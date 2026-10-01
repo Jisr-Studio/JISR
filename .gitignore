@@ -1,0 +1,13 @@
+# secrets
+.env
+# python
+.venv/
+__pycache__/
+*.pyc
+# node
+node_modules/
+# os / editor
+.DS_Store
+# user uploads & processing output (may contain beneficiaries' data)
+uploads/
+outputs/

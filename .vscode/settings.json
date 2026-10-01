@@ -1,0 +1,11 @@
+{
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "[python]": { "editor.defaultFormatter": "ms-python.python" },
+  "editor.unicodeHighlight.ambiguousCharacters": false,
+  "editor.unicodeHighlight.invisibleCharacters": false,
+  "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
+  "liveServer.settings.root": "/frontend",
+  "liveServer.settings.port": 5500,
+  "files.exclude": { "**/__pycache__": true, "**/.DS_Store": true }
+}

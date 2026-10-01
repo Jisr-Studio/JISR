@@ -1,0 +1,18 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Setup: create venv + install backend deps",
+      "type": "shell",
+      "command": "python3 -m venv .venv && .venv/bin/pip install -r backend/requirements.txt",
+      "problemMatcher": []
+    },
+    {
+      "label": "Run: Jisr (http://localhost:8000)",
+      "type": "shell",
+      "command": ".venv/bin/uvicorn backend.app.main:app --reload --port 8000",
+      "isBackground": true,
+      "problemMatcher": []
+    }
+  ]
+}

@@ -1,0 +1,72 @@
+{
+  "video_id": "demo",
+  "title": "الطهارة.. بداية كل عبادة",
+  "source_lang": "ar",
+  "target_lang": "en",
+  "duration": 48,
+  "video_url": "assets/demo.mp4",
+  "segments": [
+    {
+      "id": 1,
+      "start": 0,
+      "end": 8,
+      "type": "speech",
+      "ar": "الطهارة ليست مجرد نظافة للجسد، بل استعداد للوقوف بين يدي الله.",
+      "en": "Purification is more than physical cleanliness. It prepares us to stand before Allah."
+    },
+    {
+      "id": 2,
+      "start": 8,
+      "end": 16,
+      "type": "quran",
+      "ar": "إِنَّ اللَّهَ يُحِبُّ التَّوَّابِينَ وَيُحِبُّ الْمُتَطَهِّرِينَ",
+      "en": "Indeed, Allah loves those who are constantly repentant and loves those who purify themselves.",
+      "ref": "البقرة · ٢٢٢ — جزء من آية",
+      "citation": {
+        "surah": 2,
+        "ayah": 222,
+        "surah_name_ar": "البقرة",
+        "surah_name_en": "Al-Baqarah",
+        "partial": true,
+        "official_text": "إِنَّ اللَّهَ يُحِبُّ التَّوَّابِينَ وَيُحِبُّ الْمُتَطَهِّرِينَ",
+        "translation": "Indeed, Allah loves those who are constantly repentant and loves those who purify themselves.",
+        "translation_source": "Saheeh International (placeholder — confirm approved source)",
+        "confidence": 0.94,
+        "status": "pending"
+      }
+    },
+    {
+      "id": 3,
+      "start": 16,
+      "end": 24,
+      "type": "speech",
+      "ar": "فالوضوء عبادة نؤديها بخشوع، ونستحضر فيها معنى الطهارة.",
+      "en": "We perform ablution with humility, mindful of the meaning of purification."
+    },
+    {
+      "id": 4,
+      "start": 24,
+      "end": 32,
+      "type": "hadith",
+      "ar": "الطُّهُورُ شَطْرُ الْإِيمَانِ",
+      "en": "Purification is half of faith.",
+      "ref": "صحيح مسلم · ٢٢٣ — جزء من حديث"
+    },
+    {
+      "id": 5,
+      "start": 32,
+      "end": 40,
+      "type": "review",
+      "ar": "ونحرص على [كلمة غير واضحة] عند غسل الأعضاء.",
+      "en": "We take care to [unclear word] when washing the limbs."
+    },
+    {
+      "id": 6,
+      "start": 40,
+      "end": 48,
+      "type": "speech",
+      "ar": "فلنجعل وضوءنا فرصة لتجديد النية والاستعداد للصلاة.",
+      "en": "Let our ablution be an opportunity to renew our intention and prepare for prayer."
+    }
+  ]
+}
