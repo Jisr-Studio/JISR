@@ -6,9 +6,9 @@
 > Built for the [AI Challenge for Serving Islamic Content](https://islamicaich.org/), October 2026.  
 > Jisr assists the editor. Every matched Quranic or Hadith citation must be confirmed by a human reviewer before export or sharing. Unresolved segments block export.
 
-**Current status (October 3, 2026):** Translation integration work is paused at the team's request while selecting an alternative to Gemini. The existing backend and editor are preserved. The supplied real example has a complete transcript, a sourced Quran citation, and partial English translation; full translation, human review, and public deployment remain unfinished. See [the live example receipt](docs/live-example.md).
+**Current status:** Translation integration work is paused at the team's request while selecting an alternative to Gemini. The existing backend and editor are preserved. The supplied real example has a complete transcript, a sourced Quran citation, and partial English translation; full translation, human review, and public deployment remain unfinished. See [the live example receipt](docs/live-example.md).
 
-## UI and workspace update — October 3, 2026
+## UI and workspace
 
 - New midnight blue, soft white, and amber theme with the Mihrab logo.
 - A start screen explains the product and offers upload or an interactive example.
@@ -22,7 +22,7 @@
 
 This update changes the interface and workspace organization. Completing live translation, human review of the real example, and public deployment still remains necessary.
 
-![JISR start screen](docs/previews/start-preview.jpg)
+![JISR translation studio — desktop preview](docs/previews/studio-desktop.png)
 
 ### Working in VS Code
 
