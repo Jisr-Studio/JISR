@@ -1,0 +1,9 @@
+{$JISR_DOMAIN} {
+    request_body {
+        max_size 270MB
+    }
+    encode zstd gzip
+    reverse_proxy app:8766 {
+        header_up X-Real-IP {remote_host}
+    }
+}

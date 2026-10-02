@@ -1,0 +1,171 @@
+{
+  "checked_at": "2026-10-02T11:24:01.676139+00:00",
+  "checks": [
+    {
+      "service": "Quranpedia",
+      "ok": true,
+      "url": "https://quranpedia.net/embed?surah=2&ayah=222",
+      "available_fields": [
+        "alignment_status",
+        "arabic",
+        "ayah",
+        "english",
+        "explanation",
+        "explanation_scope",
+        "explanation_source",
+        "explanation_status",
+        "explanation_url",
+        "kind",
+        "partial",
+        "subtitle_arabic",
+        "surah",
+        "surah_name",
+        "title",
+        "translator",
+        "url"
+      ],
+      "alignment_status": "needs_selection",
+      "arabic_sha256": "da4ced9f940be8972801cba99ba631e6ea6c03b3dfabdcbe8c03f0d731e680f0",
+      "english_sha256": "2df6f387d1aeba3294f5ec970edb2309b94da38ded668b9f11884d077c655fcb",
+      "explanation_sha256": "cb921ed95650a8dd2339a3b10a90f0c863d898d173585b13eba5d9d543f42ed2"
+    },
+    {
+      "service": "HadeethEnc",
+      "ok": true,
+      "url": "https://hadeethenc.com/ar/browse/hadith/65004",
+      "available_fields": [
+        "arabic",
+        "attribution",
+        "english",
+        "explanation",
+        "explanation_status",
+        "grade",
+        "id",
+        "kind",
+        "narrator",
+        "partial",
+        "title",
+        "translation_explanation",
+        "translation_status",
+        "translation_url",
+        "translator",
+        "url"
+      ],
+      "translation_status": "sourced",
+      "arabic_sha256": "485ce48c069386e21c276261e7206152151375c8fb6f362a27ebd1e26358233c",
+      "english_sha256": "b0530eeaf152e71f2c82523593a6f282f95dbe254c36809ce1afbffaa26a7b22",
+      "explanation_sha256": "8ebbf5f969e731d69ca2a756e50cc4dd6092b8b25783b65d2f23b8ab2fa27b00"
+    },
+    {
+      "service": "Dorar",
+      "ok": true,
+      "url": "https://dorar.net/hadith/search?q=%D8%A7%D9%84%D8%B7%D9%87%D9%88%D8%B1%20%D8%B4%D8%B7%D8%B1%20%D8%A7%D9%84%D8%A5%D9%8A%D9%85%D8%A7%D9%86",
+      "available_fields": [
+        "alignment_status",
+        "arabic",
+        "attribution",
+        "english",
+        "explanation_status",
+        "grade",
+        "kind",
+        "narrator",
+        "scholar",
+        "subtitle_arabic",
+        "subtitle_english",
+        "title",
+        "translation_candidates",
+        "translation_lookup_status",
+        "translation_status",
+        "translator",
+        "url"
+      ],
+      "translation_status": "machine_draft",
+      "translation_lookup_status": "ambiguous",
+      "alignment_status": "full",
+      "arabic_sha256": "14fe30f658aa3d9bab60fa1f32fa6ea9f66e07ecb2a804e9eccdeb5ec84763ad",
+      "english_sha256": "7ef4f73dcfef91ca4969cbdbcd12d8a78917cd9814f38d7582a1130ee75e1d60"
+    },
+    {
+      "service": "Dorar tafsir",
+      "ok": true,
+      "url": "https://dorar.net/tafseer/2/38",
+      "available_fields": [
+        "explanation",
+        "explanation_scope",
+        "explanation_source",
+        "explanation_status",
+        "explanation_url",
+        "surah_name"
+      ],
+      "explanation_sha256": "cb921ed95650a8dd2339a3b10a90f0c863d898d173585b13eba5d9d543f42ed2"
+    },
+    {
+      "service": "Al-Jamhara bilingual term",
+      "ok": true,
+      "url": "https://islamic-content.com/dictionary/word/196",
+      "available_fields": [
+        "definition_ar",
+        "definition_en",
+        "english_term",
+        "english_url",
+        "provider",
+        "status",
+        "term",
+        "url"
+      ],
+      "definition_ar_sha256": "f5c48bfb7ad04f63788f00f24e1dd4e0763570617e9e71a944573981d54f7374",
+      "definition_en_sha256": "b0263479b461a02be06e7bc1cceea25d0098ba1a6fb573d5590a0bd5d484604b"
+    },
+    {
+      "service": "Al-Jamhara ablution term",
+      "ok": true,
+      "url": "https://islamic-content.com/dictionary/word/10922",
+      "available_fields": [
+        "definition_ar",
+        "definition_en",
+        "english_term",
+        "english_url",
+        "provider",
+        "status",
+        "term",
+        "url"
+      ],
+      "definition_ar_sha256": "928cc7010752f5a022ea765f37945f5a5deb60d42addb5debc8a7ba64b46be45",
+      "definition_en_sha256": "3a3b5114dff69f4c804c897ced26552aea4bc5c9d02fbe2ba17a14a24acdd4de"
+    },
+    {
+      "service": "Automatic Dorar + HadeethEnc match",
+      "ok": true,
+      "url": "https://hadeethenc.com/ar/browse/hadith/6263",
+      "available_fields": [
+        "alignment_status",
+        "arabic",
+        "attribution",
+        "english",
+        "explanation",
+        "explanation_status",
+        "grade",
+        "id",
+        "kind",
+        "narrator",
+        "partial",
+        "subtitle_arabic",
+        "title",
+        "translation_explanation",
+        "translation_lookup_status",
+        "translation_status",
+        "translation_url",
+        "translator",
+        "url",
+        "verification"
+      ],
+      "translation_status": "sourced",
+      "translation_lookup_status": "matched",
+      "alignment_status": "needs_selection",
+      "arabic_sha256": "f11b716f01fde87abe79a0f4fe62eeb753ffd2d5bba47916719c688524538cd5",
+      "english_sha256": "4a0cadd7ba4ae1f848c8ad3f5a213037a15452cfec66f349c88b4715e134da52",
+      "explanation_sha256": "ec31a0e57c1e957f8d48676377fb53db75f86074653ad3d2e0ca3d8f7fed2067"
+    }
+  ],
+  "ok": true
+}
