@@ -6,7 +6,29 @@
 > Built for the [AI Challenge for Serving Islamic Content](https://islamicaich.org/), October 2026.  
 > Jisr assists the editor. Every matched Quranic or Hadith citation must be confirmed by a human reviewer before export or sharing. Unresolved segments block export.
 
-**Current status (October 2, 2026):** Translation integration work is paused at the team's request while selecting an alternative to Gemini. The existing backend and editor are preserved. The supplied real example has a complete transcript, a sourced Quran citation, and partial English translation; full translation, human review, and public deployment remain unfinished. See [the live example receipt](docs/live-example.md).
+**Current status (October 3, 2026):** Translation integration work is paused at the team's request while selecting an alternative to Gemini. The existing backend and editor are preserved. The supplied real example has a complete transcript, a sourced Quran citation, and partial English translation; full translation, human review, and public deployment remain unfinished. See [the live example receipt](docs/live-example.md).
+
+## UI and workspace update — October 3, 2026
+
+- New midnight blue, soft white, and amber theme with the Mihrab logo.
+- A start screen explains the product and offers upload or an interactive example.
+- The studio groups tools into **Review**, **Sources**, and **Appearance** tabs, with keyboard navigation.
+- A clickable segment timeline connects the video preview to transcript selection.
+- Processing/error status and review reminders explain what needs attention before export.
+- A skippable 1.1-second splash appears once per tab session. Reduced-motion users and direct project/demo/share links bypass it.
+- Responsive layouts and reduced-motion support are included.
+- Active scripts and styles are organized in `dist/js/` and `dist/css/`. The old prototype is preserved under `archive/prototype/`.
+- VS Code tasks, debugging, and unittest discovery now target the working Python application rather than the old FastAPI skeleton.
+
+This update changes the interface and workspace organization. Completing live translation, human review of the real example, and public deployment still remains necessary.
+
+![JISR start screen](docs/previews/start-preview.jpg)
+
+### Working in VS Code
+
+Open the repository folder and select your installed Python interpreter. Use **Terminal → Run Task → JISR: Run app** to start the application, **Run and Debug → JISR: Debug app** to debug it, and **Tasks: Run Test Task** to run the existing suite. Recommended formatter extensions are listed in `.vscode/extensions.json`; they are optional for running the app.
+
+Verification for this update: JavaScript syntax checks and browser checks of the start screen, demo entry, studio tabs, source dialogs, timeline selection, review filtering, splash dismissal, and responsive layouts. The backend suite ran **77 tests: 74 passed, 3 skipped** in the current environment. This run does not verify the skipped FFmpeg-dependent tests or a complete live-provider workflow.
 
 ## The problem
 
@@ -30,7 +52,15 @@ New automated transcripts retain word timestamps. Mixed segments are split into 
 
 ```text
 server.py           Python standard-library HTTP API, processing, storage, and export
-dist/               RTL-first web app (HTML, CSS, JavaScript) and silent demo video
+dist/               Active RTL web app served by server.py
+  css/              Base editor styles and current theme
+  js/               Editor/API logic, studio journey, and splash screen
+  index.html        App shell
+  favicon.svg       Mihrab logo
+  demo.mp4          Silent demo video
+archive/prototype/  Preserved original frontend and FastAPI skeleton
+.vscode/            Run/debug/test configuration
+docs/previews/      Saved UI screenshots
 tests/              Backend tests
 docs/               Frontend/backend API and data contract
 scripts/            Opt-in checks of public citation services
@@ -40,6 +70,8 @@ compose.yaml        App, Caddy HTTPS proxy, and persistent data volume
 Caddyfile           Reverse-proxy configuration
 data/               Generated project files and SQLite database (Git-ignored)
 ```
+
+See [the code map](docs/code-map.md) for file responsibilities and VS Code shortcuts.
 
 ## Run locally
 

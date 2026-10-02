@@ -2,16 +2,44 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "Setup: create venv + install backend deps",
-      "type": "shell",
-      "command": "python3 -m venv .venv && .venv/bin/pip install -r backend/requirements.txt",
+      "label": "JISR: Run app",
+      "type": "process",
+      "command": "python3",
+      "args": [
+        "server.py"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
       "problemMatcher": []
     },
     {
-      "label": "Run: Jisr (http://localhost:8000)",
-      "type": "shell",
-      "command": ".venv/bin/uvicorn backend.app.main:app --reload --port 8000",
-      "isBackground": true,
+      "label": "JISR: Run tests",
+      "type": "process",
+      "command": "python3",
+      "args": [
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tests",
+        "-v"
+      ],
+      "group": {
+        "kind": "test",
+        "isDefault": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "JISR: Check public sources",
+      "type": "process",
+      "command": "python3",
+      "args": [
+        "scripts/check_sources.py",
+        "--output",
+        "docs/source-check.json"
+      ],
       "problemMatcher": []
     }
   ]

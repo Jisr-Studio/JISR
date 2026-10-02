@@ -1,6 +1,6 @@
 # Implementation audit — October 2, 2026
 
-The backend has both paid keys configured locally, and the supplied example has been partially processed. Public launch remains unverified. Separate upload and processing pages are deferred at the user's request; the existing editor remains the frontend.
+The backend has both paid keys configured locally, and the supplied example has been partially processed. Public launch remains unverified. The frontend now includes a start screen, upload entry, processing status, and a studio with Review, Sources, and Appearance tabs.
 
 The team paused translation integration on October 2 while choosing an alternative API to Gemini. Preserve the current implementation and saved example; the next authorized step is integrating the chosen provider and completing live verification. No further provider requests are running.
 
@@ -32,7 +32,7 @@ Run from the project directory:
 
 ```bash
 python -m unittest discover -s tests -v
-node --check dist/app.js
+node --check dist/js/app.js
 ```
 
 Result: **77 tests passed**, including `tests/test_end_to_end.py`. FFmpeg was available, so the integration test ran rather than being skipped. Source checks in `source-check.json` have seven successful public-service samples; they do not prove corpus-wide matching accuracy. Current `/api/health` reports both paid keys configured and FFmpeg available. Health flags indicate configuration only.

@@ -2,14 +2,13 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Jisr: backend + frontend (uvicorn)",
+      "name": "JISR: Debug app",
       "type": "debugpy",
       "request": "launch",
-      "module": "uvicorn",
-      "args": ["backend.app.main:app", "--reload", "--port", "8000"],
+      "program": "${workspaceFolder}/server.py",
       "cwd": "${workspaceFolder}",
-      "envFile": "${workspaceFolder}/.env",
-      "jinja": false
+      "console": "integratedTerminal",
+      "envFile": "${workspaceFolder}/.env"
     }
   ]
 }
