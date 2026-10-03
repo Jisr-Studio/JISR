@@ -64,7 +64,7 @@ class EndToEndTests(unittest.TestCase):
             patch.object(server, "RECENT_UPLOADS", {}),
             patch.object(server, "TAFSIR_INDEX", {}),
             patch.object(server, "TERM_CACHE", {}),
-            patch.dict(os.environ, {"ELEVENLABS_API_KEY": "fake-stt", "GEMINI_API_KEY": "fake-translation"}),
+            patch.dict(os.environ, {"ELEVENLABS_API_KEY": "fake-stt", "OPENAI_API_KEY": "fake-translation"}),
         ):
             item.start()
             self.addCleanup(item.stop)
@@ -98,13 +98,16 @@ class EndToEndTests(unittest.TestCase):
                  "logprob": -2 if i == 0 else -.1}
                 for i, text in enumerate(TRANSCRIPT.split())
             ]})
-        if parsed.netloc == "generativelanguage.googleapis.com":
-            self.assertEqual(request.get_header("X-goog-api-key"), "fake-translation")
+        if parsed.netloc == "api.openai.com":
+            self.assertEqual(request.get_header("Authorization"), "Bearer fake-translation")
             payload = json.loads(request.data)
             self.assertFalse(payload["store"])
-            self.assertEqual(parsed.path, "/v1/interactions")
-            self.assertEqual(payload["input"][0]["type"], "user_input")
-            inputs = json.loads(payload["input"][0]["content"][0]["text"].split("Input: ", 1)[1])
+            self.assertEqual(parsed.path, "/v1/responses")
+            self.assertEqual(payload["model"], server.OPENAI_MODEL)
+            self.assertTrue(payload["text"]["format"]["strict"])
+            self.assertFalse(payload["text"]["format"]["schema"]["additionalProperties"])
+            self.assertIsInstance(payload["input"], str)
+            inputs = json.loads(payload["input"].split("Input: ", 1)[1])
             if isinstance(inputs, dict):
                 excerpt = VERSE_EXCERPT if inputs["full_english"] == VERSE_EN else HADITH_EXCERPT
                 result = {"english_excerpt": excerpt, "confident": True}
@@ -122,7 +125,7 @@ class EndToEndTests(unittest.TestCase):
                     {"first_word": 10, "last_word": 15, "kind": "hadith", "english": "Hadith machine draft", "hadith_query": HADITH},
                     {"first_word": 16, "last_word": 17, "kind": "speech", "english": "So let us maintain it."},
                 ]}]}
-            return ExternalResponse({"status": "completed", "steps": [{"type": "model_output", "content": [{"type": "text", "text": json.dumps(result)}]}]})
+            return ExternalResponse({"status": "completed", "output": [{"type": "message", "content": [{"type": "output_text", "text": json.dumps(result)}]}]})
         if url.startswith("https://islamic-content.com/api/search_words?"):
             self.assertEqual(request.get_header("X-requested-with"), "XMLHttpRequest")
             return ExternalResponse({"table_data": '<a href="/dictionary/word/10922">الوضوء</a>'})
@@ -140,6 +143,8 @@ class EndToEndTests(unittest.TestCase):
             return ExternalResponse('<article id="tt4"><p>Synthetic tafsir explanation.</p><p>Source reference.</p></article>')
         if url.startswith("https://dorar.net/dorar_api.json?"):
             return ExternalResponse({"ahadith": {"result": f'<div>{HADITH_AR}</div><div class="hadith-info">الراوي : عثمان بن عفان | المحدث : مسلم | المصدر : صحيح مسلم | الصفحة أو الرقم : 245 | خلاصة حكم المحدث : صحيح</div>'}})
+        if url.startswith("https://dorar.net/hadith/search?"):
+            return ExternalResponse(f'<div class="border-bottom"><h5 class="h5-responsive">1 - {HADITH_AR}</h5><p>خلاصة حكم المحدث : صحيح الراوي : عثمان بن عفان | المحدث : مسلم | المصدر : صحيح مسلم الصفحة أو الرقم : 245 التصنيف الموضوعي: الطهارة</p><a href="/h/Test6263">عرض الحديث</a></div>')
         if url == "https://hadeethenc.com/ar/ajax/search":
             self.assertEqual(urllib.parse.parse_qs(request.data.decode())["term"], [HADITH])
             return ExternalResponse(f'<a href="/ar/browse/hadith/6263">{HADITH_AR}</a>')
@@ -246,7 +251,7 @@ class EndToEndTests(unittest.TestCase):
         ass = target.with_name("subtitles.ass").read_text(encoding="utf-8")
         self.assertIn(HADITH_EXCERPT, ass)
         self.assertNotIn("under his nails", ass)
-        self.assertEqual(sum("generativelanguage.googleapis.com" in url for url in self.calls), 4)
+        self.assertEqual(sum("api.openai.com" in url for url in self.calls), 4)
         self.assertEqual(sum("api.elevenlabs.io" in url for url in self.calls), 1)
         self.assertEqual(self.request(prefix, "DELETE", token=token)[0], 200)
         self.assertFalse(target.parent.exists())

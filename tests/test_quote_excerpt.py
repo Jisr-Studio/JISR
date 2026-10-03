@@ -16,11 +16,11 @@ SOURCE = {"kind": "hadith", "arabic": AR, "english": EN, "partial": True, "trans
 
 
 def alignment(excerpt=EXCERPT, confident=True):
-    return {"status": "completed", "steps": [{"type": "model_output", "content": [{"type": "text", "text": json.dumps({"english_excerpt": excerpt, "confident": confident})}]}]}
+    return {"status": "completed", "output": [{"type": "message", "content": [{"type": "output_text", "text": json.dumps({"english_excerpt": excerpt, "confident": confident})}]}]}
 
 
 class QuoteExcerptTests(unittest.TestCase):
-    @patch.dict("os.environ", {"GEMINI_API_KEY": ""})
+    @patch.dict("os.environ", {"OPENAI_API_KEY": ""})
     @patch.object(server, "lookup_tafsir", return_value={})
     @patch.object(server, "get_json", side_effect=[
         {"text": "ويسألونك عن المحيض قل هو أذى إن الله يحب التوابين ويحب المتطهرين"},
@@ -43,7 +43,7 @@ class QuoteExcerptTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             server.canonical_arabic_excerpt("كلام غير متعلق تماما", AR)
 
-    @patch.dict("os.environ", {"GEMINI_API_KEY": ""})
+    @patch.dict("os.environ", {"OPENAI_API_KEY": ""})
     def test_without_key_partial_quote_keeps_draft_and_blocks_export(self):
         segment = {"ar": SPOKEN, "en": "Machine draft", "start": 0, "end": 4}
         server.attach_source(segment, "hadith", SOURCE)
@@ -53,7 +53,7 @@ class QuoteExcerptTests(unittest.TestCase):
         segment.update(reviewed=True, needs_review=False)
         self.assertFalse(server.publishable({"status": "ready", "segments": json.dumps([segment])}))
 
-    @patch.dict("os.environ", {"GEMINI_API_KEY": "test-key"})
+    @patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"})
     @patch.object(server, "post_json", return_value=alignment())
     def test_model_only_selects_verbatim_source_english(self, post_json):
         segment = {"ar": SPOKEN, "en": "Machine draft", "start": 0, "end": 4}
@@ -71,7 +71,7 @@ class QuoteExcerptTests(unittest.TestCase):
         self.assertNotIn("أبي مالك", subtitles)
         self.assertNotIn("praise fills", server.make_ass([segment], {"bilingual": True}))
 
-    @patch.dict("os.environ", {"GEMINI_API_KEY": "test-key"})
+    @patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"})
     def test_generated_full_or_uncertain_english_is_not_accepted(self):
         responses = [alignment("Purification is half the faith."), alignment(EN), alignment(EXCERPT, False)]
         for response in responses:
@@ -80,7 +80,7 @@ class QuoteExcerptTests(unittest.TestCase):
                 self.assertEqual(source["alignment_status"], "needs_selection")
                 self.assertNotIn("subtitle_english", source)
 
-    @patch.dict("os.environ", {"GEMINI_API_KEY": "test-key"})
+    @patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"})
     @patch.object(server, "post_json", side_effect=OSError("unavailable"))
     def test_alignment_outage_does_not_substitute_full_translation(self, post_json):
         self.assertEqual(server.prepare_quote_subtitles(SPOKEN, SOURCE)["alignment_status"], "needs_selection")
@@ -89,7 +89,7 @@ class QuoteExcerptTests(unittest.TestCase):
         start = EN.index(EXCERPT)
         source = server.select_source_english(SOURCE, SPOKEN, {"start": start, "end": start + len(EXCERPT)})
         segment = {"ar": SPOKEN, "en": "Draft", "start": 0, "end": 4}
-        with patch.dict("os.environ", {"GEMINI_API_KEY": ""}):
+        with patch.dict("os.environ", {"OPENAI_API_KEY": ""}):
             server.attach_source(segment, "hadith", source)
         self.assertEqual(segment["en"], EXCERPT)
         self.assertEqual(segment["source"]["alignment_status"], "selected")

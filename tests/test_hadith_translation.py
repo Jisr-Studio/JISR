@@ -88,7 +88,8 @@ class HadithTranslationTests(unittest.TestCase):
     @patch.object(server, "get_json", return_value={"ahadith": {"result": f'<div>{FULL}</div><div class="hadith-info">الراوي : أبو مالك الأشعري | المحدث : مسلم | المصدر : صحيح مسلم | خلاصة حكم المحدث : صحيح</div>'}})
     def test_translation_outage_preserves_dorar_reference_and_review_gate(self, get_json, enrich):
         segment = {"ar": SPOKEN, "en": "Machine draft", "candidate": {"kind": "hadith", "hadith_query": SPOKEN}}
-        self.assertTrue(server.verify_hadith(segment))
+        with patch.object(server, "get_html", return_value=""):
+            self.assertTrue(server.verify_hadith(segment))
         self.assertEqual(segment["source"]["translation_lookup_status"], "unavailable")
         self.assertTrue(segment["needs_review"])
         self.assertFalse(server.publishable({"status": "ready", "segments": json.dumps([segment])}))

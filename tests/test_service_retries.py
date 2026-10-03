@@ -16,44 +16,12 @@ def error(code, retry_after=None):
     headers = Message()
     if retry_after is not None:
         headers["Retry-After"] = str(retry_after)
-    return urllib.error.HTTPError("https://provider.example/interactions", code, "provider failure", headers, io.BytesIO(b"{}"))
+    return urllib.error.HTTPError("https://api.openai.com/v1/responses", code, "provider failure", headers, io.BytesIO(b"{}"))
 
 
 class ServiceRetriesTests(unittest.TestCase):
-    @patch.object(server, "GEMINI_FALLBACK_MODEL", "gemini-3.7-flash")
-    @patch.object(server, "post_json", side_effect=[error(503), {"status": "completed"}])
-    def test_model_fallback_keeps_schema_and_does_not_change_preferred_model(self, post_json):
-        payload = {"model": "gemini-3.8-flash", "input": "Test prompt", "store": False, "response_format": {"schema": {"type": "object"}}}
-        self.assertEqual(server.gemini_request(payload, "test-only")["status"], "completed")
-        first = post_json.call_args_list[0].args[1]
-        second = post_json.call_args_list[1].args[1]
-        self.assertEqual(first["model"], "gemini-3.8-flash")
-        self.assertEqual(second, {**first, "model": "gemini-3.7-flash"})
-        self.assertEqual(payload["model"], "gemini-3.8-flash")
-        self.assertEqual(payload["input"], "Test prompt")
-        self.assertEqual(first["input"][0]["content"][0]["text"], "Test prompt")
-
-    @patch.object(server, "post_json")
-    def test_fallback_does_not_bypass_auth_schema_quota_or_timeout_errors(self, post_json):
-        for failure in (error(400), error(401), error(403), error(429), TimeoutError("unknown result")):
-            with self.subTest(error=type(failure).__name__, code=getattr(failure, "code", None)):
-                post_json.reset_mock()
-                post_json.side_effect = failure
-                with self.assertRaises(type(failure)):
-                    server.gemini_request({"model": "gemini-3.8-flash", "input": "Test prompt"}, "test-only")
-                self.assertEqual(post_json.call_count, 1)
-
-    @patch.object(server, "post_json", side_effect=error(503))
-    def test_disabled_or_same_model_fallback_does_not_loop(self, post_json):
-        for model in ("", "gemini-3.8-flash"):
-            with self.subTest(model=model), patch.object(server, "GEMINI_FALLBACK_MODEL", model):
-                post_json.reset_mock()
-                with self.assertRaises(urllib.error.HTTPError):
-                    server.gemini_request({"model": "gemini-3.8-flash", "input": "Test prompt"}, "test-only")
-                self.assertEqual(post_json.call_count, 1)
-
     def run_request(self):
-        return server.post_json("https://provider.example/interactions", {"store": False}, {"x-goog-api-key": "test-only"})
+        return server.post_json("https://api.openai.com/v1/responses", {"store": False}, {"Authorization": "Bearer test-only"})
 
     @patch.object(server.time, "sleep")
     @patch.object(server.urllib.request, "urlopen")

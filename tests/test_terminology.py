@@ -17,7 +17,7 @@ REFERENCE = {"term": "الاجتهاد", "definition_ar": "تعريف موثّق
 
 
 def response(items):
-    return {"status": "completed", "steps": [{"type": "model_output", "content": [{"type": "text", "text": json.dumps({"items": items})}]}]}
+    return {"status": "completed", "output": [{"type": "message", "content": [{"type": "output_text", "text": json.dumps({"items": items})}]}]}
 
 
 class TerminologyTests(unittest.TestCase):
@@ -93,32 +93,32 @@ class TerminologyTests(unittest.TestCase):
         self.assertTrue(server.term_in_text("الاجتهاد", "والاجتهاد علم"))
         self.assertFalse(server.term_in_text("صلاة", "صلاته"))
 
-    @patch.dict("os.environ", {"GEMINI_API_KEY": "test-key"})
+    @patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"})
     @patch.object(server, "lookup_term", return_value=REFERENCE)
     @patch.object(server, "post_json")
     def test_grounding_revises_speech_and_keeps_provenance(self, post_json, lookup):
         segments = [{"id": "one", "ar": "الاجتهاد علم", "en": "", "needs_review": False}]
         post_json.side_effect = [response([{"id": "one", "kind": "speech", "english": "Draft", "terms": ["الاجتهاد"]}]),
                                  response([{"id": "one", "english": "Ijtihad is a discipline."}])]
-        server.gemini_translate(segments)
+        server.translate_segments(segments)
         self.assertEqual(segments[0]["en"], "Ijtihad is a discipline.")
         self.assertEqual(segments[0]["terminology"][0]["url"], REFERENCE["url"])
         self.assertIsNone(segments[0]["source"])
-        sent = json.loads(post_json.call_args.args[1]["input"][0]["content"][0]["text"].split("Input: ", 1)[1])
+        sent = json.loads(post_json.call_args.args[1]["input"].split("Input: ", 1)[1])
         self.assertEqual(sent[0]["dictionary"][0]["definition_en"], REFERENCE["definition_en"])
 
-    @patch.dict("os.environ", {"GEMINI_API_KEY": "test-key"})
+    @patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"})
     @patch.object(server, "lookup_term", side_effect=ValueError("no match"))
     @patch.object(server, "post_json", return_value=response([{"id": "one", "kind": "speech", "english": "Draft", "terms": ["الاجتهاد"]}]))
     def test_unavailable_dictionary_requires_review(self, post_json, lookup):
         segments = [{"id": "one", "ar": "الاجتهاد علم", "en": "", "needs_review": False}]
-        server.gemini_translate(segments)
+        server.translate_segments(segments)
         self.assertTrue(segments[0]["needs_review"])
         self.assertEqual(segments[0]["terminology_warning"]["unavailable_terms"], ["الاجتهاد"])
         self.assertEqual(post_json.call_count, 1)
         self.assertFalse(server.publishable({"status": "ready", "segments": json.dumps(segments)}))
 
-    @patch.dict("os.environ", {"GEMINI_API_KEY": "test-key"})
+    @patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"})
     @patch.object(server, "lookup_term", return_value=REFERENCE)
     @patch.object(server, "post_json")
     def test_invalid_refinement_does_not_commit_draft(self, post_json, lookup):
@@ -126,16 +126,16 @@ class TerminologyTests(unittest.TestCase):
         original = copy.deepcopy(segments)
         post_json.side_effect = [response([{"id": "one", "kind": "speech", "english": "Draft", "terms": ["الاجتهاد"]}]), response([{"id": "wrong", "english": "Revised"}])]
         with self.assertRaises(RuntimeError):
-            server.gemini_translate(segments)
+            server.translate_segments(segments)
         self.assertEqual(segments, original)
 
-    @patch.dict("os.environ", {"GEMINI_API_KEY": "test-key"})
+    @patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"})
     @patch.object(server, "post_json", return_value=response([{"id": "one", "kind": "speech", "english": "Draft"}]))
     def test_missing_detection_does_not_silently_skip_dictionary(self, post_json):
         segments = [{"id": "one", "ar": "الاجتهاد علم", "en": "", "needs_review": False}]
         original = copy.deepcopy(segments)
         with self.assertRaises(RuntimeError):
-            server.gemini_translate(segments)
+            server.translate_segments(segments)
         self.assertEqual(segments, original)
 
 

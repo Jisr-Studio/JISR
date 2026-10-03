@@ -52,7 +52,8 @@ class TafsirTests(unittest.TestCase):
         source = segment["source"]
         self.assertNotIn("explanation", source)
         self.assertEqual(source["explanation_status"], "unavailable")
-        self.assertEqual(source["explanation_url"], "https://dorar.net/tafseer/2")
+        self.assertEqual(source["explanation_index_url"], "https://dorar.net/tafseer/2")
+        self.assertNotIn("explanation_url", source)
         self.assertTrue(segment["needs_review"])
 
 

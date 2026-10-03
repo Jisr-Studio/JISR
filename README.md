@@ -4,129 +4,159 @@
 منصة ذكية لترجمة الفيديو الإسلامي وتوثيق الآيات القرآنية والأحاديث النبوية.
 
 > Built for the [AI Challenge for Serving Islamic Content](https://islamicaich.org/), October 2026.  
-> Jisr assists the editor. Every matched Quranic or Hadith citation must be confirmed by a human reviewer before export or sharing. Unresolved segments block export.
+> Jisr is an AI-assisted tool. Every matched Quranic or Hadith citation requires human confirmation before export or sharing. Unresolved segments block publication.
 
-**Current status:** Translation integration work is paused at the team's request while selecting an alternative to Gemini. The existing backend and editor are preserved. The supplied real example has a complete transcript, a sourced Quran citation, and partial English translation; full translation, human review, and public deployment remain unfinished. See [the live example receipt](docs/live-example.md).
+**Current status:** The local application integrates **ElevenLabs Scribe v2** for transcription and **OpenAI GPT-6 Luna** for translation, quotation detection, terminology review, and source-excerpt alignment. The latest local verification passed **89 Python tests**, including actual FFmpeg video export, plus the JavaScript citation-link checks. Live-provider testing and deployment verification remain necessary before public launch.
 
-## UI and workspace
-
-- New midnight blue, soft white, and amber theme with the Mihrab logo.
-- A start screen explains the product and offers upload or an interactive example.
-- The studio groups tools into **Review**, **Sources**, and **Appearance** tabs, with keyboard navigation.
-- A clickable segment timeline connects the video preview to transcript selection.
-- Processing/error status and review reminders explain what needs attention before export.
-- A skippable 1.1-second splash appears once per tab session. Reduced-motion users and direct project/demo/share links bypass it.
-- Responsive layouts and reduced-motion support are included.
-- Active scripts and styles are organized in `dist/js/` and `dist/css/`. The old prototype is preserved under `archive/prototype/`.
-- VS Code tasks, debugging, and unittest discovery now target the working Python application rather than the old FastAPI skeleton.
-
-This update changes the interface and workspace organization. Completing live translation, human review of the real example, and public deployment still remains necessary.
-
-![JISR translation studio — desktop preview](docs/previews/studio-desktop.png)
-
-### Working in VS Code
-
-Open the repository folder and select your installed Python interpreter. Use **Terminal → Run Task → JISR: Run app** to start the application, **Run and Debug → JISR: Debug app** to debug it, and **Tasks: Run Test Task** to run the existing suite. Recommended formatter extensions are listed in `.vscode/extensions.json`; they are optional for running the app.
-
-Verification for this update: JavaScript syntax checks and browser checks of the start screen, demo entry, studio tabs, source dialogs, timeline selection, review filtering, splash dismissal, and responsive layouts. The backend suite ran **77 tests: 74 passed, 3 skipped** in the current environment. This run does not verify the skipped FFmpeg-dependent tests or a complete live-provider workflow.
+![Jisr translation studio — desktop preview](docs/previews/studio-desktop.png)
 
 ## The problem
 
-Islamic organizations produce valuable Arabic video content, but preparing it for English-speaking viewers takes time: transcribing speech, timing subtitles, translating, and checking every quoted verse or hadith. A quotation can be mistaken for ordinary speech, transcribed incorrectly, or published without a clear source.
+Islamic organizations produce valuable Arabic videos, but reaching English-speaking viewers requires transcription, subtitle timing, translation, and manual verification of every quoted verse or Hadith. Transcription errors can slip through, quotations can be translated as ordinary speech, and viewers may receive no traceable sources.
 
 ## How it works
 
-1. **Upload** an Arabic video.
-2. **Transcribe** speech with word-level timestamps using ElevenLabs Scribe v2. Suspected gaps and low-confidence segments are flagged.
-3. **Translate** ordinary speech into English using Gemini. Detected technical terms are looked up in Al-Jamhara; a second translation review uses the matched definitions and available English terms. Quranic and Hadith quotations follow separate verification paths.
-4. **Match Quranic quotations** against Quranpedia's Hafs text. A matched verse receives a sourced English translation, never an AI-generated verse translation.
-5. **Check Hadith quotations** against Dorar. Search HadeethEnc automatically and attach a sourced translation and explanation only when a unique complete record matches both the transcript and Dorar text. Multiple plausible reports remain a machine draft with selectable records for the editor; manual linking remains available.
-6. **Review and edit** the transcript, timing, English text, citation details, and subtitle appearance. Editing a verified quotation's Arabic text removes its source link until it is checked again.
-7. **Export** an MP4 with subtitles, an SRT file, and a JSON citations list, or share a read-only video page. Export is blocked while segments are unresolved; the editor remains responsible for checking citations before publication.
+1. **Upload** an Arabic video, or open the interactive example.
+2. **Transcribe** with Scribe v2 word timestamps. Suspected audio gaps and uncertain speech are flagged for correction.
+3. **Translate** ordinary speech with GPT-6 Luna. Sentence context helps keep connected phrases together; the server validates that subtitle parts preserve every original word and its timing. Al-Jamhara definitions guide translation of detected Islamic terms.
+4. **Verify Quran quotations** against Quranpedia's Hafs text and attach sourced Saheeh International English. The model does not generate canonical verse translations.
+5. **Verify Hadith quotations** against Dorar and search HadeethEnc for a matching translation and explanation. A unique complete match can be attached automatically; ambiguous or unavailable records require editor selection or manual linking. Unverified English remains a labelled machine draft.
+6. **Review** Arabic and English text, timing, narrator, grading, attribution, sources, and subtitle appearance. Editing a verified quotation invalidates its source verification and requires another review.
+7. **Export** a subtitled MP4, an SRT file, or a JSON citations list, or publish a read-only video link after all review requirements are resolved.
 
-For a partial verse or Hadith quotation, the full source text remains in the citation details. Subtitles use only its corresponding Arabic and English excerpt. Gemini may select a verbatim English substring from the reference; it cannot write a new canonical translation. If alignment is uncertain or keys are missing, the editor selects the matching text from the source. Partial quotations cannot be confirmed or exported until this selection is resolved.
+For partial quotations, citation details retain the full source while subtitles use the corresponding Arabic and English excerpt. The model can select an exact English substring from the sourced translation; it cannot invent a canonical translation. Uncertain alignment requires manual selection before confirmation and export.
+
+Source, translation, explanation, and search links are displayed separately. A Dorar direct link is used only when the published record matches the full text and attribution metadata. If no unique record can be resolved, the interface explicitly labels the search fallback.
 
 ## Project structure
 
-New automated transcripts retain word timestamps. Mixed segments are split into ordinary speech and individual quotations before source matching. The server derives the Arabic text and timing from the original transcript, rejects incomplete or overlapping model ranges, and preserves the translation of surrounding speech.
-
 ```text
-server.py           Python standard-library HTTP API, processing, storage, and export
-dist/               Active RTL web app served by server.py
-  css/              Base editor styles and current theme
-  js/               Editor/API logic, studio journey, and splash screen
-  index.html        App shell
-  favicon.svg       Mihrab logo
-  demo.mp4          Silent demo video
-archive/prototype/  Preserved original frontend and FastAPI skeleton
-.vscode/            Run/debug/test configuration
-docs/previews/      Saved UI screenshots
-tests/              Backend tests
-docs/               Frontend/backend API and data contract
-scripts/            Opt-in checks of public citation services
-.env.example        Environment variable template
-Dockerfile          Linux image with FFmpeg
-compose.yaml        App, Caddy HTTPS proxy, and persistent data volume
-Caddyfile           Reverse-proxy configuration
-data/               Generated project files and SQLite database (Git-ignored)
+server.py               Standard-library Python HTTP API, AI pipeline, storage, and exports
+dist/                   Active RTL frontend; no build step
+  index.html            App shell
+  js/                   Editor, studio, splash, and citation-link helpers
+  css/                  Editor and responsive styles
+  demo.mp4              Silent illustrative demo video
+tests/                  Python tests and JavaScript citation-link checks
+scripts/                Public-source checks and saved citation-link repairs
+docs/                   API contract, source policy, implementation notes, and previews
+.vscode/                Run, debug, and test configuration
+.env.example            Configuration template; contains no credentials
+Dockerfile              Linux image with FFmpeg
+compose.yaml            App, Caddy HTTPS proxy, and persistent data volume
+Caddyfile               Reverse-proxy configuration
+data/                   Generated media and SQLite database; Git-ignored
+archive/prototype/      Preserved early frontend and FastAPI prototype
 ```
 
-See [the code map](docs/code-map.md) for file responsibilities and VS Code shortcuts.
+The active backend is `server.py`; the archived FastAPI prototype is not the running application. See the [code map](docs/code-map.md) and [API/data contract](docs/data-contract.md).
 
 ## Run locally
 
-Requirements: **Python 3.11+**. No Python packages need to be installed. **FFmpeg** is required for MP4 export.
+Requirements: **Python 3.11+** and **FFmpeg** for video inspection, audio-gap detection, and MP4 export. No Python package installation or frontend build is needed.
+
+Copy the configuration template:
 
 ```bash
-cp .env.example .env       # PowerShell: Copy-Item .env.example .env
-# Add ELEVENLABS_API_KEY and GEMINI_API_KEY to .env for automatic processing.
+# macOS / Linux
+cp .env.example .env
+```
+
+```powershell
+# Windows PowerShell
+Copy-Item .env.example .env
+```
+
+Add your keys to `.env`:
+
+```dotenv
+ELEVENLABS_API_KEY=your_elevenlabs_key
+OPENAI_API_KEY=your_openai_key
+OPENAI_MODEL=gpt-6-luna
+```
+
+The ElevenLabs key must have **Speech to Text** access. If FFmpeg is not in `PATH`, set `FFMPEG_PATH` to its executable in `.env`.
+
+```bash
 python server.py
 ```
 
-Open [http://127.0.0.1:8766](http://127.0.0.1:8766). Restart the server after changing `.env`. The manual transcript workflow works without API keys; automated processing requires both keys. On a machine without FFmpeg in `PATH`, set `FFMPEG_PATH` in `.env`.
+Open [http://127.0.0.1:8766](http://127.0.0.1:8766). On systems where Python is named `python3`, use that command instead. Restart the server after changing `.env`.
 
-For a Linux server with a configured domain, set `JISR_DOMAIN` and the API keys in `.env`, then run `docker compose up -d --build`. The container deployment has not yet been verified with live API keys and a real video; complete that end-to-end check before opening it to the public.
+The interactive demo and manual transcript workflow can be used without AI keys. Automatic processing requires both keys and access to the source services. `/api/health` reports configuration availability; it does not verify credentials, billing, or model access.
+
+In VS Code, select a Python interpreter and use **Run and Debug → JISR: Debug app**. The supplied run/test tasks use `python3`; the terminal commands above also work on Windows with `python`.
 
 ## Sources and services
 
-The integration contract is documented in [docs/data-contract.md](docs/data-contract.md).
-
 | Content or task | Source or service |
 |---|---|
-| Arabic Quran text (Hafs) | [Quranpedia API](https://quranpedia.net/api-docs) |
+| Speech and word timestamps | [ElevenLabs Scribe v2](https://elevenlabs.io/docs/api-reference/speech-to-text/convert) |
+| Ordinary-speech translation and quotation detection | [OpenAI GPT-6 Luna](https://developers.openai.com/api/docs/models/gpt-6-luna) through the Responses API |
+| Quran text | [Quranpedia API](https://quranpedia.net/api-docs), Hafs text |
 | English Quran translation | Saheeh International, Quranpedia book ID `1947` |
-| Quranic explanation, when available | [Dorar tafsir](https://dorar.net/tafseer), with the original section scope and references |
-| Hadith search and grading candidates | Dorar |
-| Linked Hadith text, English translation, grading, and explanation | [HadeethEnc API](https://github.com/islamhouse-dev/hadith-api) |
-| Speech-to-text | [ElevenLabs Scribe v2](https://elevenlabs.io/docs/api-reference/speech-to-text/convert) |
-| Translation of ordinary speech and quotation detection | [Gemini](https://ai.google.dev/gemini-api/docs/structured-output) |
-| Terminology guidance | [Al-Jamhara dictionary](https://islamic-content.com/dictionary), fetched for detected terms; page 8's sample glossary provides baseline guidance |
-| Subtitle rendering and video export | FFmpeg |
+| Quran explanation, when available | [Dorar tafsir](https://dorar.net/tafseer), preserving section scope and references |
+| Hadith attribution and grading candidates | [Dorar](https://dorar.net/hadith) |
+| Matched Hadith translation and explanation | [HadeethEnc API](https://github.com/islamhouse-dev/hadith-api) |
+| Islamic terminology | [Al-Jamhara dictionary](https://islamic-content.com/dictionary), retrieved for detected terms |
+| Subtitle rendering and MP4 export | FFmpeg |
 
-Third-party data and services have their own licenses and terms. The repository does not include Quran or Hadith datasets, model weights, or bundled API keys. The demo video and its sample data are illustrative.
+Religious explanations are retrieved from their sources, not generated by the model. Dorar and HadeethEnc metadata remain distinguishable when both are attached. A source's Hadith grade is not an AI confidence score.
 
-Source selection and remaining integration limits are documented in [docs/source-policy.md](docs/source-policy.md). Commentary is retrieved from its source and kept separate from the verse text; it is never generated by the model.
+See the [source policy](docs/source-policy.md) for the mapping to the challenge's scientific package and remaining source-integration limits, including QuranEnc prioritisation. Third-party services and content have their own licenses and terms. This repository does not bundle religious datasets, model weights, or API credentials; the demo content is illustrative.
 
-## Verification
+## Verification and maintenance
+
+Run the local tests:
 
 ```bash
 python -m unittest discover -s tests -v
+# Optional JavaScript check; requires Node.js
+node tests/test_citation_links.js
+```
+
+The latest run passed **89 Python tests with no skips**, with FFmpeg available. External AI and source-service responses are mocked in the suite; no paid API requests are made by these tests. The integration test uploads a video with audio, processes word timestamps and mixed quotations, enforces review, renders an actual MP4, and checks subtitle/source exports, sharing permissions, retries, and deletion. These checks establish local integration rather than live model accuracy.
+
+Optional checks against public citation services:
+
+```bash
 python scripts/check_sources.py --output docs/source-check.json
 ```
 
-The second command makes public-source requests without paid API keys or user media. The [saved report](docs/source-check.json) records successful sample checks of Quranpedia, HadeethEnc, Dorar Hadith, Dorar tafsir, two Al-Jamhara terms, and automatic Hadith translation matching on October 2, 2026. It proves connectivity and expected fields for those samples, not corpus-wide accuracy or permission to redistribute every source. Both paid keys are now configured locally. ElevenLabs successfully transcribed the supplied 53.9-second Arabic example with 113 word timestamps. Gemini translated the first batch (five resulting segments), then subsequent processing stopped with HTTP 429. The saved results can be resumed without retranscribing. Full live translation and human review are still pending; see the [example receipt](docs/live-example.md).
+This command makes network requests to public sources without sending user videos or invoking paid AI services. The [saved sample report](docs/source-check.json) records successful checks on October 2, 2026; it does not establish corpus-wide matching accuracy.
 
-The local suite currently passes 77 tests. Its full integration test uploads an actual video with audio, exercises streaming Scribe requests and Gemini translation/dictionary/excerpt requests through fake external transports, matches Quran/Hadith source fixtures, flags an untranscribed audio interval, requires review, and exports a real MP4 using FFmpeg. It also checks SRT, source JSON, read-only sharing, editor access, and deletion. Reference fixtures are synthetic; this test proves local integration, not live model accuracy. See the [implementation audit](docs/implementation-status.md) for remaining launch checks.
+To repair source links in saved projects:
 
-## Privacy and current limits
+```bash
+python scripts/refresh_source_links.py          # Preview only
+python scripts/refresh_source_links.py --apply  # Save resolved links
+```
 
-There are **no accounts**. Projects, uploaded videos, edits, and exports remain on the server until the editor deletes the project; there is no automatic expiry or backup system. Anyone with a share link can view its published project, while editing requires a separate private link. Keep the edit link and API keys private. `.env` and `data/` are excluded from Git.
+Link repairs preserve transcript text, translations, grades, and review decisions, and do not retranscribe or retranslate videos.
 
-The supplied real video has been partially processed with live keys; completing translation, human review, and deployment verification remain necessary before public launch. Human review is especially important for partial verse quotations, hadith attribution and grading, low-confidence speech, and translation in context.
+## Privacy and storage
 
-Dictionary integration retrieves only detected terms and temporarily caches up to 256 records in memory. Search results must match the full headword; related or ambiguous results are not accepted. Not all entries have English translations, and the site's search can omit records. Missing dictionary matches flag affected segments for review. Source-guided speech translation is still machine translation, not an approved translation of the whole sentence. It adds one Gemini call per batch containing matched terms, plus public-source requests.
+There are **no accounts and no backup system**. Uploaded videos, projects, edits, and exports remain on the server until the editor deletes the project; there is no automatic expiry. Sharing uses a read-only link, while editing requires a separate private link.
+
+Automatic processing sends uploaded media to ElevenLabs and transcript/translation context to OpenAI. OpenAI Responses requests use `store: false`; each provider's own data policies still apply. Public source lookups send relevant quotation or term queries to their services.
+
+Keep API keys and editor links private. `.env`, `data/`, generated logs, and Python caches are excluded by `.gitignore`; only `.env.example` belongs in the repository. Do not force-add private project files when pushing.
+
+## Deployment and remaining work
+
+For a Linux host with a configured domain, set `JISR_DOMAIN` and the API keys in `.env`, then run:
+
+```bash
+docker compose up -d --build
+```
+
+Docker, persistent storage, and Caddy HTTPS configuration are supplied. Public deployment has not yet been verified end to end.
+
+Live OpenAI testing translated all nine cues from the saved 53.9-second example using its original 113 word timestamps; Maryam 19:96 received a sourced translation. Three cues still required human review at the time of that check. A separate ElevenLabs test reported missing `speech_to_text` permission; verify the key's access and a fresh upload before relying on automatic transcription. See the [live example receipt](docs/live-example.md).
+
+Before public launch, complete human review of representative Arabic videos, verify live transcription and translation together, and check HTTPS, access links, persistent storage, source retrieval, export, and deletion on the intended host. Citation matching, uncertain speech detection, and machine translation still require editor judgment. The [implementation audit](docs/implementation-status.md) records the outstanding launch checks.
 
 ## Team
 
-- **Turki:** frontend, UI/UX, integration, export.
-- **Anas** AI Engineering, translation, API integration.
+- **Turki:** frontend, UI/UX, integration, and export.
+- **Anas:** AI engineering, translation, and API integration.

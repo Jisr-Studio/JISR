@@ -1,0 +1,15 @@
+const assert = require('node:assert/strict');
+const {links} = require('../dist/js/citation-links.js');
+const search = 'https://dorar.net/hadith/search?q=test';
+const direct = 'https://dorar.net/h/lS2wNsu7';
+assert.equal(links({url:search},'hadith')[0].label,'البحث في المصدر');
+assert.equal(links({url:direct,link_status:'direct'},'hadith')[0].href,direct);
+assert.equal(links({url:direct,explanation_status:'unavailable'},'hadith').length,1);
+const full=links({url:'https://hadeethenc.com/ar/browse/hadith/1',translation_status:'sourced',translation_url:'https://hadeethenc.com/en/browse/hadith/1',verification:{url:direct},explanation_status:'available'},'hadith');
+assert.deepEqual(full.map(x=>x.role),['source','translation','verification']);
+const quran=links({url:'https://quranpedia.net/embed?surah=2&ayah=222',explanation_url:'https://dorar.net/tafseer/2/38',explanation_status:'available'},'quran');
+assert.deepEqual(quran.map(x=>x.role),['source','explanation']);
+const unavailable=links({url:'https://quranpedia.net/embed?surah=2&ayah=222',explanation_url:'https://dorar.net/tafseer/2',explanation_status:'unavailable'},'quran');
+assert.equal(unavailable[1].label,'تصفح تفاسير السورة');
+assert.deepEqual(links({url:'javascript:alert(1)',explanation_url:'https://user:pass@example.com/',explanation_status:'available'},'hadith'),[]);
+console.log('Citation link UI checks passed.');

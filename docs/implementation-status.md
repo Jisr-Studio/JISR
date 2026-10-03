@@ -1,8 +1,6 @@
-# Implementation audit — October 2, 2026
+# Implementation audit — October 3, 2026
 
-The backend has both paid keys configured locally, and the supplied example has been partially processed. Public launch remains unverified. The frontend now includes a start screen, upload entry, processing status, and a studio with Review, Sources, and Appearance tabs.
-
-The team paused translation integration on October 2 while choosing an alternative API to Gemini. Preserve the current implementation and saved example; the next authorized step is integrating the chosen provider and completing live verification. No further provider requests are running.
+OpenAI GPT-6 Luna is integrated across translation, terminology review, and partial-source alignment. I1's saved 113-word transcript now has complete English translation and a sourced Quran quotation. The current ElevenLabs key returned HTTP 401 in a 12-second test; new automatic transcription remains blocked. Human review and public deployment remain unfinished.
 
 ## Requirements and evidence
 
@@ -10,9 +8,9 @@ The team paused translation integration on October 2 while choosing an alternati
 |---|---|---|
 | No accounts; no backup system | Editor capability token, read-only share token, local SQLite/files, no account routes or backup service | Implemented |
 | Upload Arabic video | Streaming multipart receiver validates a video stream; real HTTP upload exercised in `test_end_to_end.py` | Locally verified |
-| ElevenLabs transcription and word timing | Streaming Scribe v2 request inspected at the transport boundary; returned word timing survives partitioning | Live transcription succeeded on I1.mp4; human accuracy review remains pending |
-| Gemini ordinary-speech translation | Structured Interactions requests, transcript-derived Arabic/timing, exact item and word-range coverage; tested with controlled responses | First live batch saved; later batches blocked by Gemini HTTP 429; full translation and quality review pending |
-| Islamic terminology | Exact Al-Jamhara source retrieval, definitions supplied to speech-only Gemini refinement; public sample receipt and integration tests | Sample source connectivity and local integration verified |
+| ElevenLabs transcription and word timing | Streaming Scribe v2 request inspected at the transport boundary; returned word timing survives partitioning | Earlier I1 transcription succeeded; current key test returned HTTP 401; human accuracy review remains pending |
+| OpenAI ordinary-speech translation | Strict JSON Responses requests, transcript-derived Arabic/timing, exact item and word-range coverage | All 9 live I1 cues translated; human quality review remains pending |
+| Islamic terminology | Exact Al-Jamhara source retrieval, definitions supplied to speech-only translation refinement; public sample receipt and integration tests | Sample source connectivity and local integration verified |
 | Quran citations and sourced English | Quranpedia text matching and sourced translation; full references separated from subtitle excerpts; canonical texts are not generated | Sample source connectivity and local integration verified |
 | Hadith narrator, grade, attribution, English | Dorar candidate verification; unique complete HadeethEnc match or explicit ambiguity/manual linking; each provider's metadata remains separate | Sample source connectivity and local integration verified |
 | Explanations and links | Dorar indexed tafsir with section scope; HadeethEnc explanation when available; failures retain links and explicit unavailable status | Source samples verified; completeness of all references is not guaranteed |
@@ -35,13 +33,13 @@ python -m unittest discover -s tests -v
 node --check dist/js/app.js
 ```
 
-Result: **77 tests passed**, including `tests/test_end_to_end.py`. FFmpeg was available, so the integration test ran rather than being skipped. Source checks in `source-check.json` have seven successful public-service samples; they do not prove corpus-wide matching accuracy. Current `/api/health` reports both paid keys configured and FFmpeg available. Health flags indicate configuration only.
+Result: **84 tests passed**, including `tests/test_end_to_end.py`. FFmpeg was available, so the integration test ran rather than being skipped. Source checks in `source-check.json` have seven successful public-service samples; they do not prove corpus-wide matching accuracy. Current `/api/health` reports both paid keys configured and FFmpeg available. Health flags indicate configuration only.
 
 ## Remaining work before public launch
 
-1. Resolve Gemini's HTTP 429 response, then resume the saved example with the editor's processing button. Both keys have been supplied, and completed transcription/translation batches are retained.
+1. Correct current ElevenLabs access (the short live test returned HTTP 401), restart the server, and verify a newly uploaded video's transcription. OpenAI translation of the saved example is complete.
 2. Process a real, audible Arabic clip containing ordinary speech, a partial verse, a Hadith, and weak audio. Verify timestamps, preserved context, every source excerpt, attribution, and translation with a human reviewer. Repeat an interrupted/failed processing job with the live services.
 3. Run `docker compose up -d --build` on the intended Linux host with `JISR_DOMAIN`; verify HTTPS, persistent storage after restart, source-service access, private editor links, MP4 rendering, and deletion.
 4. Finish the deferred upload/processing pages when the user resumes that UI work. Keep the current retention behavior visible: project files remain until the editor deletes them; there is no automatic expiry or backup system.
 
-The local implementation checks cannot replace these launch checks. Partial live paid processing is documented in `live-example.md`; no complete live translation or public deployment result is claimed.
+The local implementation checks cannot replace these launch checks. Live-provider testing is documented in `live-example.md`; complete live translation is recorded, while human review and public deployment remain unverified.

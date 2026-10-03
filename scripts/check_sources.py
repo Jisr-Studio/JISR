@@ -39,7 +39,7 @@ def check_sources():
     for name, lookup, fields in samples:
         result = {"service": name, "ok": False}
         try:
-            with patch.dict(server.os.environ, {"GEMINI_API_KEY": ""}):
+            with patch.dict(server.os.environ, {"OPENAI_API_KEY": ""}):
                 source = lookup()
             missing = [field for field in fields if not source.get(field)]
             if missing:

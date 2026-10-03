@@ -28,7 +28,7 @@ class ProcessingHTTPTests(unittest.TestCase):
         self.patches = [
             patch.object(server, "DATA", root),
             patch.object(server, "DB", root / "test.sqlite3"),
-            patch.dict(os.environ, {"ELEVENLABS_API_KEY": "test-elevenlabs", "GEMINI_API_KEY": "test-gemini"}),
+            patch.dict(os.environ, {"ELEVENLABS_API_KEY": "test-elevenlabs", "OPENAI_API_KEY": "test-openai"}),
             patch.object(server, "lookup_tafsir", return_value={"explanation": "شرح موثق للآية.", "explanation_url": "https://dorar.net/tafseer/2/38", "explanation_status": "available"}),
             patch.object(server, "transcribe", return_value={"words": [
                 {"type": "word", "text": "إن", "start": 1, "end": 1.2},
@@ -38,7 +38,7 @@ class ProcessingHTTPTests(unittest.TestCase):
                 {"type": "word", "text": "ويحب", "start": 2.4, "end": 2.7},
                 {"type": "word", "text": "المتطهرين.", "start": 2.8, "end": 3.4},
             ]}),
-            patch.object(server, "post_json", return_value={"status": "completed", "steps": [{"type": "model_output", "content": [{"type": "text", "text": '{"items":[{"id":"SEGMENT_ID","english":"Machine draft","kind":"quran","surah":2,"ayah":222}]}'}]}]}),
+            patch.object(server, "post_json", return_value={"status": "completed", "output": [{"type": "message", "content": [{"type": "output_text", "text": '{"items":[{"id":"SEGMENT_ID","english":"Machine draft","kind":"quran","surah":2,"ayah":222}]}'}]}]}),
         ]
         for item in self.patches:
             item.start()
@@ -79,12 +79,12 @@ class ProcessingHTTPTests(unittest.TestCase):
 
         original_post = server.post_json
         def model_response(url, payload, headers, timeout=90):
-            segment_id = json.loads(payload["input"][0]["content"][0]["text"].split("Input: ", 1)[1])[0]["id"]
-            result = json.loads(original_post.return_value["steps"][0]["content"][0]["text"].replace("SEGMENT_ID", segment_id))
+            segment_id = json.loads(payload["input"].split("Input: ", 1)[1])[0]["id"]
+            result = json.loads(original_post.return_value["output"][0]["content"][0]["text"].replace("SEGMENT_ID", segment_id))
             for item in result["items"]:
                 item["terms"] = []
                 item["parts"] = [{"first_word": 0, "last_word": 5, **{k: item[k] for k in ("english", "kind", "surah", "ayah")}}]
-            return {"status": "completed", "steps": [{"type": "model_output", "content": [{"type": "text", "text": json.dumps(result)}]}]}
+            return {"status": "completed", "output": [{"type": "message", "content": [{"type": "output_text", "text": json.dumps(result)}]}]}
 
         with patch.object(server, "get_json", side_effect=source_response), patch.object(server, "post_json", side_effect=model_response):
             status, _ = self.request(f"/api/projects/{project_id}/process", "POST", b"{}", token)
@@ -211,7 +211,7 @@ class ProcessingHTTPTests(unittest.TestCase):
         with server.db() as con:
             con.execute("INSERT INTO projects(id,edit_token,share_token,title,filename,status,duration,segments,created,updated) VALUES(?,?,?,?,?,?,?,?,?,?)",
                         (project_id, token, "9" * 32, "Automatic Hadith", "original.mp4", "uploaded", 5, json.dumps([segment]), time.time(), time.time()))
-        translated = {"status": "completed", "steps": [{"type": "model_output", "content": [{"type": "text", "text": json.dumps({"items": [{"id": segment_id, "english": "Machine draft", "kind": "hadith", "hadith_query": spoken, "terms": []}]})}]}]}
+        translated = {"status": "completed", "output": [{"type": "message", "content": [{"type": "output_text", "text": json.dumps({"items": [{"id": segment_id, "english": "Machine draft", "kind": "hadith", "hadith_query": spoken, "terms": []}]})}]}]}
         fragment = f'<div>{spoken}</div><div class="hadith-info">الراوي : أبو مالك الأشعري | المحدث : مسلم | المصدر : صحيح مسلم | خلاصة حكم المحدث : صحيح</div>'
         reference = {"kind": "hadith", "arabic": spoken, "english": "Source translation", "explanation": "شرح موثق", "narrator": "أبو مالك الأشعري", "grade": "صحيح", "attribution": "مسلم", "url": "https://hadeethenc.com/ar/browse/hadith/65004", "translation_status": "sourced", "verification": {"provider": "Dorar"}}
         with patch.object(server, "post_json", return_value=translated), patch.object(server, "get_json", return_value={"ahadith": {"result": fragment}}), patch.object(server, "enrich_hadith_translation", return_value=reference):
@@ -239,7 +239,7 @@ class ProcessingHTTPTests(unittest.TestCase):
         english = "The Prophet said: Purity is half of faith, and praise fills the Scale."
         excerpt = "Purity is half of faith,"
         segment = {"id": segment_id, "start": 0, "end": 4, "ar": spoken, "en": "Machine draft"}
-        with patch.dict(os.environ, {"GEMINI_API_KEY": ""}):
+        with patch.dict(os.environ, {"OPENAI_API_KEY": ""}):
             server.attach_source(segment, "hadith", {"arabic": spoken + " والحمد لله تملأ الميزان", "english": english, "partial": True})
         with server.db() as con:
             con.execute("INSERT INTO projects(id,edit_token,share_token,title,filename,status,duration,segments,created,updated) VALUES(?,?,?,?,?,?,?,?,?,?)",

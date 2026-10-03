@@ -104,7 +104,7 @@ class PipelineTests(unittest.TestCase):
         parsed = server.parse_dorar(fragment)
         self.assertEqual(parsed[0]["narrator"], "أبو مالك الأشعري")
         self.assertEqual(parsed[0]["grade"], "صحيح")
-        with patch.object(server, "get_json", return_value={"ahadith": {"result": fragment}}):
+        with patch.object(server, "get_json", return_value={"ahadith": {"result": fragment}}), patch.object(server, "get_html", return_value=""):
             seg = {"start": 0, "end": 4, "ar": "الطهور شطر الإيمان", "en": "Purification is half of faith.", "candidate": {"hadith_query": "الطهور شطر الإيمان"}, "type": "speech"}
             self.assertTrue(server.verify_hadith(seg))
             self.assertTrue(seg["needs_review"])
@@ -151,54 +151,54 @@ class PipelineTests(unittest.TestCase):
         row["segments"] = json.dumps(segments)
         self.assertFalse(server.publishable(row))
 
-    @patch.dict("os.environ", {"GEMINI_API_KEY": "test-key"})
+    @patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"})
     @patch.object(server, "post_json")
-    def test_gemini_interactions_contract(self, post_json):
-        post_json.return_value = {"status": "completed", "steps": [{"type": "model_output", "content": [{"type": "text", "text": '{"items":[{"id":"one","english":"Ablution is worship.","kind":"speech","terms":[]}]}'}]}]}
+    def test_openai_responses_contract(self, post_json):
+        post_json.return_value = {"status": "completed", "output": [{"type": "message", "content": [{"type": "output_text", "text": '{"items":[{"id":"one","english":"Ablution is worship.","kind":"speech","terms":[]}]}'}]}]}
         segments = [{"id": "one", "ar": "الوضوء عبادة", "en": "", "needs_review": False},
                     {"id": "gap", "ar": "", "en": "", "audio_gap": True, "needs_review": True}]
-        server.gemini_translate(segments)
+        server.translate_segments(segments)
         self.assertEqual(segments[0]["en"], "Ablution is worship.")
         self.assertEqual(segments[1]["en"], "")
         url, payload, headers = post_json.call_args.args
-        self.assertTrue(url.endswith("/v1/interactions"))
-        self.assertEqual(payload["input"][0]["type"], "user_input")
-        self.assertEqual(payload["model"], server.GEMINI_MODEL)
-        self.assertEqual(payload["response_format"]["mime_type"], "application/json")
-        self.assertEqual(headers["x-goog-api-key"], "test-key")
+        self.assertEqual(url, "https://api.openai.com/v1/responses")
+        self.assertIsInstance(payload["input"], str)
+        self.assertEqual(payload["model"], server.OPENAI_MODEL)
+        self.assertTrue(payload["text"]["format"]["strict"])
+        self.assertEqual(headers["Authorization"], "Bearer test-key")
 
-    @patch.dict("os.environ", {"GEMINI_API_KEY": "test-key"})
+    @patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"})
     @patch.object(server, "post_json")
-    def test_gemini_retry_skips_completed_batches(self, post_json):
+    def test_translation_retry_skips_completed_batches(self, post_json):
         size = server.TRANSLATION_BATCH_SIZE
         segments = [{"id": str(i), "ar": "الوضوء", "en": "", "needs_review": False} for i in range(size + 1)]
-        first = {"status": "completed", "steps": [{"type": "model_output", "content": [{"type": "text", "text": json.dumps({"items": [{"id": str(i), "english": "Ablution", "kind": "speech", "terms": []} for i in range(size)]})}]}]}
-        last = {"status": "completed", "steps": [{"type": "model_output", "content": [{"type": "text", "text": json.dumps({"items": [{"id": str(size), "english": "Ablution", "kind": "speech", "terms": []}]})}]}]}
+        first = {"status": "completed", "output": [{"type": "message", "content": [{"type": "output_text", "text": json.dumps({"items": [{"id": str(i), "english": "Ablution", "kind": "speech", "terms": []} for i in range(size)]})}]}]}
+        last = {"status": "completed", "output": [{"type": "message", "content": [{"type": "output_text", "text": json.dumps({"items": [{"id": str(size), "english": "Ablution", "kind": "speech", "terms": []}]})}]}]}
         snapshots = []
         post_json.side_effect = [first, RuntimeError("temporary failure")]
         with self.assertRaises(RuntimeError):
-            server.gemini_translate(segments, checkpoint=lambda items: snapshots.append(json.dumps(items)))
+            server.translate_segments(segments, checkpoint=lambda items: snapshots.append(json.dumps(items)))
         self.assertEqual(len(snapshots), 1)
         self.assertTrue(all(item["en"] for item in segments[:size]))
         self.assertFalse(segments[size]["en"])
         post_json.side_effect = [last]
-        server.gemini_translate(segments)
-        self.assertEqual(len(json.loads(post_json.call_args.args[1]["input"][0]["content"][0]["text"].split("Input: ", 1)[1])), 1)
+        server.translate_segments(segments)
+        self.assertEqual(len(json.loads(post_json.call_args.args[1]["input"].split("Input: ", 1)[1])), 1)
         self.assertTrue(all(item["en"] for item in segments))
 
     @patch.object(server, "project_row")
     @patch.object(server, "save_project")
     @patch.object(server, "transcribe")
-    @patch.object(server, "gemini_translate")
+    @patch.object(server, "translate_segments")
     @patch.object(server, "verify_quran")
-    def test_background_processing_reaches_review_state(self, verify_quran, gemini_translate, transcribe, save_project, project_row):
+    def test_background_processing_reaches_review_state(self, verify_quran, translate_segments, transcribe, save_project, project_row):
         project_row.return_value = {"id": "a" * 32, "filename": "original.mp4", "segments": "[]", "duration": 0}
         transcribe.return_value = {"words": [{"type": "word", "text": "الوضوء", "start": 0, "end": .5}, {"type": "word", "text": "عبادة.", "start": .6, "end": 1.0}]}
         def classify(items, checkpoint=None):
             items[0]["en"] = "Ablution is worship."
             items[0]["candidate"] = {"kind": "quran", "surah": 1, "ayah": 1}
             return items
-        gemini_translate.side_effect = classify
+        translate_segments.side_effect = classify
         verify_quran.return_value = False
         self.assertTrue(server.PROCESS_SLOTS.acquire(blocking=False))
         server.process_project("a" * 32)
@@ -210,15 +210,15 @@ class PipelineTests(unittest.TestCase):
     @patch.object(server, "project_row")
     @patch.object(server, "save_project")
     @patch.object(server, "transcribe")
-    @patch.object(server, "gemini_translate")
-    def test_retry_reuses_saved_transcript_and_translation(self, gemini_translate, transcribe, save_project, project_row):
+    @patch.object(server, "translate_segments")
+    def test_retry_reuses_saved_transcript_and_translation(self, translate_segments, transcribe, save_project, project_row):
         segment = {"id": "one", "ar": "الوضوء عبادة", "en": "Ablution is worship.", "start": 0, "end": 1,
                    "type": "speech", "source": None, "needs_review": False, "candidate": {"kind": "speech"}}
         project_row.return_value = {"id": "a" * 32, "filename": "original.mp4", "segments": json.dumps([segment]), "duration": 3}
         self.assertTrue(server.PROCESS_SLOTS.acquire(blocking=False))
         server.process_project("a" * 32)
         transcribe.assert_not_called()
-        gemini_translate.assert_not_called()
+        translate_segments.assert_not_called()
         self.assertEqual(save_project.call_args_list[-1].kwargs["status"], "ready")
 
 

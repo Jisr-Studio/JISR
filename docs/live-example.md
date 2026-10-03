@@ -1,24 +1,21 @@
-# Live example receipt — October 2, 2026
+# Live example receipt — October 3, 2026
 
-**Paused by the user:** choose an alternative translation API before continuing integration. The implementation and saved results are retained; no further automatic translation attempts are running.
-
-The user supplied **I1.mp4** and authorized processing with their configured ElevenLabs and Gemini keys. Keys, the private edit link, the uploaded video, and project data are excluded from the source archive and Git.
+The user configured ElevenLabs and OpenAI keys and authorized a small live test. Credentials, the private editor link, uploaded media, and project data remain local and Git-ignored.
 
 | Check | Observed result |
 |---|---|
-| Upload | Local project created; video duration 53.9 seconds |
-| ElevenLabs Scribe v2 | Successful real transcription with 113 word timestamps; reused on subsequent attempts |
-| Gemini | First structured translation batch saved; 5 translated segments out of 13 after splitting the quotation |
-| Remaining translation | Stopped with HTTP 429 after earlier service-unavailability/timeouts; the project retains completed work |
-| Quota diagnostic | One Gemini 3.8 request at 12:35:57 UTC returned HTTP 429 with `Retry-After: 41040` seconds; no automatic retry was made |
-| Alternative model | At the user's supplied usage screenshot, the running server was temporarily switched to Gemini 3.7 Flash; its bounded pending-batch attempt ended in HTTP 503 at 12:39 UTC without altering saved results |
-| Quran source | Maryam 19:96 matched to Quranpedia Hafs text and Saheeh International translation; linked through the editor API without human confirmation |
-| Explanation | Dorar commentary retrieved with its original section scope, verses 96–98 |
-| Source formatting | Quranpedia returned HTML and translator footnotes; subtitle text is cleaned without rewriting its wording, and footnotes remain in source metadata |
-| Review hints | Unfinished words and one unusually long word timing flagged; no guessed transcript corrections applied |
-| Hadith | No Hadith citation established in this example; this clip does not validate the live Hadith path |
-| Export/share | Blocked while translation and human review remain incomplete |
+| OpenAI GPT-6 Luna | Successful live Responses request with strict JSON output; the full Arabic greeting stayed in one cue |
+| I1.mp4 | 53.9-second video uploaded into the current JISR_Pull_1 application |
+| Saved transcription | Reused all 113 original ElevenLabs word timestamps from the earlier example; no full-video retranscription charge |
+| Full English translation | All 9 resulting segments translated; exact original word coverage validated |
+| Quran source | Maryam 19:96 matched to Quranpedia Hafs text and sourced Saheeh International English |
+| Review | 3 segments require review, including the verse and uncertain words; no automatic human confirmation |
+| Export and sharing | Blocked until the editor resolves outstanding review |
+| Current ElevenLabs key | A separate 12-second Scribe v2 test returned HTTP 401. A diagnostic request confirmed `missing_permissions` for `speech_to_text`; enable Speech to Text on the existing key before retrying new transcription |
+| Hadith | No Hadith quotation established in I1; this video does not prove the live Hadith path |
 
-The local suite passes **77 tests**, including actual FFmpeg rendering with controlled external API responses. This does not substitute for completing and reviewing the real example. The local editor's **متابعة المعالجة** button resumes pending batches after Gemini becomes available; it does not repeat the saved transcription or completed translation.
+The new example uses fresh grouping and OpenAI translation, with the original saved transcription reused.
 
-The active local server uses Gemini 3.7 through process environment overrides. The user's `.env` keys and source defaults were not changed; a normal restart returns to the configured model or the default Gemini 3.8. A lower displayed historical peak for another model does not prove current remaining quota or service availability.
+84 local tests pass, including a complete OpenAI-shaped transport workflow with synthetic Quran/Hadith records, human review gates, actual FFmpeg MP4 export, subtitle/source export, sharing, and deletion. These checks establish local integration, not corpus-wide citation accuracy or public deployment readiness.
+
+Sentence grouping now gathers context before the model proposes subtitle boundaries. Original words and timestamps stay authoritative. This reduces premature splitting, but translation and semantic boundaries still require review.
