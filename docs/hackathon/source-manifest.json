@@ -1,0 +1,23 @@
+{
+  "received_on": "2026-10-03",
+  "files": [
+    {
+      "source_name": "da2OrbRMEsNrIQaoq8z6jEv26opKXdQmq1i0XfXo.pdf",
+      "workspace_copy": "participant-guide.pdf",
+      "sha256": "7dcf525b7fbdee92b0eda80432ec03c9794614031e3584dcf5012977e5488994",
+      "modified": false
+    },
+    {
+      "source_name": "LcXbkXRzH232sfKL8cAgJ1AI7jQATxu2bP0S4EWu.pptx",
+      "workspace_copy": "presentation-template.pptx",
+      "sha256": "9d8a125c29171c90c5e69ef8407ebbffe633ae1714c88cc9a83c03e7f1b189fd",
+      "modified": false
+    },
+    {
+      "source_name": "ZA1IoQnh5S1tuLFiBghyT7U2HYN6IpzNDg9vamHW.pdf",
+      "workspace_copy": "scientific-sources-package.pdf",
+      "sha256": "446911252f2012d36afe52db3e9afaf0dae52615da34e134aa4e95a199cd65bf",
+      "modified": false
+    }
+  ]
+}

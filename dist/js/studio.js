@@ -119,20 +119,69 @@ const stagePanel = document.createElement('section');
 stagePanel.className = 'stage-panel';
 stagePanel.setAttribute('role','status');
 $('.workflow').after(stagePanel);
+let processingStarted = null;
+let processingProject = null;
+const processingSteps = ['تفريغ الصوت', 'الترجمة', 'مطابقة المصادر', 'جاهز للمراجعة'];
+function updateProcessingTime() {
+  const clock = stagePanel.querySelector('.processing-time');
+  if(clock && processingStarted) clock.textContent = 'الوقت المنقضي ' + fmt((Date.now() - processingStarted) / 1000);
+}
+setInterval(updateProcessingTime, 1000);
 const viewStatus = status;
 status = function () {
   viewStatus();
   syncView();
   if(readOnly) selectTool(1);
-  const processing = project && ['uploaded','processing','error'].includes(project.status) && !readOnly;
+  const processing = project && ['uploaded','processing','error','ready'].includes(project.status) && !readOnly;
   stagePanel.hidden = !processing;
   if(processing) {
+    const running = project.status === 'processing';
+    const ready = project.status === 'ready';
+    const failed = project.status === 'error';
+    if(running && (!processingStarted || processingProject !== project.id)) {
+      processingStarted = Date.now();
+      processingProject = project.id;
+    }
+    if(!running) processingStarted = null;
+    const stage = project.stage || '';
+    const current = ready ? 3 : stage.includes('مطابقة') ? 2 : stage.includes('ترجم') ? 1 : 0;
+    stagePanel.classList.toggle('is-running', running);
+    stagePanel.classList.toggle('is-ready', ready);
+    stagePanel.classList.toggle('is-error', failed);
     stagePanel.replaceChildren();
     const heading = document.createElement('b');
-    heading.textContent = project.status === 'processing' ? 'جارٍ تجهيز مساحة التحرير' : project.status === 'error' ? 'المعالجة تحتاج انتباهك' : 'الفيديو مرفوع — الخطوة التالية: المعالجة';
+    heading.textContent = running ? 'جارٍ تحليل الفيديو' : ready ? 'اكتملت المعالجة — دورك في المراجعة' : failed ? 'توقفت المعالجة' : 'الفيديو مرفوع — الخطوة التالية: المعالجة';
     const detail = document.createElement('p');
     detail.textContent = project.error || project.stage || 'ابدأ التفريغ والترجمة، أو أدخل نصاً وتوقيتاً يدوياً.';
     stagePanel.append(heading, detail);
+    if(running || ready) {
+      const steps = document.createElement('ol');
+      steps.className = 'processing-steps';
+      processingSteps.forEach((name, index) => {
+        const step = document.createElement('li');
+        step.className = index < current || ready ? 'done' : index === current ? 'active' : '';
+        if(index === current) step.setAttribute('aria-current', 'step');
+        const marker = document.createElement('span');
+        marker.textContent = index < current || ready ? '✓' : String(index + 1);
+        const label = document.createElement('span');
+        label.textContent = name;
+        step.append(marker, label);
+        steps.append(step);
+      });
+      stagePanel.append(steps);
+    }
+    if(running) {
+      const activity = document.createElement('div');
+      activity.className = 'processing-activity';
+      activity.setAttribute('role', 'progressbar');
+      activity.setAttribute('aria-label', 'تحليل الفيديو قيد التنفيذ');
+      activity.setAttribute('aria-valuetext', stage || 'جارٍ بدء المعالجة');
+      const timing = document.createElement('div');
+      timing.className = 'processing-meta';
+      timing.innerHTML = '<span class="processing-time"></span><span>قد يستغرق ذلك عدة دقائق حسب طول الفيديو واستجابة الخدمات.</span>';
+      stagePanel.append(activity, timing);
+      updateProcessingTime();
+    }
   }
 };
 status();

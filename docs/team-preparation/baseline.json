@@ -1,0 +1,104 @@
+{
+  "prepared_on": "2026-10-03",
+  "timezone": "Asia/Riyadh",
+  "recorded_at": "2026-10-03T17:23:01.817601+03:00",
+  "git_head": "0a83e093d02545adeed0a180d39352acf80ab044",
+  "preexisting_uncommitted_application_files": [
+    "dist/css/studio.css",
+    "dist/js/studio.js"
+  ],
+  "sha256_of_tracked_working_files": {
+    ".dockerignore": "a2c217472f16a31ddbaf2ad570252769a1ac4dc41d13a5487d09b7b30ae75793",
+    ".env.example": "5a1e9554828700ede7a5a79538cdc316e7357052c7fb0a8899250f045e2c1cc0",
+    ".gitignore": "402337afb6a002ed4dde180127ed8c13267df000d428f73c10b7ca3494afe4e8",
+    ".vscode/extensions.json": "b2c916f3d7f15af08d29f0356cb58e98368a0f94999d2d40a56c391c30bb873f",
+    ".vscode/launch.json": "6bef241341d08c3306901247b2b8692555d127421d4fed1e2846087468830154",
+    ".vscode/settings.json": "4f847eaa185f336614ffe9edf8e7552611816a69f4d3912c80ba8090d33c2445",
+    ".vscode/tasks.json": "e7afc8aa0c77dd09507b99895c7e26187ac18613905e4599e566edb9bf6b2d45",
+    "Caddyfile": "43129430830c24774f7e51bf5e4d153f5acc20574d290058e574295852363cc6",
+    "Dockerfile": "c5f1bc3e2a20c2ed8618cda40beba4e4fe801aacd5ea2288c83b27bae18e677a",
+    "README.md": "a1a032566cb70e801256a55833a411d8b2863b889b7b7bc3368bdfd92a4c4fa2",
+    "archive/README.md": "635fbbf4c8dd3087a31bdc38c0ccf81cd46bebe5a23651a157a7fb15cff3e750",
+    "archive/prototype/backend/app/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "archive/prototype/backend/app/main.py": "9c293e40891c93b13f69844f1a8247f7147f3f2338b85c9450350b7fa99556f6",
+    "archive/prototype/backend/requirements.txt": "8c9e39954dd1e4d56d5a65644308a56c8e2a52373e0e69dcebec43a3ad622973",
+    "archive/prototype/frontend/app.js": "f48b77121e35ee6b5364fa195651b3b90ba76121e2e642defc6f1242ed992eae",
+    "archive/prototype/frontend/assets/demo.mp4": "5b094fb1b0b61033c32586d1e619146ed210ed4a415ace46827e51a92ce1f00a",
+    "archive/prototype/frontend/favicon.svg": "f27c5633a44f74e26acf63a51b1e1a4c078692650a823143973047f0b93911e0",
+    "archive/prototype/frontend/index.html": "82b8f371c822b6c72cf333131aff4b187f8dae2a95a2a57e42dd3939d59c36c7",
+    "archive/prototype/frontend/mock/project.json": "32ff7de914a7bf502d99f8c02a56cdbff1f2aa777250f40dadd5b9001e37cb77",
+    "archive/prototype/frontend/style.css": "c4e522888501a839102aee6972f245c3b059196936d6548f67701f0efa8c7196",
+    "compose.yaml": "ae653d91e96eb5ccfddf47a684a679bd545daddb4ac6dfcb068b1ad4080ee75d",
+    "dist/css/studio.css": "e809d9848f793ca9495a4a7b10fdfecf460246c1cde3aec797ed7282d8d6d01d",
+    "dist/css/style.css": "9a0cf3182140cb0ebfe561deaf0bf94daf1555cec48ac14c0ecded162b8e4661",
+    "dist/demo.mp4": "87297eb42321963fb851d429b8dda474549efeb906a73d2ea618b2b3a2474a54",
+    "dist/favicon.svg": "95b54270ad6740291127b1752b80ba6ed8ec278a0eabb828849f8b979c8d1f97",
+    "dist/index.html": "076cabcb8587c3d75a83104b66fd27bc7fc9d44ca505caf033667c7a92578776",
+    "dist/js/app.js": "8626c070143a3da6751a24afbfd435d4e2371c52a17e55c60e1a33cdacec0684",
+    "dist/js/splash.js": "7963880feac836d1053988d6024cb62d5048c03f021586f12183d8a6cf0e787c",
+    "dist/js/studio.js": "b1310a5f34326e720cc9aa97068e6f50171d4517d1f3e6a9417efb48c733215c",
+    "docs/code-map.md": "3ff6b54ffc83070a55fd5f6714396942335fa9162d28ea0e45ab2c45ca1d272c",
+    "docs/data-contract.md": "4649feac3f7316f72b205568875e315aad0a34ca82c5ea6eab31067b3114c754",
+    "docs/implementation-status.md": "a70dc531a7ae7b343358e2ce29d6ff429d3f646e8bcf85968c2e4159e0e82ebd",
+    "docs/live-example.md": "734a49a69a600bac6126b60ea0514c9915ec062044293b380585975a14f2b1fa",
+    "docs/previews/splash-preview.jpg": "ed3085d378e4c7e903935b403d330959ad990846548f16da73b8d65af7861889",
+    "docs/previews/start-preview.jpg": "a0e2c24e0408f59ad08e3e8ed77adb6ac2aa1b0a0dd142745ce74e76679284c6",
+    "docs/previews/studio-desktop.png": "747635ff741b9f7bd68448c0d121665c6ed65d1b4429b730b8b2ab1b7e0966eb",
+    "docs/previews/ui-preview.jpg": "6d7c391b27997054f1a31d33bfc319d051a77c77102184850571ae4f82b644dc",
+    "docs/source-check.json": "0ec6585366f8f39edf326a215e86be7a078ce27c20edded88fc124f374d7b13f",
+    "docs/source-policy.md": "63623378383edd9b010f844ed9868e50b6cabcf365a4b31e65a72188772f8c2a",
+    "scripts/check_sources.py": "c1b3631966ec8f933e19a8360163647abe7393be18723e446e6db1cc3e2841a5",
+    "server.py": "d6dc161be430ebfb823e473c92d549c4155463b113467d7562ef621a10ef9d84",
+    "tests/test_end_to_end.py": "734a3d4aa7d4f626882101ffec7c05d3b91f2ddca09911f722e851a08e1f3f3b",
+    "tests/test_hadith_translation.py": "4de602db6377f4e5cf9a348b5156703437cea2243f7ed7e2e406c87cebf4e51a",
+    "tests/test_http.py": "95de019d67e5b3452ffbc412a02e93ba297181628c1f8550c646172b3dd28251",
+    "tests/test_pipeline.py": "bf73c300ddf09edc194d6bbcb52f1d2c0ccb946f4d0ff87dba6b43f1d6aa527a",
+    "tests/test_quote_excerpt.py": "ee0b84c33dc6ed32be29082f6aebbcc1d45b9263d657e4e007bc1a995a76fc34",
+    "tests/test_quran_location.py": "5b7d296b68d9188329b7c945b9dc5aa60dde53f55b6ac6bf99fabe894f354f2c",
+    "tests/test_service_retries.py": "6d30a984e5d40d43c53df7e17e9c05bb641860db437e6118a5e68ed064c097f3",
+    "tests/test_tafsir.py": "a8ce730448c74fff909ba5ab46bfab54ed58df130ba210141a79837533047f93",
+    "tests/test_terminology.py": "f6cd1c96fc7d3179bcd3e1f2f27e49d837f49f806c1833ec8e29b52be46a6f85",
+    "tests/test_translation_parts.py": "144ba41e80dcd058d9bad435fd19b0638dbcbcbdb903860778dcffae297cfbea",
+    "tests/test_word_review.py": "08bb3707783a83f7214a7a596d55e211eba2b1f5105da5cc1f91b8fdab90b5a0"
+  },
+  "saved_project_summary_without_identifiers": [
+    {
+      "status": "error",
+      "stored_duration_seconds": 0.0,
+      "segments": 241,
+      "segments_with_nonempty_english": 30,
+      "linked_citations": 0,
+      "confirmed_citations": 0,
+      "unresolved_review_flags": 10
+    }
+  ],
+  "verification": {
+    "unittest": {
+      "discovered": 77,
+      "passed": 74,
+      "skipped": 3,
+      "errors": 0,
+      "local_test_server_access_required": true,
+      "skip_reasons": [
+        "FFmpeg full integration unavailable",
+        "Video probe unavailable for upload/process test",
+        "FFmpeg probe unavailable for input validation"
+      ]
+    },
+    "javascript_syntax": [
+      "dist/js/app.js",
+      "dist/js/studio.js",
+      "dist/js/splash.js"
+    ],
+    "ffmpeg_on_shell_path": false,
+    "ffprobe_on_shell_path": false,
+    "paid_provider_requests_made": false,
+    "public_deployment_verified": false
+  },
+  "notes": [
+    "Hashes describe existing working files before any October 4-6 implementation, including uncommitted frontend edits.",
+    "This is a manifest, not a recoverable code archive. Retain the repository and working files.",
+    "Private media, project identifiers, tokens, and credentials are intentionally absent.",
+    "Earlier documented 53.9-second example is not assumed to be the same as the currently saved project."
+  ]
+}
