@@ -11,6 +11,35 @@ import server
 
 
 class PipelineTests(unittest.TestCase):
+    @patch.object(server, "get_json")
+    def test_paraphrase_reference_keeps_spoken_text_and_requires_review(self, get_json):
+        ar = {"id": 4817, "hadeeth": "عن أبي هريرة رضي الله عنه عن النبي قال: أذنب عبد ذنبا فقال اللهم اغفر لي ذنبي", "grade": "صحيح", "attribution": "متفق عليه"}
+        en = {"id": 4817, "hadeeth": "A servant committed a sin and asked for forgiveness."}
+        spoken = "أذنب عبد ذنبا فقال اللهم إني أذنب ذنبا اللهم اغفر لي"
+        get_json.return_value = ar
+        with self.assertRaises(ValueError):
+            server.lookup_hadith("4817", spoken)
+        get_json.side_effect = [ar, en]
+        source = server.lookup_hadith("4817", spoken, paraphrase=True)
+        self.assertEqual(source["narrator"], "أبي هريرة")
+        segment = {"ar": spoken, "en": "Speaker's translation", "candidate": {"kind": "hadith"}}
+        server.attach_source(segment, "hadith", source)
+        self.assertEqual(segment["ar"], spoken)
+        self.assertEqual(segment["en"], "Speaker's translation")
+        self.assertEqual(segment["source"]["english"], en["hadeeth"])
+        self.assertTrue(segment["needs_review"])
+        self.assertFalse(segment["reviewed"])
+        row = {"status": "ready", "segments": json.dumps([segment])}
+        self.assertFalse(server.publishable(row))
+        segment.update(start=1.88, end=6.46, reviewed=True, needs_review=False)
+        row["segments"] = json.dumps([segment])
+        self.assertTrue(server.publishable(row))
+        self.assertIn("[Hadith paraphrase]", server.make_srt([segment]))
+        self.assertIn("[Hadith paraphrase]", server.make_ass([segment], {}))
+        self.assertEqual(server.make_sources([segment])[0]["quotation_mode"], "paraphrase")
+        with self.assertRaises(ValueError):
+            server.select_source_english(source, spoken, {"start": 0, "end": 10})
+
     def test_audio_gap_marks_untranscribed_sound_for_review(self):
         log = "silence_start: 0\nsilence_end: 1 | silence_duration: 1\nsilence_start: 7\nsilence_end: 8 | silence_duration: 1"
         spoken = [{"start": 1.0, "end": 3.0, "ar": "كلام مسموع"}]

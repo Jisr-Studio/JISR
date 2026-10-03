@@ -133,13 +133,22 @@ def project_json(row, editable=False):
     return result
 
 
+def quote_alignment_ready(source):
+    if not source.get("partial"):
+        return True
+    aligned = source.get("alignment_status") in ("matched", "selected")
+    paraphrased = (source.get("kind") == "hadith" and source.get("quotation_mode") == "paraphrase"
+                  and source.get("relation_method") == "editor_selected" and source.get("alignment_status") == "paraphrase")
+    return bool((aligned or paraphrased) and source.get("subtitle_english") and source.get("subtitle_arabic"))
+
+
 def publishable(row):
     segments = json.loads(row["segments"])
     return row["status"] == "ready" and bool(segments) and all(
         s.get("en", "").strip() and not s.get("needs_review")
         and (s.get("candidate") or {}).get("kind") not in ("quran", "hadith")
         and (s.get("type") not in ("quran", "hadith") or (s.get("source") and s.get("reviewed") is True))
-        and (not (s.get("source") or {}).get("partial") or ((s.get("source") or {}).get("alignment_status") in ("matched", "selected") and (s.get("source") or {}).get("subtitle_english") and (s.get("source") or {}).get("subtitle_arabic")))
+        and quote_alignment_ready(s.get("source") or {})
         for s in segments
     )
 
@@ -165,7 +174,10 @@ def save_edit(project_id, **changes):
 
 def attach_source(segment, kind, source):
     """A reference match resolves detection, but still needs human acceptance."""
-    source = prepare_quote_subtitles(segment["ar"], source)
+    if source.get("quotation_mode") == "paraphrase":
+        source = {**source, "subtitle_arabic": segment["ar"], "subtitle_english": segment.get("en", ""), "alignment_status": "paraphrase"}
+    else:
+        source = prepare_quote_subtitles(segment["ar"], source)
     english = source.get("subtitle_english") or (segment.get("en", "") if source.get("partial") else source["english"])
     segment.update(type=kind, source=source, en=english, needs_review=True, reviewed=False)
     segment.pop("candidate", None)
@@ -1111,7 +1123,7 @@ def parse_dorar(fragment):
     return results
 
 
-def lookup_hadith(hadith_id, spoken):
+def lookup_hadith(hadith_id, spoken, *, paraphrase=False):
     if not re.fullmatch(r"\d{1,10}", str(hadith_id)):
         raise ValueError("معرّف الحديث غير صالح")
     base = "https://hadeethenc.com/api/v1/hadeeths/one/"
@@ -1121,7 +1133,9 @@ def lookup_hadith(hadith_id, spoken):
     arabic = ar.get("hadeeth", "")
     # Hadith usually has narrator and introduction before the quotation.
     spoken_norm, full_norm = normalize_ar(spoken), normalize_ar(arabic)
-    if not quotation_matches(spoken, arabic):
+    if type(paraphrase) is not bool:
+        raise ValueError("paraphrase must be a JSON boolean")
+    if not quotation_matches(spoken, arabic) and not paraphrase:
         raise ValueError("النص المسموع لا يطابق الحديث المحدد؛ صحّح النص أو اختر مرجعاً آخر")
     en = get_json(base + "?" + urllib.parse.urlencode({"id": hadith_id, "language": "en"}))
     if en.get("id") is not None and str(en["id"]) != str(hadith_id):
@@ -1131,10 +1145,11 @@ def lookup_hadith(hadith_id, spoken):
     narrator = ar.get("narrator") or ""
     if not narrator:
         plain = re.sub(r"[\u064b-\u065f\u0670\u06d6-\u06ed]", "", arabic)
-        opening = re.match(r"^\s*عن\s+(.{2,120}?)\s+قال(?:ت)?\s*[:：]", plain)
+        opening = re.match(r"^\s*عن\s+(.{2,120}?)(?:\s+قال(?:ت)?\s*[:：]|\s+رضي الله عن(?:ه|ها|هم|هما)\s+عن النبي)", plain)
         if opening:
             narrator = re.sub(r"\s*[-–]\s*رضي الله عن(?:ه|ها|هم|هما)\s*[-–]?\s*", " ", opening.group(1)).strip(" -–،")
     return {"kind": "hadith", "title": ar.get("title") or "حديث نبوي", "arabic": arabic, "english": en.get("hadeeth", ""), "narrator": narrator, "grade": ar.get("grade") or "", "attribution": ar.get("attribution") or "", "explanation": ar.get("explanation") or "", "translation_explanation": en.get("explanation") or "", "url": f"https://hadeethenc.com/ar/browse/hadith/{hadith_id}", "id": str(hadith_id), "partial": spoken_norm != full_norm,
+            "quotation_mode": "paraphrase" if paraphrase else "quotation", "relation_method": "editor_selected" if paraphrase else "text_match",
             "translator": "موسوعة الأحاديث النبوية · HadeethEnc", "translation_url": f"https://hadeethenc.com/en/browse/hadith/{hadith_id}",
             "translation_status": "sourced" if en.get("hadeeth") else "unavailable", "explanation_status": "available" if ar.get("explanation") else "unavailable"}
 
@@ -1221,6 +1236,8 @@ def canonical_arabic_excerpt(spoken, canonical):
 
 def select_source_english(source, spoken, span, status="selected"):
     english = source.get("english", "")
+    if source.get("quotation_mode") == "paraphrase":
+        raise ValueError("Paraphrase subtitles must preserve the spoken wording, not select a literal source excerpt")
     if not isinstance(span, dict) or type(span.get("start")) is not int or type(span.get("end")) is not int or not 0 <= span["start"] < span["end"] <= len(english):
         raise ValueError("Invalid source English selection")
     raw = english[span["start"]:span["end"]]
@@ -1364,6 +1381,8 @@ def make_srt(segments, bilingual=True):
         quoted = seg["type"] in ("quran", "hadith") and not seg.get("needs_review")
         original = (seg.get("source") or {}).get("subtitle_arabic") or (seg.get("source") or {}).get("arabic") or seg["ar"]
         text = (original.strip() + "\n" if bilingual and quoted else "") + seg["en"].strip()
+        if (seg.get("source") or {}).get("quotation_mode") == "paraphrase":
+            text = "[Hadith paraphrase]\n" + text
         blocks.append(f"{len(blocks)+1}\n{srt_time(seg['start'])} --> {srt_time(seg['end'])}\n{text}\n")
     return "\n".join(blocks)
 
@@ -1399,6 +1418,8 @@ def make_ass(segments, style):
         original = (s.get("source") or {}).get("subtitle_arabic") or (s.get("source") or {}).get("arabic") or s["ar"]
         ar = safe_ass(original) if style.get("bilingual", True) and s["type"] in ("quran", "hadith") and not s.get("needs_review") else ""
         combined = (ar + "\\N" if ar else "") + safe_ass(s["en"])
+        if (s.get("source") or {}).get("quotation_mode") == "paraphrase":
+            combined = "[Hadith paraphrase]\\N" + combined
         lines.append(f"Dialogue: 0,{ass_time(s['start'])},{ass_time(s['end'])},Default,,0,0,0,,{combined}")
     return "\n".join(lines) + "\n"
 
@@ -1701,7 +1722,7 @@ class Handler(BaseHTTPRequestHandler):
                     raise ValueError("reviewed must be a JSON boolean")
                 if data["reviewed"] and (seg.get("candidate") or {}).get("kind") in ("quran", "hadith") and not seg.get("source"):
                     return self.fail(409, "الاقتباس ما زال غير موثق؛ اربطه بمرجع أو ارفض الترشيح")
-                if data["reviewed"] and (seg.get("source") or {}).get("partial") and (seg.get("source") or {}).get("alignment_status") not in ("matched", "selected"):
+                if data["reviewed"] and not quote_alignment_ready(seg.get("source") or {}):
                     return self.fail(409, "حدد من ترجمة المصدر الجزء المقابل للاقتباس الجزئي قبل تأكيده")
                 seg["reviewed"] = bool(data["reviewed"])
                 seg["needs_review"] = not seg["reviewed"]
@@ -1728,7 +1749,9 @@ class Handler(BaseHTTPRequestHandler):
             seg = next((s for s in segments if s["id"] == match.group(4)), None)
             if not seg:
                 return self.fail(404, "المقطع غير موجود")
-            source = lookup_hadith(data.get("hadith_id", ""), seg["ar"])
+            if "paraphrase" in data and type(data["paraphrase"]) is not bool:
+                raise ValueError("paraphrase must be a JSON boolean")
+            source = lookup_hadith(data.get("hadith_id", ""), seg["ar"], paraphrase=True) if data.get("paraphrase") else lookup_hadith(data.get("hadith_id", ""), seg["ar"])
             if not all(source.get(field) for field in ("english", "narrator", "grade", "attribution")):
                 return self.fail(422, "مرجع الحديث لا يتضمن الراوي والحكم والتخريج والترجمة كاملة؛ اختر مرجعاً آخر")
             attach_source(seg, "hadith", source)

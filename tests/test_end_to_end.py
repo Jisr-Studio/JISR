@@ -47,7 +47,7 @@ class EndToEndTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
-        self.root = Path(self.temp.name)
+        self.root = Path(self.temp.name).resolve()
         self.calls = []
         self.media = self.root / "fixture.mp4"
         # Real audio from 6s to 8s deliberately has no returned transcript.
