@@ -1,6 +1,7 @@
 """Volume initialization must drop privileges before starting the web server."""
 
 import importlib.util
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -9,6 +10,8 @@ from unittest.mock import Mock, call, patch
 
 
 ROOT = Path(__file__).resolve().parents[1]
+if os.name == "nt":
+    raise unittest.SkipTest("Container privilege tests require a Unix host")
 spec = importlib.util.spec_from_file_location("jisr_entrypoint", ROOT / "docker-entrypoint.py")
 entrypoint = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(entrypoint)

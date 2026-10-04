@@ -209,10 +209,11 @@ class EndToEndTests(unittest.TestCase):
         self.assertEqual(len(gaps), 1)
         self.assertGreaterEqual(gaps[0]["start"], 5.9)
         share_path = "/api/share/" + project["share_url"].split("/")[-1]
-        for path in (prefix + "/export/srt", prefix + "/export/mp4", share_path):
-            with self.assertRaises(urllib.error.HTTPError) as blocked:
-                self.request(path, token=token)
-            self.assertEqual(blocked.exception.code, 409)
+        _, draft = self.request(prefix + "/export/srt", token=token)
+        self.assertIn(VERSE_EXCERPT, draft.decode())
+        with self.assertRaises(urllib.error.HTTPError) as blocked:
+            self.request(share_path, token=token)
+        self.assertEqual(blocked.exception.code, 409)
         # Every flagged phrase is confirmed, then the intentionally synthetic tone is dismissed.
         for segment in parts:
             if segment["needs_review"]:
@@ -249,16 +250,22 @@ class EndToEndTests(unittest.TestCase):
         self.assertTrue(server.has_video_stream(target))
         self.assertAlmostEqual(server.video_duration(target), 8, delta=.3)
         self.assertGreater(target.stat().st_size, 1000)
-        ass = target.with_name("subtitles.ass").read_text(encoding="utf-8")
-        self.assertIn("Style: Default,Cairo,12,&H00ffb8c9", ass)
-        self.assertIn(",2,45,45,48,1", ass)  # Bottom alignment even for an older saved top setting.
-        self.assertEqual((target.parent / "fonts" / "cairo.ttf").read_bytes(), (server.DIST / "fonts" / "cairo.ttf").read_bytes())
-        self.assertIn(HADITH_EXCERPT, ass)
-        self.assertNotIn("under his nails", ass)
-        # A cached export from the former top-position setting must be rebuilt.
-        target.with_name("subtitles.ass").write_text(ass.replace(",2,45,45,48,1", ",8,45,45,48,1"), encoding="utf-8")
+        manifest_path = target.with_name("render-manifest.json")
+        manifest = json.loads(manifest_path.read_text())
+        self.assertEqual(manifest["crf"], 18)
+        self.assertEqual(manifest["audio"], "copy")
+        self.assertEqual((target.parent / "subtitle-previews" / "fonts" / "cairo.ttf").read_bytes(), (server.DIST / "fonts" / "cairo.ttf").read_bytes())
+        # The private preview returns the exact image used for the corresponding export cue.
+        quote = next(s for s in json.loads(server.project_row(project_id)["segments"]) if s["type"] == "hadith")
+        _, preview = self.request(prefix + "/subtitle/" + quote["id"], token=token)
+        cue = next(c for c in manifest["cues"] if c["start"] == quote["start"])
+        self.assertEqual(preview, (target.parent / cue["image"]).read_bytes())
+        self.assertIsNotNone(server.alpha_bounds(preview))
+        # A stale renderer manifest must force an export rebuild.
+        manifest["signature"] = "old-renderer"
+        manifest_path.write_text(json.dumps(manifest))
         self.request(prefix + "/export/mp4", token=token)
-        self.assertIn(",2,45,45,48,1", target.with_name("subtitles.ass").read_text(encoding="utf-8"))
+        self.assertNotEqual(json.loads(manifest_path.read_text())["signature"], "old-renderer")
         _, raw = self.request(prefix + "/export/mp4", "POST", b"{}", token)
         prepared = json.loads(raw)
         _, downloaded = self.request(prepared["download_url"])

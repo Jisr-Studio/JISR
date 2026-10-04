@@ -148,7 +148,7 @@ class PipelineTests(unittest.TestCase):
             self.assertTrue(server.verify_hadith(seg))
             self.assertTrue(seg["needs_review"])
             self.assertEqual(server.make_sources([seg]), [])
-            seg["needs_review"] = False
+            seg.update(needs_review=False, reviewed=True)
             self.assertEqual(len(server.make_sources([seg])), 1)
         with patch.object(server, "get_json", return_value={"ahadith": [{"th": fragment}]}):
             seg = {"ar": "الطهور شطر الإيمان", "en": "Purification is half of faith.", "candidate": {"hadith_query": "الطهور شطر الإيمان"}, "type": "speech"}
@@ -172,7 +172,8 @@ class PipelineTests(unittest.TestCase):
         self.assertIn("00:00:01,250 --> 00:00:03,500", server.make_srt(segments))
         self.assertIn("In the name of Allah.", server.make_ass(segments, {"backdrop": True, "color": "#ffffff"}))
         segments[0].update(type="quran", needs_review=False, reviewed=True)
-        self.assertIn("بسم الله\\NIn the name of Allah.", server.make_ass(segments, {"bilingual": True}))
+        self.assertIn("بسم الله\\N", server.make_ass(segments, {"bilingual": True}))
+        self.assertIn("In the name of Allah.", server.make_ass(segments, {"bilingual": True}))
         segments[0]["source"] = {"arabic": "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ"}
         self.assertIn("بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ", server.make_srt(segments))
         self.assertIn("بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ", server.make_ass(segments, {"bilingual": True}))

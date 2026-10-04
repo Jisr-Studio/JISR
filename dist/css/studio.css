@@ -30,6 +30,10 @@ main{max-width:1760px;padding:32px 3% 0}.studio-intro{display:flex;justify-conte
 .audio-controls #volume{width:65px;flex:0 0 65px;margin:0}
 .audio-controls output{width:31px;color:#a1aec8;font:10px/1.5 Arial,sans-serif;font-variant-numeric:tabular-nums;text-align:right}
 .subtitle #subtitleArabic{font-family:inherit}
+.subtitle.image-subtitle{inset:0!important;width:100%;height:100%;font-size:0!important;pointer-events:none}
+.subtitle.image-subtitle>div,.subtitle.image-subtitle>small{position:absolute!important;width:1px!important;height:1px!important;overflow:hidden;clip-path:inset(50%);padding:0!important;margin:0!important}
+.subtitle-image{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none}
+.video-stage.has-project video{opacity:1;filter:none}
 .font-size-entry{display:flex;align-items:center;gap:4px;background:#2a3750;border:1px solid #40506a;border-radius:6px;padding:3px 7px;color:#b9c5d9;direction:ltr;font-size:11px}
 .font-size-entry input{width:43px;padding:1px 0;border:0;background:transparent;color:#edf0f7;font:13px/1.5 Arial,sans-serif;font-variant-numeric:tabular-nums}
 .color-setting{margin-bottom:23px}

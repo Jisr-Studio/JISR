@@ -18,6 +18,7 @@ def main():
     checks = (
         ("/", b"JISR", "text/html"),
         ("/js/app.js", b"function", "javascript"),
+        ("/js/subtitle-preview.js", b"JisrSubtitlePreview", "javascript"),
         ("/css/onboarding.css", b"{", "text/css"),
         ("/fonts/plex.ttf", None, "font"),
         ("/demo.mp4", b"ftyp", "video/mp4"),

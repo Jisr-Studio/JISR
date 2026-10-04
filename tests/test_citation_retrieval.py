@@ -18,6 +18,7 @@ def dorar_response(text):
 
 
 @patch.dict("os.environ", {"OPENAI_API_KEY": ""})
+@patch.object(server, "search_hadeethenc", new=lambda query: [])
 class CitationRetrievalTests(unittest.TestCase):
     def test_one_asr_word_boundary_error_matches_saved_case(self):
         self.assertGreater(server.similarity(SPOKEN, CANONICAL), .98)

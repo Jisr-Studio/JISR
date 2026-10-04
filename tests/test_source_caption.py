@@ -43,10 +43,10 @@ class SourceCaptionTests(unittest.TestCase):
         self.assertNotIn(r"{\pos(0,0)}", ass)
         self.assertIn("Custom (/pos(0,0)) caption", ass)
 
-    def test_orphaned_or_unreviewed_source_is_not_exported_as_caption(self):
+    def test_private_draft_keeps_caption_but_orphaned_source_does_not(self):
         self.segment["needs_review"] = True
-        self.assertNotIn(self.segment["source"]["title"], server.make_ass([self.segment], {}))
-        self.assertNotIn(self.segment["source"]["title"], server.make_srt([self.segment]))
+        self.assertIn(self.segment["source"]["title"], server.make_ass([self.segment], {}))
+        self.assertIn(self.segment["source"]["title"], server.make_srt([self.segment]))
         self.segment.update(source=None, source_caption="Stale caption")
         self.assertEqual(server.source_caption(self.segment), "")
 

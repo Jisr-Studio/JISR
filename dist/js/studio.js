@@ -32,12 +32,12 @@ render = function () {
     clip.onclick = () => seek(index);
     timeline.append(clip);
   });
-  const pending = segments.filter(s => s.needs_review && !s.reviewed).length;
+  const pending = segments.filter(JisrCitationText.reviewPending).length;
   reviewMeter.replaceChildren();
   const label = document.createElement('span');
   label.textContent = pending ? `${pending} مقطع يحتاج مراجعة` : 'لا توجد تنبيهات مراجعة';
   const context = document.createElement('small');
-  context.textContent = project ? (project.publishable ? 'جاهز للتصدير' : 'أكمل الترجمة وتأكيد الاقتباسات قبل التصدير') : 'مثال توضيحي · جرّب التحرير والمصادر';
+  context.textContent = project ? (project.publishable ? 'جاهز للتصدير والمشاركة' : project.exportable ? 'يمكن تصدير مسودة الآن؛ راجع النصوص والمصادر قبل النشر' : 'انتظر انتهاء المعالجة قبل التصدير') : 'مثال توضيحي · جرّب التحرير والمصادر';
   reviewMeter.append(label, context);
   reviewMeter.classList.toggle('clear', !pending);
   reviewAction.disabled = !pending;
@@ -72,12 +72,15 @@ tabs.setAttribute('role', 'tablist');
 tabs.setAttribute('aria-label', 'أدوات الاستوديو');
 const reviewPanel = document.createElement('section');
 reviewPanel.className = 'review-tools';
-reviewPanel.innerHTML = '<h2>قبل التصدير</h2><p>أكمل الترجمة، وراجع المقاطع، وأكّد مصادر الاقتباسات.</p>';
+reviewPanel.innerHTML = '<h2>قبل النشر</h2><p>يمكنك تصدير مسودة، وراجع النصوص وأكّد مصادر الاقتباسات قبل نشرها.</p>';
 reviewPanel.append($('.review-summary'));
 sidebar.prepend(reviewPanel);
 sidebar.prepend(tabs);
 const toolPanels = [reviewPanel, $('#referencePanel'), $('.appearance-panel')];
 const toolNames = ['المراجعة', 'المصادر', 'المظهر'];
+const subtitleSizeNote = document.createElement('p');
+subtitleSizeNote.textContent = 'الحجم يتناسب مع الفيديو. يُصغّر النص الطويل عند الحاجة، ويظهر بالشكل نفسه في المعاينة والتصدير.';
+$('#fontSize').after(subtitleSizeNote);
 function selectTool(index) {
   toolPanels.forEach((panel, i) => {
     panel.hidden = i !== index;

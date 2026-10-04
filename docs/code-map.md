@@ -3,8 +3,10 @@
 ## Active application
 
 - `server.py`: Python HTTP API, persistence, processing, source matching, exports, and static file serving. This remains at the root to preserve the test imports and deployment entry point.
+- `subtitle_png.py`: standard-library PNG decoder for alpha bounds; the shared subtitle renderer uses it to fit long cues without clipping.
 - `dist/index.html`: HTML shell, video controls, transcript list, source panel, and dialogs.
 - `dist/js/app.js`: API requests, project loading, editing, review, source details, and exports.
+- `dist/js/subtitle-preview.js`: bounded image cache, next-cue preload, failed-load retry, and cancellation guards for the shared PNG preview.
 - `dist/js/studio.js`: start screen, studio tabs, segment timeline, review controls, and processing status. It loads after `app.js` and uses its existing state.
 - `dist/js/splash.js`: once-per-session intro; skips project/share links and reduced-motion users.
 - `dist/css/style.css`: underlying editor layout.

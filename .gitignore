@@ -2,6 +2,9 @@
 .env.*
 !.env.example
 data/
+work/
+*.sqlite3
+*.sqlite3-*
 __pycache__/
 *.pyc
 ffmpeg.exe

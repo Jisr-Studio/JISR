@@ -4,7 +4,7 @@
 منصة ذكية لترجمة الفيديو الإسلامي وتوثيق الآيات القرآنية والأحاديث النبوية.
 
 > Built for the [AI Challenge for Serving Islamic Content](https://islamicaich.org/), October 2026.  
-> Jisr is an AI-assisted tool. Every matched Quranic or Hadith citation requires human confirmation before export or sharing. Unresolved segments block publication.
+> Jisr is an AI-assisted tool. Private SRT/MP4 drafts can be exported with a review warning. Every matched Quranic or Hadith citation requires human confirmation before sharing through a public viewing link.
 
 **Current status:** The local application integrates **ElevenLabs Scribe v2** for transcription and **OpenAI GPT-6 Luna** for translation, quotation detection, terminology review, and source-excerpt alignment. Local verification includes actual FFmpeg video export and JavaScript citation-link/text checks. Live-provider testing and deployment verification remain necessary before public launch.
 
@@ -26,9 +26,9 @@ Islamic organizations produce valuable Arabic videos, but reaching English-speak
 4. **Verify Quran quotations** against Quranpedia's Hafs text and attach sourced Saheeh International English. The model does not generate canonical verse translations.
 5. **Verify Hadith quotations** against Dorar and search HadeethEnc for a matching translation and explanation. A unique complete match can be attached automatically; ambiguous or unavailable records require editor selection or manual linking. Unverified English remains a labelled machine draft.
 6. **Review** source Arabic and English text, timing, narrator, grading, attribution, and subtitle appearance. The editor displays matched Quran/Hadith wording from the reference and keeps the original transcript available for comparison. Saving that wording unchanged preserves the reference; changing quotation text invalidates the link and requires verification again.
-7. **Export** a subtitled MP4, an SRT file, or a JSON citations list, or publish a read-only video link after all review requirements are resolved.
+7. **Export** a subtitled MP4 or SRT draft with a warning about unresolved review, or a JSON list of eligible citations. Public read-only video links require all review requirements to be resolved. Exporting a draft does not confirm its text or sources.
 
-For partial quotations, citation details retain the full source while subtitles use the corresponding Arabic and English excerpt. The model can select an exact English substring from the sourced translation; it cannot invent a canonical translation. Uncertain alignment requires manual selection before confirmation and export.
+For partial quotations, citation details retain the full source while subtitles use the corresponding Arabic and English excerpt. The model can select an exact English substring from the sourced translation; it cannot invent a canonical translation. Uncertain alignment requires manual selection before confirmation and public sharing. A private draft never substitutes an unresolved partial quotation with the full reference.
 
 Source, translation, explanation, and search links are displayed separately. A Dorar direct link is used only when the published record matches the full text and attribution metadata. If no unique record can be resolved, the interface explicitly labels the search fallback.
 
@@ -37,17 +37,28 @@ Source, translation, explanation, and search links are displayed separately. A D
 - **Canonical Arabic:** literal Quran/Hadith quotations use the matched source excerpt in the segment list, edit dialog, source cards, and Arabic video preview. When it differs from speech recognition, expand **التفريغ الأصلي** in the edit dialog to compare the original transcript. Partial quotations use their selected excerpt; unresolved excerpts are not replaced by the full reference.
 - **Human confirmation:** source matching does not approve a quotation automatically. Check its wording, translation, and attribution before selecting **راجعت هذا المقطع**. Unmatched citations remain flagged, with a message distinguishing no match, service unavailability, and an invalid response.
 - **Hadith paraphrases:** editors can explicitly link a related Hadith as **نقل بالمعنى**. This preserves the speaker's wording and its translation, labels the relationship as a paraphrase, and still requires review before publication.
+- **Suggested Hadith sources:** if Dorar cannot match a quotation literally, a bounded HadeethEnc search uses short Arabic anchors. Complete records are checked again; abbreviated wording and recognition differences appear under **مصدر محتمل · قارن واربط**, showing source Arabic, English, narrator, grading, and attribution. These suggestions are not verified literal quotations. Selecting **ربط كنقل بالمعنى** preserves spoken text and leaves human review pending.
+- **Readable speech cues:** the translator aims for short connected clauses and roughly one or two English lines. The server rejects ordinary-speech parts over 180 English characters, or over 8 seconds when they contain more than 12 Arabic words, and allows one repair attempt. Original word timestamps remain authoritative. Retrying an older project can repair oversized unreviewed speech without retranscribing or changing reviewed quotations; failed repair preserves existing translations. Long scripture quotations retain their separate source-matching rules.
 - **Editable source caption:** select a Quran/Hadith segment, then click **تعديل سطر المصدر** above the video preview, or edit **سطر المصدر أسفل الترجمة** in the segment dialog. Save a custom single-line caption of up to 200 characters, leave it empty to hide the line, or choose **استعادة السطر الأصلي** to restore the automatic label.
 
 Source-caption changes persist after reloading and appear in the preview, MP4, and SRT exports. They preserve the canonical reference, its URL, and existing review decisions; the JSON sources list retains the original source metadata. Replacing or removing a reference clears its custom caption. The shared viewer is read-only.
+
+### Preview and MP4 appearance
+
+Real projects use the same server-rendered transparent subtitle image in the browser and MP4, including font, colour, background, line wrapping, Arabic shaping, and source caption. Size 10–42 is measured on a 480-pixel logical video width and scales with the video; long bilingual cues shrink to fit in both views. Uploaded video keeps its original colours in the preview. The illustrative demo still uses browser text.
+
+MP4 exports use H.264 CRF 18 and preserve normal square-pixel video dimensions. Anamorphic or rotated footage is normalized to its displayed aspect ratio; odd dimensions are rounded up to an even encoding canvas. Compatible audio is copied; other codecs are converted to AAC. Export quality cannot restore detail already absent from the original video. SRT contains text and timestamps; its appearance is controlled by the receiving player. See [export verification](docs/export-rendering.md).
+
+Subtitle images are cached in the browser and the next cue is preloaded. Temporary load failures are retried once; old responses cannot replace the current cue or appear in a timing gap. Saving edits preserves playback position, and appearance saves are serialized before export. The review filter uses the same criteria as public sharing, including unconfirmed references and unresolved partial quotations. JSON citations contain only confirmed, aligned references.
 
 ## Project structure
 
 ```text
 server.py               Standard-library Python HTTP API, AI pipeline, storage, and exports
+subtitle_png.py         Standard-library PNG alpha bounds for fitting subtitle images
 dist/                   Active RTL frontend; no build step
   index.html            App shell
-  js/                   Editor, studio, splash, citation-link and citation-text helpers
+  js/                   Editor, studio, subtitle preview, and citation helpers
   css/                  Editor and responsive styles
   demo.mp4              Silent illustrative demo video
 tests/                  Python tests and JavaScript citation-link/text checks
@@ -67,7 +78,7 @@ The active backend is `server.py`; the archived FastAPI prototype is not the run
 
 ## Run locally
 
-Requirements: **Python 3.11+** and **FFmpeg** for video inspection, audio-gap detection, and MP4 export. No Python package installation or frontend build is needed.
+Requirements: **Python 3.11+** and **FFmpeg with libass and libx264** for video inspection, audio-gap detection, subtitle preview, and MP4 export. No Python package installation or frontend build is needed.
 
 Copy the configuration template:
 
@@ -99,7 +110,7 @@ Open [http://127.0.0.1:8766](http://127.0.0.1:8766). On systems where Python is 
 
 The interactive demo and manual transcript workflow can be used without AI keys. Automatic processing requires both keys and access to the source services. `/api/health` reports configuration availability; it does not verify credentials, billing, or model access.
 
-In VS Code, select a Python interpreter and use **Run and Debug → JISR: Debug app**. The supplied run/test tasks use `python3`; the terminal commands above also work on Windows with `python`.
+In VS Code, select a Python interpreter and use **Run and Debug → JISR: Debug app**. The supplied tasks use `python3` on macOS/Linux and `python` on Windows.
 
 ## Sources and services
 
@@ -128,9 +139,10 @@ python -m unittest discover -s tests -v
 # Optional JavaScript checks; require Node.js
 node tests/test_citation_links.js
 node tests/test_citation_text.js
+node tests/test_subtitle_preview.js
 ```
 
-The latest run passed **105 Python tests with no skips**, with FFmpeg available. External AI and source-service responses are mocked in the suite; no paid API requests are made by these tests. The integration test uploads a video with audio, processes word timestamps and mixed quotations, enforces review, renders an actual MP4, and checks subtitle/source exports, sharing permissions, retries, and deletion. These checks establish local integration rather than live model accuracy.
+The latest subtitle-readability/source-lookup run on Windows passed **133 Python tests**, with **one Unix-only deployment module skipped** and FFmpeg available. External AI and source-service responses are mocked in the suite; no paid API requests are made by these tests. The integration test uploads a video with audio, processes word timestamps and mixed quotations, permits private draft exports, enforces review for public sharing, renders an actual MP4, and checks subtitle/source exports, sharing permissions, retries, and deletion. It also verifies that preview PNG bytes equal the subtitle image used by MP4. Additional cases cover a 10-ms cue in 60-fps video, odd dimensions, rotation/aspect ratio, incomplete cache files, whitespace translations, confirmed-source eligibility, static MIME types, and video byte ranges. JavaScript checks cover preview retry, out-of-order responses, timing gaps, cache cleanup, and review decisions. These checks establish local integration rather than live model accuracy.
 
 Citation checks also cover displaying source wording while preserving the original transcript, retaining the reference when saving unchanged displayed Arabic, and keeping partial quotations and paraphrases distinct. Caption tests cover saving, hiding, resetting, input validation, editor access, source replacement, and subtitle output without changing source metadata. The caption workflow was also checked in the browser for saving, persistence after reload, hiding, and restoration.
 

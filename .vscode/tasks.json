@@ -5,6 +5,7 @@
       "label": "JISR: Run app",
       "type": "process",
       "command": "python3",
+      "windows": { "command": "python" },
       "args": [
         "server.py"
       ],
@@ -17,6 +18,7 @@
       "label": "JISR: Run tests",
       "type": "process",
       "command": "python3",
+      "windows": { "command": "python" },
       "args": [
         "-m",
         "unittest",
@@ -35,6 +37,7 @@
       "label": "JISR: Check public sources",
       "type": "process",
       "command": "python3",
+      "windows": { "command": "python" },
       "args": [
         "scripts/check_sources.py",
         "--output",

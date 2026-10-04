@@ -22,13 +22,15 @@ Upload returns an `edit_token` once. Send it in the `X-Edit-Token` header for ed
   "segments": [],
   "style": {},
   "publishable": false,
+  "exportable": true,
+  "export_warnings": ["توجد مقاطع لم تكتمل مراجعتها"],
   "video_url": "/api/projects/ID/video",
   "share_url": "/view/SHARE_TOKEN",
   "editable": true
 }
 ```
 
-`status` is `uploaded`, `processing`, `ready`, or `error`. `ready` means processing finished; it does not mean review passed. Use `publishable` to enable SRT, MP4, and sharing. `stage` and `error` are display text, not identifiers. Poll the editor project endpoint during processing. There is no project-list endpoint.
+`status` is `uploaded`, `processing`, `ready`, or `error`. `ready` means processing finished; it does not mean review passed. Use `exportable` for private SRT/MP4 and `publishable` for public sharing. Exportable projects have nonempty segments and status `ready` or `error`; uploaded/processing projects remain unavailable for file export. Show localized `export_warnings` for unresolved review, missing translation, unresolved partial alignment, or incomplete processing. Export does not change review decisions. `stage` and `error` are display text, not identifiers. Poll the editor project endpoint during processing. There is no project-list endpoint.
 
 ## Segment
 
@@ -63,7 +65,7 @@ Hadith sources include `kind`, `title`, `arabic`, `english`, `narrator`, `grade`
 
 New Hadith sources also record `translation_status` (`sourced`, `machine_draft`, or `unavailable`) and `explanation_status` (`available` or `unavailable`). Sourced HadeethEnc translations include `translator` and `translation_url`. Automatic matching records `translation_lookup_status`: `matched`, `ambiguous`, `not_found`, `unavailable`, or `too_many_candidates`. A unique complete record must match both the transcript and Dorar's Arabic text; a failed candidate lookup prevents a uniqueness claim. Up to eight returned `translation_candidates` contain `id`, `title`, and `url` for manual selection. A larger result set is explicitly flagged rather than selecting from a truncated set.
 
-Automatically attached HadeethEnc sources retain the Dorar record under `verification`, with `provider`, `arabic`, `narrator`, `grade`, `attribution`, `url`, and optional `scholar`. Each provider's attribution and grading remain separate; the model does not synthesize a new judgment. Every source, including an automatically sourced translation, still requires human confirmation before export.
+Automatically attached HadeethEnc sources retain the Dorar record under `verification`, with `provider`, `arabic`, `narrator`, `grade`, `attribution`, `url`, and optional `scholar`. Each provider's attribution and grading remain separate; the model does not synthesize a new judgment. Every source, including an automatically sourced translation, still requires human confirmation before public sharing. Private file export includes a warning when review is unresolved.
 
 Changing a linked citation's Arabic or English removes its reference and flags it for review. Every linked Quran or Hadith citation requires `reviewed: true` before publication. Older records with a source but no human confirmation are also blocked.
 
@@ -91,10 +93,11 @@ The editor may send `source_english_span: {"start": 24, "end": 48}` to the segme
 | POST | `/api/projects/ID/style` | Editor token; subtitle style fields |
 | POST | `/api/projects/ID/title` | Editor token; `{"title":"..."}` |
 | GET | `/api/projects/ID/video` | Uploaded video; supports a single byte range |
-| GET | `/api/projects/ID/export/srt` | Requires a publishable project |
+| GET | `/api/projects/ID/subtitle/SEGMENT_ID` | Exact RGBA PNG used for preview and MP4; editor token or publishable project; optional appearance query overrides |
+| GET | `/api/projects/ID/export/srt` | Exportable project; editor token required for an unreviewed draft |
 | GET | `/api/projects/ID/export/sources` | JSON list of references eligible for export, with start/end times |
-| GET | `/api/projects/ID/export/mp4` | Editor token and publishable project; FFmpeg render |
-| POST | `/api/projects/ID/export/KIND` | Editor token; JSON `{}`; prepares `srt`, `sources`, or `mp4` for browser download. SRT/MP4 require a publishable project |
+| GET | `/api/projects/ID/export/mp4` | Editor token and exportable project; FFmpeg render |
+| POST | `/api/projects/ID/export/KIND` | Editor token; JSON `{}`; prepares `srt`, `sources`, or `mp4` for browser download. SRT/MP4 require an exportable project |
 | GET | `/api/downloads/TICKET` | Short-lived attachment download; supports byte ranges |
 | GET | `/api/share/SHARE_TOKEN` | Read-only project; requires a publishable project |
 | GET | `/view/SHARE_TOKEN` | Read-only viewer page |
@@ -102,11 +105,17 @@ The editor may send `source_english_span: {"start": 24, "end": 48}` to the segme
 
 `reviewed` must be a JSON boolean. Style accepts `font` (`plex`, `amiri`, `cairo`, `tajawal`, `noto-sans`, `noto-naskh`, `system`), `size` (10–42, default 18), `color` (`#RRGGBB`), and boolean `backdrop` and `bilingual`. Subtitles always use bottom placement. Legacy `position` values (`top`, `middle`, `bottom`) are accepted and normalized to `bottom`.
 
-Export preparation returns `download_url`, `filename`, `size` (bytes), `expires_in` (600 seconds), and `project_updated`. The browser follows this URL as a normal attachment link, without creating an in-memory Blob or putting the editor token in the URL. Tickets expire after ten minutes, invalidate after project edits or deletion, and disappear on server restart; prepare a new file when needed. The frontend waits for appearance saves before preparing an export and shows preparation failures in the export dialog.
+Export preparation returns `download_url`, `filename`, `size` (bytes), `expires_in` (600 seconds), `project_updated`, and `warnings` (localized string array). The browser follows this URL as a normal attachment link, without creating an in-memory Blob or putting the editor token in the URL. Tickets expire after ten minutes, invalidate after project edits or deletion, and disappear on server restart; prepare a new file when needed. The frontend waits for appearance saves before preparing an export and shows preparation failures in the export dialog.
 
 The six named fonts are bundled in `dist/fonts/` for both browser preview and MP4 export. The system option uses the host's Arial fallback. Preview volume is a local player control and does not change the exported audio.
 
-Processing blocks transcript edits, manual replacement, source linking, and deletion. Style and title updates remain available. Missing keys, unresolved review, and incompatible states return `409`; invalid input returns `400`; invalid editor access returns `403`; missing records return `404`. Upload and processing limits can return `429`.
+Real-video previews fetch the server-rendered subtitle PNG with the editor token in a header. Query overrides accept `font`, `size`, `color`, and `backdrop`/`bilingual` (`true` or `false`). The response reports `X-Subtitle-Font-Size` (after fitting) and `X-Subtitle-Renderer`. Size is scaled from a 480-pixel logical video width; long cues shrink consistently to fit. Cached images are private to the project and shared with MP4 rendering, which retains native resolution, uses H.264 CRF 18, and copies compatible audio. Gaps between cues display no subtitle. Missing English is explicitly shown as `[Translation unavailable]` in private drafts rather than silently dropping the cue. SRT retains canonical quoted Arabic and source captions even before confirmation, without changing review flags; the JSON sources list still includes only eligible citations. SRT has no font or appearance settings.
+
+The frontend displays the server's warning array before export and alongside a prepared download, including incomplete processing and partial-quotation warnings. Review counters and filters also include missing English, unresolved candidates, unconfirmed citations, and unresolved partial alignment. JSON sources require an actual boolean `reviewed: true`, no outstanding review/candidate, a nonempty translation, and completed excerpt alignment; source metadata cannot overwrite the segment's exported start/end times. Style sizes must be integer values; invalid sizes and non-object JSON requests return `400`.
+
+MP4 subtitle-image timestamps use a millisecond time base, preventing short cues from disappearing through the image demuxer's default 25-fps rounding. Video retains its source frame rate; the image time base does not make it a 1000-fps video. Display dimensions account for sample aspect ratio and 90-degree rotation, and normalize to an even square-pixel canvas for H.264. Interrupted manifest/metadata files are rebuilt. Browser images use a bounded cache and a guarded retry; editing an existing project does not reload its video or reset playback position.
+
+Processing blocks transcript edits, manual replacement, source linking, and deletion. Style and title updates remain available. Missing keys, unresolved review for public sharing, and incompatible states return `409`; invalid input returns `400`; invalid editor access returns `403`; missing records return `404`. Upload and processing limits can return `429`.
 
 ## Verification limits
 
@@ -118,6 +127,8 @@ When matched speech terms exist, the server makes a second OpenAI call with the 
 
 OpenAI uses the `v1/responses` API with strict JSON schemas, `store: false`, and the configured model. Translation runs in batches of four original segments, with bounded surrounding transcript context and checkpoints after validated batches. One corrective request may repair invalid output; the original Arabic words and timestamps are preserved. Explicit transient HTTP failures receive at most three attempts. Authentication errors, long quota waits, and uncertain timeouts do not trigger another request or model.
 
+Ordinary-speech parts with indexed words must contain at most 180 English characters. Parts with more than 12 Arabic words must last at most 8 seconds; word-end offsets are supplied for boundary selection. These limits trigger the same bounded repair request as invalid word coverage. They do not apply to scripture matching. Retrying a ready project also accepts oversized unreviewed ordinary speech. Reflow runs on a copy and retains the saved translations if the provider fails; reviewed text and unresolved scripture candidates are excluded.
+
 If a Quran candidate names a surah but omits its verse number, only a unique literal match in that surah's authoritative text can resolve the location. Ambiguous excerpts and explicitly wrong locations remain unresolved. Quran translation HTML is converted to text; verse-number prefixes and documented footnote markers are omitted from subtitles, while source footnotes are retained in optional `translation_notes`. No translation wording is generated by this cleanup.
 
 ## Translation provider health
@@ -127,6 +138,8 @@ If a Quran candidate names a surah but omits its verse number, only a unique lit
 ### Citation retrieval failures
 
 Unresolved Quran/Hadith candidates retain `candidate`, set `needs_review: true` and `reviewed: false`, and expose `citation_lookup` with `status`, `provider`, and a safe editor-facing `message`. Status values distinguish `not_matched`, `unavailable`, and `invalid_response`; HTTP failures also include `http_status`. The editor displays the message beside the segment. Successful or manually linked references clear this diagnostic. Retrying processing reuses the saved transcription and completed translations.
+
+Hadith literal no-match results trigger up to three HadeethEnc anchor searches and at most three complete-record lookups. Only a unique, complete, literal match without lookup failures attaches automatically. Looser lexical matches produce `citation_lookup.status: suggested` and `citation_suggestions`: an array with `id`, `title`, `arabic`, `english`, `url`, `narrator`, `grade`, `attribution`, and `quotation_mode`. These are comparison choices, not confirmed citations. `citation_suggestion_status` distinguishes `suggested`, `not_found`, and `unavailable`. The editor selects a suggestion through the existing Hadith endpoint, explicitly using `paraphrase: true` for abbreviated wording. Attaching/rejecting a source or changing Arabic clears stale suggestions; no automatic review approval occurs.
 
 Hadith matching ranks the spoken passage inside a full source report. Passage matching uses the existing 0.86 similarity threshold; a one-word difference in token counts additionally requires compatible beginning/end boundaries and at least 0.98 similarity without spaces. This tolerates a near-identical ASR boundary error without absorbing an introduction. The original transcript stays unchanged and human review remains required. A transcription error in a complete quotation does not make it a partial quotation. Longer source reports remain partial and require the correct sourced subtitle excerpt. Failed long queries may use up to two shorter normalized anchors; every result must still pass passage matching and metadata checks. This is source retrieval and validation, not an embedding/vector RAG pipeline.
 

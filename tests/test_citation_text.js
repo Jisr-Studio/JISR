@@ -37,4 +37,13 @@ assert.equal(presentation({type:'speech',ar:original,source:hadith.source}).arab
 assert.equal(presentation({...hadith,source:null}).arabic,original);
 assert.equal(presentation({...hadith,source:{}}).fromSource,false);
 assert.equal(presentation(undefined).arabic,'');
+const {reviewPending}=require('../dist/js/citation-text.js');
+const reviewed={...hadith,en:'Source translation',reviewed:true,needs_review:false};
+assert.equal(reviewPending(reviewed),false);
+assert.equal(reviewPending({...reviewed,reviewed:false}),true);
+assert.equal(reviewPending({...reviewed,reviewed:'true'}),true);
+assert.equal(reviewPending({...reviewed,en:'  '}),true);
+assert.equal(reviewPending({...reviewed,candidate:{kind:'quran'}}),true);
+assert.equal(reviewPending({...reviewed,source:{...reviewed.source,partial:true,alignment_status:'needs_selection'}}),true);
+assert.equal(reviewPending({...reviewed,source:{...reviewed.source,partial:true,alignment_status:'selected',subtitle_english:'Selected excerpt'}}),false);
 console.log('Canonical citation text and edit-save checks passed.');

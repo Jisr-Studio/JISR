@@ -3,5 +3,6 @@
 !Dockerfile
 !docker-entrypoint.py
 !server.py
+!subtitle_png.py
 !dist/
 !dist/**

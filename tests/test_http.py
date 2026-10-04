@@ -110,7 +110,9 @@ class ProcessingHTTPTests(unittest.TestCase):
         self.assertNotIn("candidate", quote)
         with self.assertRaises(urllib.error.HTTPError) as unreviewed:
             self.request(f"/api/projects/{project_id}/export/srt")
-        self.assertEqual(unreviewed.exception.code, 409)
+        self.assertEqual(unreviewed.exception.code, 403)
+        _, draft = self.request(f"/api/projects/{project_id}/export/srt", token=token)
+        self.assertIn(quote["source"]["arabic"], draft.decode())
         _, raw = self.request(f"/api/projects/{project_id}/segments/{quote['id']}", "POST", b'{"reviewed":true}', token)
         project = json.loads(raw)
         self.assertTrue(project["publishable"])
@@ -180,7 +182,8 @@ class ProcessingHTTPTests(unittest.TestCase):
         _, raw = self.request(path, "POST", b'{"size":42}', token)
         self.assertEqual(json.loads(raw)["style"]["color"], "#c9b8ff")
         self.assertEqual(json.loads(raw)["style"]["size"], 42)
-        for invalid in ({"size": 9}, {"size": 43}, {"font": "unknown"}, {"color": "blue"}):
+        for invalid in ({"size": 9}, {"size": 43}, {"size": 12.5}, {"size": True}, {"size": None},
+                        {"size": float('inf')}, {"font": []}, {"font": "unknown"}, {"color": "blue"}, [], None):
             with self.subTest(invalid=invalid), self.assertRaises(urllib.error.HTTPError) as rejected:
                 self.request(path, "POST", json.dumps(invalid).encode(), token)
             self.assertEqual(rejected.exception.code, 400)
@@ -229,7 +232,7 @@ class ProcessingHTTPTests(unittest.TestCase):
             _, content = self.request(json.loads(raw)["download_url"])
             self.assertIn(expected, content.decode())
 
-    def test_download_preparation_preserves_review_gate_and_detects_concurrent_edit(self):
+    def test_draft_download_warns_without_confirming_review_and_detects_concurrent_edit(self):
         project_id, token = "e" * 32, "private"
         segment = {"id": "e" * 12, "start": 0, "end": 4, "type": "speech", "ar": "اختبار", "en": "Draft", "needs_review": True}
         folder = server.DATA / project_id
@@ -242,10 +245,13 @@ class ProcessingHTTPTests(unittest.TestCase):
         prefix = f"/api/projects/{project_id}/export/"
         with patch.object(server, "render_video", return_value=video) as render:
             for kind in ("srt", "mp4"):
-                with self.assertRaises(urllib.error.HTTPError) as blocked:
-                    self.request(prefix + kind, "POST", b"{}", token)
-                self.assertEqual(blocked.exception.code, 409)
-            render.assert_not_called()
+                _, raw = self.request(prefix + kind, "POST", b"{}", token)
+                prepared = json.loads(raw)
+                self.assertTrue(prepared["warnings"])
+                self.request(prepared["download_url"])
+            render.assert_called_once()
+        self.assertTrue(json.loads(server.project_row(project_id)["segments"])[0]["needs_review"])
+        server.DOWNLOAD_TICKETS.clear()
         segment.pop("needs_review")
         server.save_project(project_id, segments=json.dumps([segment]))
         def changed_during_render(row):
@@ -277,6 +283,29 @@ class ProcessingHTTPTests(unittest.TestCase):
                     with patch.object(handler, operation, side_effect=error("client disconnected")), patch.object(handler, "fail") as fail:
                         getattr(handler, route)()
                         fail.assert_not_called()
+
+    def test_static_mime_types_ignore_windows_registry_associations(self):
+        with patch.object(server.mimetypes, 'guess_type', return_value=('text/plain', None)):
+            for path, expected in (('/fonts/plex.ttf', 'font/ttf'), ('/js/subtitle-preview.js', 'text/javascript')):
+                with urllib.request.urlopen(self.base + path, timeout=10) as response:
+                    self.assertEqual(response.headers.get_content_type(), expected)
+                    self.assertEqual(response.headers['X-Content-Type-Options'], 'nosniff')
+                    self.assertTrue(response.read())
+
+    def test_video_ranges_clamp_end_and_reject_empty_or_zero_suffix(self):
+        data = (server.DIST / 'demo.mp4').read_bytes()
+        for value, expected in (('bytes=0-999999999', data), ('bytes=-7', data[-7:]), ('bytes=7-', data[7:])):
+            with self.subTest(range=value):
+                request = urllib.request.Request(self.base + '/demo.mp4', headers={'Range': value})
+                with urllib.request.urlopen(request, timeout=10) as response:
+                    self.assertEqual(response.status, 206)
+                    self.assertEqual(response.read(), expected)
+                    self.assertEqual(response.headers['Content-Range'].split('/')[-1], str(len(data)))
+        for value in ('bytes=-', 'bytes=-0', f'bytes={len(data)}-', 'bytes=7-2'):
+            with self.subTest(range=value), self.assertRaises(urllib.error.HTTPError) as invalid:
+                urllib.request.urlopen(urllib.request.Request(self.base + '/demo.mp4', headers={'Range': value}), timeout=10)
+            self.assertEqual(invalid.exception.code, 416)
+            self.assertEqual(invalid.exception.headers['Content-Range'], f'bytes */{len(data)}')
 
     def test_source_caption_edits_preserve_provenance_and_review(self):
         project_id, token = "c" * 32, "caption-editor"

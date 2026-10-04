@@ -12,7 +12,7 @@ OUTPUT = ROOT / "submission" / "deployment" / "jisr-hackathon-deploy.zip"
 
 def main():
     files = [ROOT / name for name in (
-        "Dockerfile", ".dockerignore", "docker-entrypoint.py", "server.py", "render.yaml",
+        "Dockerfile", ".dockerignore", "docker-entrypoint.py", "server.py", "subtitle_png.py", "render.yaml",
         "docs/deployment.md", "scripts/check_deployment.py",
     )]
     files += sorted(path for path in (ROOT / "dist").rglob("*") if path.is_file())
@@ -21,7 +21,7 @@ def main():
         if path.is_symlink() or not path.resolve().is_relative_to(ROOT):
             raise SystemExit(f"Refusing linked file: {path.relative_to(ROOT)}")
         payloads[path.relative_to(ROOT).as_posix()] = path.read_bytes()
-    payloads[".gitignore"] = b".env\n.env.*\ndata/\n__pycache__/\n*.pyc\n*.log\n"
+    payloads[".gitignore"] = (ROOT / ".gitignore").read_bytes()
     payloads["README.md"] = (
         "# JISR hackathon application\n\n"
         "Full Python/Docker application with the Arabic landing page and editor.\n\n"

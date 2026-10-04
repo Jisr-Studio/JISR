@@ -22,6 +22,15 @@
     if(source.quotation_mode==='paraphrase')return 'نقل بالمعنى · مرجع مرتبط · '+(source.attribution||source.title||'حديث');
     return segment.type==='quran' ? source.title||'آية قرآنية' : (source.attribution||source.title||'حديث')+' · '+(source.grade||'الحكم غير مذكور');
   }
-  root.JisrCitationText = { presentation, transcriptForSave, sourceCaption };
+  function reviewPending(segment) {
+    if(!segment)return false;
+    const source=segment.source||{};
+    const aligned=['matched','selected'].includes(source.alignment_status);
+    const paraphrase=source.kind==='hadith'&&source.quotation_mode==='paraphrase'&&source.relation_method==='editor_selected'&&source.alignment_status==='paraphrase';
+    const partialReady=!source.partial||((aligned||paraphrase)&&source.subtitle_arabic&&source.subtitle_english);
+    return !!(!segment.en?.trim()||segment.needs_review||['quran','hadith'].includes(segment.candidate?.kind)
+      ||(['quran','hadith'].includes(segment.type)&&(!segment.source||segment.reviewed!==true))||!partialReady);
+  }
+  root.JisrCitationText = { presentation, transcriptForSave, sourceCaption, reviewPending };
   if (typeof module !== 'undefined') module.exports = root.JisrCitationText;
 })(typeof window === 'undefined' ? globalThis : window);
