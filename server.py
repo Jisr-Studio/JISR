@@ -30,6 +30,12 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 DIST = ROOT / "dist"
+SUBTITLE_FONTS = {
+    "plex": "IBM Plex Sans Arabic", "amiri": "Amiri", "cairo": "Cairo",
+    "tajawal": "Tajawal", "noto-sans": "Noto Sans Arabic",
+    "noto-naskh": "Noto Naskh Arabic", "system": "Arial",
+}
+SUBTITLE_MIN_SIZE, SUBTITLE_MAX_SIZE, SUBTITLE_DEFAULT_SIZE = 10, 42, 18
 
 
 def load_env():
@@ -59,6 +65,8 @@ LOCK = threading.RLock()
 RENDER_LOCK = threading.Lock()
 PROCESS_SLOTS = threading.Semaphore(2)
 RECENT_UPLOADS = {}
+DOWNLOAD_TICKETS = {}
+DOWNLOAD_TTL = 600
 TAFSIR_INDEX = {}
 DORAR_LINK_CACHE = {}
 TERM_CACHE = {}
@@ -73,13 +81,19 @@ TERMINOLOGY_GUIDE = (
 
 
 def client_identity(peer_ip, headers):
-    if os.getenv("JISR_TRUST_PROXY", "0") == "1":
+    trust = os.getenv("JISR_TRUST_PROXY", "0")
+    if trust == "render":
+        # Render's managed edge supplies the client address in this header.
+        # Enable only behind that edge, never on an exposed origin server.
+        forwarded = headers.get("X-Forwarded-For", "").split(",", 1)[0].strip()
+    elif trust == "1":
         forwarded = headers.get("X-Real-IP", "").strip()
-        try:
-            return str(ipaddress.ip_address(forwarded))
-        except ValueError:
-            pass
-    return peer_ip
+    else:
+        return peer_ip
+    try:
+        return str(ipaddress.ip_address(forwarded))
+    except ValueError:
+        return peer_ip
 
 
 @contextmanager
@@ -1467,13 +1481,13 @@ def ass_time(seconds):
 
 
 def make_ass(segments, style):
-    font = {"plex": "Arial", "amiri": "Arabic Typesetting" if os.name == "nt" else "Amiri", "system": "Arial"}.get(style.get("font"), "Arial")
-    size = min(42, max(16, int(style.get("size", 24))))
+    font = SUBTITLE_FONTS.get(style.get("font"), SUBTITLE_FONTS["plex"])
+    size = min(SUBTITLE_MAX_SIZE, max(SUBTITLE_MIN_SIZE, int(style.get("size", SUBTITLE_DEFAULT_SIZE))))
     color = str(style.get("color", "#ffffff"))
     if not re.fullmatch(r"#[0-9a-fA-F]{6}", color):
         color = "#ffffff"
     ass_color = "&H00" + color[5:7] + color[3:5] + color[1:3]
-    align = {"bottom": 2, "middle": 5, "top": 8}.get(style.get("position"), 2)
+    align = 2
     back = "&H90000000" if style.get("backdrop", True) else "&H00000000"
     border_style = 3 if style.get("backdrop", True) else 1
     lines = ["[Script Info]", "ScriptType: v4.00+", "PlayResX: 1280", "PlayResY: 720", "WrapStyle: 2", "", "[V4+ Styles]", "Format: Name,Fontname,Fontsize,PrimaryColour,SecondaryColour,OutlineColour,BackColour,Bold,Italic,Underline,StrikeOut,ScaleX,ScaleY,Spacing,Angle,BorderStyle,Outline,Shadow,Alignment,MarginL,MarginR,MarginV,Encoding", f"Style: Default,{font},{size},{ass_color},{ass_color},&H00000000,{back},0,0,0,0,100,100,0,0,{border_style},2,1,{align},45,45,48,1", "", "[Events]", "Format: Layer,Start,End,Style,Name,MarginL,MarginR,MarginV,Effect,Text"]
@@ -1503,11 +1517,25 @@ def render_video(row):
         dst = folder / "translated.mp4"
         tmp = folder / "translated.tmp.mp4"
         ass = folder / "subtitles.ass"
-        if dst.exists() and dst.stat().st_mtime >= row["updated"]:
+        subtitle_style = json.loads(row["style"])
+        subtitle_text = make_ass(json.loads(row["segments"]), subtitle_style)
+        # A short relative font path works across Windows, macOS, and Linux.
+        # Use the same bundled face as the preview without installing host fonts.
+        font_key = subtitle_style.get("font", "plex")
+        if font_key not in SUBTITLE_FONTS or font_key == "system":
+            font_key = "plex"
+        fonts = folder / "fonts"
+        # Refresh older cached exports after font or bottom-position defaults change.
+        if (dst.exists() and dst.stat().st_mtime >= row["updated"]
+                and (fonts / f"{font_key}.ttf").is_file()
+                and ass.exists() and ass.read_text(encoding="utf-8") == subtitle_text):
             return dst
-        ass.write_text(make_ass(json.loads(row["segments"]), json.loads(row["style"])), encoding="utf-8")
+        ass.write_text(subtitle_text, encoding="utf-8")
+        fonts.mkdir(exist_ok=True)
+        shutil.copyfile(DIST / "fonts" / f"{font_key}.ttf", fonts / f"{font_key}.ttf")
         # Run in the project directory so libass receives a simple, controlled path.
-        cmd = [FFMPEG, "-y", "-i", src.name, "-vf", "ass=subtitles.ass", "-c:v", "libx264", "-preset", "veryfast", "-crf", "22", "-c:a", "aac", "-movflags", "+faststart", tmp.name]
+        threads = str(max(1, min(8, int(os.getenv("JISR_FFMPEG_THREADS", "2")))))
+        cmd = [FFMPEG, "-y", "-filter_threads", threads, "-i", src.name, "-vf", "ass=subtitles.ass:fontsdir=fonts", "-c:v", "libx264", "-threads", threads, "-preset", "veryfast", "-crf", "22", "-c:a", "aac", "-movflags", "+faststart", tmp.name]
         try:
             result = subprocess.run(cmd, cwd=folder, capture_output=True, text=True, timeout=1800)
             if result.returncode:
@@ -1554,7 +1582,7 @@ class Handler(BaseHTTPRequestHandler):
     def editable(self, row):
         return bool(row and secrets.compare_digest(self.token(), row["edit_token"]))
 
-    def serve_file(self, path, download=False):
+    def serve_file(self, path, download=False, filename=None):
         if not path.is_file():
             return self.fail(404, "الملف غير موجود")
         mime = mimetypes.guess_type(path.name)[0] or "application/octet-stream"
@@ -1576,7 +1604,8 @@ class Handler(BaseHTTPRequestHandler):
         if range_header:
             self.send_header("Content-Range", f"bytes {start}-{end}/{size}")
         if download:
-            self.send_header("Content-Disposition", f'attachment; filename="{path.name}"')
+            self.send_header("Content-Disposition", f'attachment; filename="{filename or path.name}"')
+            self.send_header("Cache-Control", "no-store")
         self.end_headers()
         with path.open("rb") as stream:
             stream.seek(start)
@@ -1600,6 +1629,21 @@ class Handler(BaseHTTPRequestHandler):
         path = urllib.parse.urlsplit(self.path).path
         if path == "/api/health":
             return self.json(200, {"ok": True, "elevenlabs": bool(os.getenv("ELEVENLABS_API_KEY", "").strip()), "openai": bool(os.getenv("OPENAI_API_KEY", "").strip()), "translation": bool(translation_key()), "translation_provider": "openai", "ffmpeg": bool(FFMPEG)})
+        match = re.fullmatch(r"/api/downloads/([A-Za-z0-9_-]{43})", path)
+        if match:
+            with LOCK:
+                ticket = DOWNLOAD_TICKETS.get(match.group(1))
+                if not ticket:
+                    return self.fail(404, "رابط التنزيل غير صالح؛ جهّز الملف مجدداً")
+                if ticket["expires"] <= time.monotonic():
+                    DOWNLOAD_TICKETS.pop(match.group(1), None)
+                    return self.fail(410, "انتهت صلاحية رابط التنزيل؛ جهّز الملف مجدداً")
+                row = project_row(ticket["project_id"])
+                if not row:
+                    return self.fail(404, "المشروع غير موجود")
+                if row["updated"] != ticket["updated"] or (ticket["kind"] != "sources" and not publishable(row)):
+                    return self.fail(409, "تغيّر المشروع؛ جهّز الملف مجدداً لتنزيل أحدث نسخة")
+            return self.serve_file(ticket["path"], True, ticket["filename"])
         if path.startswith("/api/share/"):
             token = path.removeprefix("/api/share/")
             with db() as con:
@@ -1681,6 +1725,40 @@ class Handler(BaseHTTPRequestHandler):
 
     def post(self):
         path = urllib.parse.urlsplit(self.path).path
+        match = re.fullmatch(r"/api/projects/([0-9a-f]{32})/export/(srt|sources|mp4)", path)
+        if match:
+            row = project_row(match.group(1))
+            if not row:
+                return self.fail(404, "المشروع غير موجود")
+            if not self.editable(row):
+                return self.fail(403, "رابط التحرير غير صالح")
+            self.body_json()
+            kind = match.group(2)
+            if kind != "sources" and not publishable(row):
+                return self.fail(409, "راجع جميع المقاطع قبل التصدير النهائي")
+            if kind == "mp4":
+                file = render_video(row)
+            else:
+                segments = json.loads(row["segments"])
+                content = (make_srt(segments, json.loads(row["style"]).get("bilingual", True))
+                           if kind == "srt" else json.dumps(make_sources(segments), ensure_ascii=False, indent=2))
+                file = DATA / row["id"] / ("subtitles.srt" if kind == "srt" else "sources.json")
+                with LOCK:
+                    file.write_text(content, encoding="utf-8")
+            with LOCK:
+                latest = project_row(row["id"])
+                if not latest or latest["updated"] != row["updated"]:
+                    return self.fail(409, "تغيّر المشروع أثناء تجهيز الملف؛ حاول مجدداً")
+                now = time.monotonic()
+                expired = [key for key, ticket in DOWNLOAD_TICKETS.items() if ticket["expires"] <= now]
+                for key in expired:
+                    DOWNLOAD_TICKETS.pop(key, None)
+                download_token = secrets.token_urlsafe(32)
+                filename = f"jisr-{row['id'][:8]}.{'json' if kind == 'sources' else kind}"
+                DOWNLOAD_TICKETS[download_token] = {"project_id": row["id"], "kind": kind, "path": file,
+                    "updated": row["updated"], "expires": now + DOWNLOAD_TTL, "filename": filename}
+            return self.json(200, {"download_url": f"/api/downloads/{download_token}", "filename": filename,
+                "size": file.stat().st_size, "expires_in": DOWNLOAD_TTL, "project_updated": row["updated"]})
         if path == "/api/projects":
             client = client_identity(self.client_address[0], self.headers)
             now = time.time()
@@ -1854,14 +1932,14 @@ class Handler(BaseHTTPRequestHandler):
             return self.json(200, project_json(project_row(row["id"]), True))
         if action == "style":
             allowed = {k: data[k] for k in ("font", "size", "color", "backdrop", "bilingual", "position") if k in data}
-            if "font" in allowed and allowed["font"] not in ("plex", "amiri", "system"):
+            if "font" in allowed and allowed["font"] not in SUBTITLE_FONTS:
                 raise ValueError("الخط غير مدعوم")
             if "size" in allowed:
                 try:
                     allowed["size"] = int(allowed["size"])
                 except (TypeError, ValueError) as exc:
                     raise ValueError("حجم الخط غير صالح") from exc
-                if not 16 <= allowed["size"] <= 42:
+                if not SUBTITLE_MIN_SIZE <= allowed["size"] <= SUBTITLE_MAX_SIZE:
                     raise ValueError("حجم الخط خارج النطاق")
             if "color" in allowed and not re.fullmatch(r"#[0-9a-fA-F]{6}", str(allowed["color"])):
                 raise ValueError("لون الترجمة غير صالح")
@@ -1871,6 +1949,7 @@ class Handler(BaseHTTPRequestHandler):
                 raise ValueError("خيارات الترجمة غير صالحة")
             current_style = json.loads(project_row(row["id"])["style"])
             current_style.update(allowed)
+            current_style["position"] = "bottom"
             save_project(row["id"], style=json.dumps(current_style, ensure_ascii=False))
             return self.json(200, project_json(project_row(row["id"]), True))
         if action == "title":
@@ -1880,6 +1959,6 @@ class Handler(BaseHTTPRequestHandler):
 
 if __name__ == "__main__":
     initialize_db()
-    host, port = os.getenv("JISR_HOST", "127.0.0.1"), int(os.getenv("JISR_PORT", "8766"))
+    host, port = os.getenv("JISR_HOST", "127.0.0.1"), int(os.getenv("JISR_PORT") or os.getenv("PORT", "8766"))
     print(f"Jisr ready: http://{host}:{port}/", flush=True)
     ThreadingHTTPServer((host, port), Handler).serve_forever()

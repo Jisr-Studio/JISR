@@ -28,6 +28,7 @@ class ProcessingHTTPTests(unittest.TestCase):
         self.patches = [
             patch.object(server, "DATA", root),
             patch.object(server, "DB", root / "test.sqlite3"),
+            patch.object(server, "DOWNLOAD_TICKETS", {}),
             patch.dict(os.environ, {"ELEVENLABS_API_KEY": "test-elevenlabs", "OPENAI_API_KEY": "test-openai"}),
             patch.object(server, "lookup_tafsir", return_value={"explanation": "شرح موثق للآية.", "explanation_url": "https://dorar.net/tafseer/2/38", "explanation_status": "available"}),
             patch.object(server, "transcribe", return_value={"words": [
@@ -164,6 +165,97 @@ class ProcessingHTTPTests(unittest.TestCase):
                 self.assertTrue(json.loads(raw)["publishable"])
                 _, public = self.request("/api/share/" + share)
                 self.assertEqual(json.loads(public)["segments"][0]["source"]["english"], source["english"])
+
+    def test_expanded_subtitle_styles_save_and_validate(self):
+        project_id, token = "a" * 32, "private"
+        with server.db() as con:
+            con.execute("INSERT INTO projects(id,edit_token,share_token,title,filename,status,created,updated) VALUES(?,?,?,?,?,?,?,?)",
+                        (project_id, token, "b" * 32, "Subtitle styles", "original.mp4", "ready", time.time(), time.time()))
+        path = f"/api/projects/{project_id}/style"
+        for font in ("plex", "amiri", "cairo", "tajawal", "noto-sans", "noto-naskh", "system"):
+            with self.subTest(font=font):
+                _, raw = self.request(path, "POST", json.dumps({"font": font, "size": 10, "color": "#c9b8ff", "position": "top"}).encode(), token)
+                saved = json.loads(raw)["style"]
+                self.assertEqual(saved, {"font": font, "size": 10, "color": "#c9b8ff", "position": "bottom"})
+        _, raw = self.request(path, "POST", b'{"size":42}', token)
+        self.assertEqual(json.loads(raw)["style"]["color"], "#c9b8ff")
+        self.assertEqual(json.loads(raw)["style"]["size"], 42)
+        for invalid in ({"size": 9}, {"size": 43}, {"font": "unknown"}, {"color": "blue"}):
+            with self.subTest(invalid=invalid), self.assertRaises(urllib.error.HTTPError) as rejected:
+                self.request(path, "POST", json.dumps(invalid).encode(), token)
+            self.assertEqual(rejected.exception.code, 400)
+        _, raw = self.request(f"/api/projects/{project_id}", token=token)
+        self.assertEqual(json.loads(raw)["style"]["size"], 42)
+
+    def test_native_download_tickets_require_editor_and_expire_after_changes(self):
+        project_id, token = "e" * 32, "private-edit-token"
+        segment = {"id": "e" * 12, "start": 0, "end": 4, "type": "speech", "ar": "اختبار", "en": "Export check."}
+        folder = server.DATA / project_id
+        folder.mkdir()
+        video = folder / "translated.mp4"
+        video.write_bytes(b"\x00\x00\x00\x18ftypmp42download-fixture")
+        with server.db() as con:
+            con.execute("INSERT INTO projects(id,edit_token,share_token,title,filename,status,duration,segments,created,updated) VALUES(?,?,?,?,?,?,?,?,?,?)",
+                        (project_id, token, "f" * 32, "Download check", "original.mp4", "ready", 4, json.dumps([segment]), time.time(), time.time()))
+        prefix = f"/api/projects/{project_id}/export/"
+        with patch.object(server, "render_video", return_value=video) as render:
+            for credential in (None, "wrong"):
+                with self.assertRaises(urllib.error.HTTPError) as unauthorized:
+                    self.request(prefix + "mp4", "POST", b"{}", credential)
+                self.assertEqual(unauthorized.exception.code, 403)
+            render.assert_not_called()
+            _, raw = self.request(prefix + "mp4", "POST", b"{}", token)
+            result = json.loads(raw)
+            self.assertNotIn(token, raw.decode())
+            self.assertEqual(result["size"], video.stat().st_size)
+            with urllib.request.urlopen(self.base + result["download_url"]) as response:
+                self.assertEqual(response.headers["Content-Type"], "video/mp4")
+                self.assertEqual(response.headers["Cache-Control"], "no-store")
+                self.assertIn(result["filename"], response.headers["Content-Disposition"])
+                self.assertEqual(response.read(), video.read_bytes())
+            ticket = result["download_url"].split("/")[-1]
+            server.DOWNLOAD_TICKETS[ticket]["expires"] = 0
+            with self.assertRaises(urllib.error.HTTPError) as expired:
+                self.request(result["download_url"])
+            self.assertEqual(expired.exception.code, 410)
+            _, raw = self.request(prefix + "mp4", "POST", b"{}", token)
+            result = json.loads(raw)
+            self.request(f"/api/projects/{project_id}/style", "POST", b'{"size":12}', token)
+            with self.assertRaises(urllib.error.HTTPError) as stale:
+                self.request(result["download_url"])
+            self.assertEqual(stale.exception.code, 409)
+        for kind, expected in (("srt", "Export check."), ("sources", "[]")):
+            _, raw = self.request(prefix + kind, "POST", b"{}", token)
+            _, content = self.request(json.loads(raw)["download_url"])
+            self.assertIn(expected, content.decode())
+
+    def test_download_preparation_preserves_review_gate_and_detects_concurrent_edit(self):
+        project_id, token = "e" * 32, "private"
+        segment = {"id": "e" * 12, "start": 0, "end": 4, "type": "speech", "ar": "اختبار", "en": "Draft", "needs_review": True}
+        folder = server.DATA / project_id
+        folder.mkdir()
+        video = folder / "translated.mp4"
+        video.write_bytes(b"video-fixture")
+        with server.db() as con:
+            con.execute("INSERT INTO projects(id,edit_token,share_token,title,filename,status,duration,segments,created,updated) VALUES(?,?,?,?,?,?,?,?,?,?)",
+                        (project_id, token, "f" * 32, "Review check", "original.mp4", "ready", 4, json.dumps([segment]), time.time(), time.time()))
+        prefix = f"/api/projects/{project_id}/export/"
+        with patch.object(server, "render_video", return_value=video) as render:
+            for kind in ("srt", "mp4"):
+                with self.assertRaises(urllib.error.HTTPError) as blocked:
+                    self.request(prefix + kind, "POST", b"{}", token)
+                self.assertEqual(blocked.exception.code, 409)
+            render.assert_not_called()
+        segment.pop("needs_review")
+        server.save_project(project_id, segments=json.dumps([segment]))
+        def changed_during_render(row):
+            server.save_project(project_id, title="Changed during export")
+            return video
+        with patch.object(server, "render_video", side_effect=changed_during_render):
+            with self.assertRaises(urllib.error.HTTPError) as changed:
+                self.request(prefix + "mp4", "POST", b"{}", token)
+            self.assertEqual(changed.exception.code, 409)
+        self.assertFalse(server.DOWNLOAD_TICKETS)
 
     def test_importing_backend_does_not_reset_a_running_job(self):
         with server.db() as con:

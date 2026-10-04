@@ -65,6 +65,16 @@ class PipelineTests(unittest.TestCase):
             fake.write_bytes(b"not video data")
             self.assertFalse(server.has_video_stream(fake))
 
+    def test_render_proxy_separates_judges_and_ignores_untrusted_real_ip(self):
+        headers = {"X-Forwarded-For": "203.0.113.9, 10.0.0.1", "X-Real-IP": "198.51.100.4"}
+        with patch.dict("os.environ", {"JISR_TRUST_PROXY": "render"}):
+            self.assertEqual(server.client_identity("10.0.0.2", headers), "203.0.113.9")
+            self.assertEqual(server.client_identity("10.0.0.2", {"X-Forwarded-For": "2001:db8::1"}), "2001:db8::1")
+            self.assertEqual(server.client_identity("10.0.0.2", {"X-Forwarded-For": "invalid"}), "10.0.0.2")
+            self.assertEqual(server.client_identity("10.0.0.2", {"X-Real-IP": "198.51.100.4"}), "10.0.0.2")
+        with patch.dict("os.environ", {"JISR_TRUST_PROXY": "0"}):
+            self.assertEqual(server.client_identity("10.0.0.2", headers), "10.0.0.2")
+
     def test_multipart_upload_streams_binary_across_chunk_boundaries(self):
         boundary = "----jisr-test-boundary"
         video_bytes = b"x" * 65_530 + b"\r\n--" + boundary.encode() + b"NO" + b"y" * 100_000

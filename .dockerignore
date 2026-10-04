@@ -1,10 +1,7 @@
-.env
-.env.*
-data/
-ffmpeg.exe
-__pycache__/
-tests/
-.openai/
-tmp*/
-.venv/
-*.log
+# Send only runtime source to the Docker builder.
+**
+!Dockerfile
+!docker-entrypoint.py
+!server.py
+!dist/
+!dist/**

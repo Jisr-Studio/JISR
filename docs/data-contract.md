@@ -94,11 +94,17 @@ The editor may send `source_english_span: {"start": 24, "end": 48}` to the segme
 | GET | `/api/projects/ID/export/srt` | Requires a publishable project |
 | GET | `/api/projects/ID/export/sources` | JSON list of references eligible for export, with start/end times |
 | GET | `/api/projects/ID/export/mp4` | Editor token and publishable project; FFmpeg render |
+| POST | `/api/projects/ID/export/KIND` | Editor token; JSON `{}`; prepares `srt`, `sources`, or `mp4` for browser download. SRT/MP4 require a publishable project |
+| GET | `/api/downloads/TICKET` | Short-lived attachment download; supports byte ranges |
 | GET | `/api/share/SHARE_TOKEN` | Read-only project; requires a publishable project |
 | GET | `/view/SHARE_TOKEN` | Read-only viewer page |
 | DELETE | `/api/projects/ID` | Editor token; deletes project and files; unavailable during processing |
 
-`reviewed` must be a JSON boolean. Style accepts `font` (`plex`, `amiri`, `system`), `size` (16–42), `color` (`#RRGGBB`), boolean `backdrop` and `bilingual`, and `position` (`top`, `middle`, `bottom`).
+`reviewed` must be a JSON boolean. Style accepts `font` (`plex`, `amiri`, `cairo`, `tajawal`, `noto-sans`, `noto-naskh`, `system`), `size` (10–42, default 18), `color` (`#RRGGBB`), and boolean `backdrop` and `bilingual`. Subtitles always use bottom placement. Legacy `position` values (`top`, `middle`, `bottom`) are accepted and normalized to `bottom`.
+
+Export preparation returns `download_url`, `filename`, `size` (bytes), `expires_in` (600 seconds), and `project_updated`. The browser follows this URL as a normal attachment link, without creating an in-memory Blob or putting the editor token in the URL. Tickets expire after ten minutes, invalidate after project edits or deletion, and disappear on server restart; prepare a new file when needed. The frontend waits for appearance saves before preparing an export and shows preparation failures in the export dialog.
+
+The six named fonts are bundled in `dist/fonts/` for both browser preview and MP4 export. The system option uses the host's Arial fallback. Preview volume is a local player control and does not change the exported audio.
 
 Processing blocks transcript edits, manual replacement, source linking, and deletion. Style and title updates remain available. Missing keys, unresolved review, and incompatible states return `409`; invalid input returns `400`; invalid editor access returns `403`; missing records return `404`. Upload and processing limits can return `429`.
 

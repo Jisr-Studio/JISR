@@ -6,7 +6,11 @@
 > Built for the [AI Challenge for Serving Islamic Content](https://islamicaich.org/), October 2026.  
 > Jisr is an AI-assisted tool. Every matched Quranic or Hadith citation requires human confirmation before export or sharing. Unresolved segments block publication.
 
-**Current status:** The local application integrates **ElevenLabs Scribe v2** for transcription and **OpenAI GPT-6 Luna** for translation, quotation detection, terminology review, and source-excerpt alignment. The latest local verification passed **105 Python tests**, including actual FFmpeg video export, plus the JavaScript citation-link and citation-text checks. Live-provider testing and deployment verification remain necessary before public launch.
+**Current status:** The local application integrates **ElevenLabs Scribe v2** for transcription and **OpenAI GPT-6 Luna** for translation, quotation detection, terminology review, and source-excerpt alignment. Local verification includes actual FFmpeg video export and JavaScript citation-link/text checks. Live-provider testing and deployment verification remain necessary before public launch.
+
+The [October 4 verification](docs/verification-2026-10-04.md) records 111 passing
+Python tests and desktop/mobile browser checks for onboarding, appearance,
+upload, review and native MP4 download.
 
 ![Jisr translation studio — desktop preview](docs/previews/studio-desktop.png)
 
@@ -52,6 +56,7 @@ docs/                   API contract, source policy, implementation notes, and p
 .vscode/                Run, debug, and test configuration
 .env.example            Configuration template; contains no credentials
 Dockerfile              Linux image with FFmpeg
+render.yaml             Always-on Render configuration and persistent disk
 compose.yaml            App, Caddy HTTPS proxy, and persistent data volume
 Caddyfile               Reverse-proxy configuration
 data/                   Generated media and SQLite database; Git-ignored
@@ -155,6 +160,12 @@ Automatic processing sends uploaded media to ElevenLabs and transcript/translati
 Keep API keys and editor links private. `.env`, `data/`, generated logs, and Python caches are excluded by `.gitignore`; only `.env.example` belongs in the repository. Do not force-add private project files when pushing.
 
 ## Deployment and remaining work
+
+For the hackathon's public demo, use the [deployment guide](docs/deployment.md).
+`render.yaml` prepares a paid, always-on Docker service with HTTPS and persistent
+uploads. No public service has been created or verified yet. Generate a clean
+runtime-only deployment ZIP with `python3 scripts/package_demo.py`; API keys and
+local projects are excluded. Hosting costs require account-owner approval.
 
 For a Linux host with a configured domain, set `JISR_DOMAIN` and the API keys in `.env`, then run:
 

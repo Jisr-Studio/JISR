@@ -53,24 +53,17 @@ render();
 
 // Start and studio are two views of the same connected application.
 const studioMain = $('main');
-const welcome = document.createElement('section');
-welcome.className = 'welcome';
-welcome.innerHTML = `<div class="welcome-copy"><span class="studio-kicker">جسر / من العربية إلى العالم</span><h1>المعنى يستحق<br>أن يصل.</h1><p>حوّل الفيديو العربي إلى ترجمة إنجليزية، مع مصادر واضحة للآيات والأحاديث ومراجعة بشرية قبل النشر.</p><div class="welcome-actions"><button class="button primary" id="startUpload">ارفع فيديوك ←</button><button class="button secondary" id="startDemo">جرّب مثالاً</button></div><small>MP4، MOV، WebM · حتى 250 ميغابايت</small></div><div class="welcome-preview"><span class="preview-label">من الكلام إلى المعرفة</span><div class="welcome-arch"><img src="/favicon.svg" alt="شعار جسر — المحراب"></div><div class="sample-translation"><span class="tag quran">اقتباس قرآني · مثال توضيحي</span><p lang="ar">إِنَّ اللَّهَ يُحِبُّ التَّوَّابِينَ</p><p lang="en" dir="ltr">Indeed, Allah loves those who are constantly repentant.</p><small>البقرة · ٢٢٢ / الترجمة: Saheeh International</small></div></div><div class="welcome-steps"><article><b>01 / ارفع</b><p>ابدأ بمقطع فيديو عربي.</p></article><article><b>02 / ترجم</b><p>تفريغ وترجمة مع مطابقة الاقتباسات.</p></article><article><b>03 / راجع</b><p>حرّر النص وتحقق من المصادر.</p></article><article><b>04 / شارك</b><p>صدّر الفيديو والترجمة وقائمة المصادر.</p></article></div><p class="welcome-note">جسر يساعد المحرر. الاقتباسات والترجمات تحتاج مراجعتك وتأكيدك قبل التصدير.</p>`;
-studioMain.before(welcome);
+const welcome = $('#landing');
 let demoOpened = new URLSearchParams(location.search).get('demo') === '1';
 function syncView() {
   const inStudio = !!project || demoOpened || location.pathname.startsWith('/view/');
   welcome.hidden = inStudio;
+  document.title = inStudio ? 'جسر | استوديو الترجمة' : 'جسر | للمعنى طريق';
+  $('.skip-link').href = inStudio ? '#studioMain' : '#landing';
   studioMain.hidden = !inStudio;
   document.body.classList.toggle('start-view', !inStudio);
 }
-$('#startUpload').onclick = () => $('#fileInput').click();
-$('#startDemo').onclick = () => {
-  demoOpened = true;
-  history.replaceState(null, '', '/?demo=1');
-  syncView();
-  window.scrollTo({top:0});
-};
+
 
 const sidebar = $('.workspace aside');
 const tabs = document.createElement('div');

@@ -3,7 +3,7 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const fmt=n=>`${String(Math.floor((+n||0)/60)).padStart(2,'0')}:${String(Math.floor((+n||0)%60)).padStart(2,'0')}`;
 const video=$('#video');
 let project=null, token='', segments=[], filter='all', showArabic=true, selected=0, readOnly=false, poll=null, toastTimer;
-const style={font:'plex',size:22,color:'#ffffff',backdrop:true,bilingual:true,position:'bottom'};
+const style={font:'plex',size:18,color:'#ffffff',backdrop:true,bilingual:true,position:'bottom'};
 const demo=[
  {id:'d1',start:0,end:8,type:'speech',ar:'الطهارة ليست مجرد نظافة للجسد، بل استعداد للوقوف بين يدي الله.',en:'Purification is more than physical cleanliness. It prepares us to stand before Allah.'},
  {id:'d2',start:8,end:16,type:'quran',ar:'إِنَّ اللَّهَ يُحِبُّ التَّوَّابِينَ وَيُحِبُّ الْمُتَطَهِّرِينَ',en:'Indeed, Allah loves those who are constantly repentant and loves those who purify themselves.',source:{title:'سورة البقرة · الآية ٢٢٢',url:'https://quranpedia.net/embed?surah=2&ayah=222',arabic:'إِنَّ اللَّهَ يُحِبُّ التَّوَّابِينَ وَيُحِبُّ الْمُتَطَهِّرِينَ',english:'Indeed, Allah loves those who are constantly repentant and loves those who purify themselves.',translator:'مثال توضيحي'}},
@@ -14,7 +14,7 @@ const demo=[
 ];segments=demo.map(x=>({...x}));
 function toast(s){$('#toast').textContent=s;$('#toast').classList.add('visible');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('#toast').classList.remove('visible'),4500)}
 async function api(path,opt={}){let r=await fetch(path,{...opt,headers:{...(opt.body instanceof FormData?{}:{'Content-Type':'application/json'}),...(token?{'X-Edit-Token':token}:{}),...opt.headers}});let d=await r.json().catch(()=>({error:'تعذر قراءة استجابة الخادم'}));if(!r.ok)throw Error(d.error||'تعذر الطلب');return d}
-function setProject(p){project=p;segments=p.segments||[];Object.assign(style,{font:'plex',size:22,color:'#ffffff',backdrop:true,bilingual:true,position:'bottom'},p.style||{});video.src=p.video_url;selected=0;render();applyStyle();status();clearInterval(poll);if(p.status==='processing')poll=setInterval(async()=>{try{let next=await api('/api/projects/'+p.id);setProject(next);if(next.status==='ready')toast('اكتملت المعالجة؛ راجع النصوص والمراجع');if(next.status==='error')toast(next.error)}catch(e){clearInterval(poll);toast(e.message)}},2500)}
+function setProject(p){project=p;segments=p.segments||[];Object.assign(style,{font:'plex',size:18,color:'#ffffff',backdrop:true,bilingual:true,position:'bottom'},p.style||{},{position:'bottom'});video.src=p.video_url;selected=0;render();applyStyle();status();clearInterval(poll);if(p.status==='processing')poll=setInterval(async()=>{try{let next=await api('/api/projects/'+p.id);setProject(next);if(next.status==='ready')toast('اكتملت المعالجة؛ راجع النصوص والمراجع');if(next.status==='error')toast(next.error)}catch(e){clearInterval(poll);toast(e.message)}},2500)}
 function status(){$('#projectTitle').textContent=project?.title||'الطهارة.. بداية كل عبادة';$('#saveState').textContent=project?({uploaded:'تم الرفع',processing:project.stage,ready:'التعديلات محفوظة',error:project.error}[project.status]||''):'بيانات توضيحية';$('#durationLabel').textContent=project?fmt(project.duration||video.duration||0):'٤٨ ثانية';$('.demo-pill').textContent=project?'مشروع حقيقي':'نسخة تجريبية';$('.workflow-note').textContent=project?(project.stage||'جاهز للمعالجة'):'بيانات توضيحية · لا توجد معالجة آلية';$('.preview-note').textContent=project?'راجع النصوص والمصادر قبل نشر الفيديو.':'الفيديو صامت والنصوص أمثلة مستقلة للتجربة.';$('.video-title').style.display=project?'none':'';$('.video-top').style.display=project?'none':'';$('#upload').style.display=readOnly?'none':'';$('#export').style.display=readOnly?'none':'';document.body.classList.toggle('viewer-mode',readOnly)}
 function sourceLabel(s){let r=s.source;if(!r)return '';if(r.quotation_mode==='paraphrase')return 'نقل بالمعنى · مرجع مرتبط · '+(r.attribution||r.title||'حديث');return s.type==='quran'?r.title||'آية قرآنية':(r.attribution||r.title||'حديث')+' · '+(r.grade||'الحكم غير مذكور')+(s.needs_review?' · بانتظار المراجعة':'')}
 function render(){let counts={all:segments.length,quran:segments.filter(x=>x.type==='quran').length,hadith:segments.filter(x=>x.type==='hadith').length,review:segments.filter(x=>x.needs_review&&!x.reviewed).length};$$('[data-filter]').forEach(b=>{b.querySelector('span').textContent=counts[b.dataset.filter]});$('.transcript-panel .count').textContent=segments.length+' مقاطع';$('#reviewCount').textContent=counts.review;$('#reviewSummary').textContent=counts.review?counts.review+' مقطع يحتاج انتباهك':'لا توجد مقاطع تنتظر المراجعة';$('.topbar nav .count').textContent=counts.quran+counts.hadith;
@@ -25,11 +25,47 @@ function renderSources(){let cards=segments.map((s,i)=>({s,i})).filter(({s})=>s.
 function seek(i){if(!segments[i])return;video.currentTime=segments[i].start;selected=i;render()}
 function updateSubtitle(){let s=segments[selected];$('#subtitleArabic').textContent=s&&style.bilingual&&['quran','hadith'].includes(s.type)?JisrCitationText.presentation(s).arabic:'';$('#subtitleEnglish').textContent=s?.en||'';$('#subtitleRef').textContent=JisrCitationText.sourceCaption(s);$('#editSubtitleRef').hidden=readOnly||!s?.source}
 function updateTime(){let duration=Number.isFinite(video.duration)?video.duration:(project?.duration||48);$('#seek').max=duration;$('#seek').value=video.currentTime;$('#time').textContent=fmt(video.currentTime)+' / '+fmt(duration);let i=segments.findIndex(s=>video.currentTime>=s.start&&video.currentTime<s.end);if(i>=0&&i!==selected){selected=i;render()}}
-video.addEventListener('timeupdate',updateTime);video.addEventListener('loadedmetadata',()=>{status();updateTime()});video.addEventListener('play',()=>{$('#play').textContent='Ⅱ'});video.addEventListener('pause',()=>{$('#play').textContent='▶'});$('#play').onclick=()=>video.paused?video.play().catch(()=>toast('تعذر تشغيل الفيديو')):video.pause();$('#seek').oninput=e=>{video.currentTime=+e.target.value;updateTime()};$('#mute').onclick=()=>{video.muted=!video.muted;$('#mute').textContent=video.muted?'♩':'♪'};$('#fullscreen').onclick=()=>$('#videoStage').requestFullscreen?.();
+video.addEventListener('timeupdate',updateTime);video.addEventListener('loadedmetadata',()=>{status();updateTime()});video.addEventListener('play',()=>{$('#play').textContent='Ⅱ'});video.addEventListener('pause',()=>{$('#play').textContent='▶'});$('#play').onclick=()=>video.paused?video.play().catch(()=>toast('تعذر تشغيل الفيديو')):video.pause();$('#seek').oninput=e=>{video.currentTime=+e.target.value;updateTime()};$('#fullscreen').onclick=()=>$('#videoStage').requestFullscreen?.();
+const volumeControl=$('#volume'),volumeOutput=$('#volumeValue'),muteButton=$('#mute');
+let lastAudibleVolume=video.volume||1;
+function syncVolume(){
+  const level=video.muted?0:Math.round(video.volume*100);
+  if(level>0)lastAudibleVolume=video.volume;
+  volumeControl.value=level;volumeControl.setAttribute('aria-valuetext',level+'%');volumeOutput.value=level+'%';
+  muteButton.setAttribute('aria-pressed',String(level===0));muteButton.setAttribute('aria-label',level===0?'إلغاء كتم الصوت':'كتم الصوت');
+}
+volumeControl.oninput=e=>{const level=Number(e.target.value)/100;video.volume=level;video.muted=level===0;if(level>0)lastAudibleVolume=level;syncVolume()};
+muteButton.onclick=()=>{if(video.muted||video.volume===0){video.volume=lastAudibleVolume;video.muted=false}else{lastAudibleVolume=video.volume;video.muted=true}syncVolume()};
+video.addEventListener('volumechange',syncVolume);syncVolume();
 $$('[data-filter]').forEach(b=>b.onclick=()=>{filter=b.dataset.filter;$$('[data-filter]').forEach(x=>x.classList.toggle('active',x===b));render()});$('#toggleAll').onclick=()=>{showArabic=!showArabic;$('#toggleAll').textContent=showArabic?'إخفاء النص العربي':'عرض النص العربي';render()};$('#toggleAll').textContent='إخفاء النص العربي';
-function applyStyle(){let e=$('#subtitle');e.style.fontSize=style.size+'px';e.style.setProperty('--chosen-size',style.size+'px');e.style.setProperty('--subcolor',style.color);e.style.fontFamily=style.font==='amiri'?'Amiri,serif':style.font==='system'?'Arial,sans-serif':"'IBM Plex Sans Arabic',sans-serif";$$('.subtitle>div').forEach(x=>x.style.background=style.backdrop?'#05141dbb':'transparent');e.style.bottom=style.position==='bottom'?'7%':'auto';e.style.top=style.position==='top'?'13%':style.position==='middle'?'45%':'auto';$('#font').value=style.font;$('#fontSize').value=style.size;$('#fontValue').value=style.size+' px';$('#backdrop').checked=style.backdrop;$('#bilingual').checked=style.bilingual;$$('[data-color]').forEach(x=>x.classList.toggle('selected',x.dataset.color===style.color));$$('[data-pos]').forEach(x=>x.classList.toggle('active',x.dataset.pos===style.position));updateSubtitle()}
-let styleTimer;function saveStyle(){applyStyle();if(!project||readOnly)return;clearTimeout(styleTimer);styleTimer=setTimeout(()=>api('/api/projects/'+project.id+'/style',{method:'POST',body:JSON.stringify(style)}).catch(e=>toast(e.message)),350)}
-$('#font').oninput=e=>{style.font=e.target.value;saveStyle()};$('#fontSize').oninput=e=>{style.size=+e.target.value;saveStyle()};$('#backdrop').onchange=e=>{style.backdrop=e.target.checked;saveStyle()};$('#bilingual').onchange=e=>{style.bilingual=e.target.checked;saveStyle()};$$('[data-color]').forEach(b=>b.onclick=()=>{style.color=b.dataset.color;saveStyle()});$$('[data-pos]').forEach(b=>b.onclick=()=>{style.position=b.dataset.pos;saveStyle()});$('#resetStyle').onclick=()=>{Object.assign(style,{font:'plex',size:22,color:'#ffffff',backdrop:true,bilingual:true,position:'bottom'});saveStyle();toast('أُعيد مظهر الترجمة الافتراضي')};
+const subtitleFonts={plex:"'Jisr Plex',sans-serif",amiri:"'Jisr Amiri',serif",cairo:"'Jisr Cairo',sans-serif",tajawal:"'Jisr Tajawal',sans-serif",'noto-sans':"'Jisr Noto Sans Arabic',sans-serif",'noto-naskh':"'Jisr Noto Naskh Arabic',serif",system:'Arial,sans-serif'};
+function applyStyle(){
+  style.position='bottom';
+  const e=$('#subtitle');
+  e.style.fontSize=style.size+'px';e.style.setProperty('--chosen-size',style.size+'px');e.style.setProperty('--subcolor',style.color);
+  e.style.fontFamily=subtitleFonts[style.font]||subtitleFonts.plex;
+  $$('.subtitle>div').forEach(x=>x.style.background=style.backdrop?'#05141dbb':'transparent');
+  e.style.bottom='7%';e.style.top='auto';
+  $('#font').value=style.font;$('#fontSize').value=style.size;$('#fontSizeNumber').value=style.size;
+  $('#backdrop').checked=style.backdrop;$('#bilingual').checked=style.bilingual;$('#customColor').value=style.color;
+  $$('[data-color]').forEach(x=>{const chosen=x.dataset.color.toLowerCase()===style.color.toLowerCase();x.classList.toggle('selected',chosen);x.setAttribute('aria-pressed',String(chosen))});
+  updateSubtitle();
+}
+let styleTimer;
+const pendingStyleSaves=new Set();
+function saveStyle(){
+  applyStyle();if(!project||readOnly)return;
+  clearTimeout(styleTimer);
+  styleTimer=setTimeout(()=>{
+    styleTimer=null;
+    const request=api('/api/projects/'+project.id+'/style',{method:'POST',body:JSON.stringify(style)})
+      .then(p=>{if(project?.id===p.id&&p.updated>=project.updated)Object.assign(project,{style:p.style,updated:p.updated})})
+      .catch(e=>toast(e.message));
+    pendingStyleSaves.add(request);request.finally(()=>pendingStyleSaves.delete(request));
+  },350);
+}
+$('#fontSizeNumber').oninput=e=>{const size=Number(e.target.value);if(Number.isInteger(size)&&size>=10&&size<=42){style.size=size;saveStyle()}};
+$('#font').oninput=e=>{style.font=e.target.value;saveStyle()};$('#fontSize').oninput=e=>{style.size=+e.target.value;saveStyle()};$('#backdrop').onchange=e=>{style.backdrop=e.target.checked;saveStyle()};$('#bilingual').onchange=e=>{style.bilingual=e.target.checked;saveStyle()};$$('[data-color]').forEach(b=>b.onclick=()=>{style.color=b.dataset.color;saveStyle()});$('#fontSizeNumber').onchange=e=>{style.size=Math.min(42,Math.max(10,Math.round(Number(e.target.value)||18)));saveStyle()};$('#customColor').oninput=e=>{style.color=e.target.value;saveStyle()};$('#resetStyle').onclick=()=>{Object.assign(style,{font:'plex',size:18,color:'#ffffff',backdrop:true,bilingual:true,position:'bottom'});saveStyle();toast('أُعيد مظهر الترجمة الافتراضي')};
 function modal(title,body){video.pause();$('#modalTitle').textContent=title;$('#modalBody').innerHTML=body;$('#modal').showModal()}$('#closeModal').onclick=()=>$('#modal').close();
 const captionButton=document.createElement('button');captionButton.id='editSubtitleRef';captionButton.className='text-button';captionButton.textContent='تعديل سطر المصدر';captionButton.hidden=true;$('.player-panel .panel-heading').append(captionButton);
 captionButton.onclick=()=>editCaption(selected);
@@ -100,14 +136,100 @@ function edit(i){
 }
 function reference(i){let s=segments[i],r=s.source;if(!r)return;modal(r.title||'تفاصيل المصدر',`<span class="tag ${s.type}">${s.type==='quran'?'قرآن كريم':'حديث نبوي'}</span><p class="modal-verse">${esc(r.arabic||s.ar)}</p>${r.quotation_mode==='paraphrase'?'<p class="modal-note">كلام المتحدث نقل بالمعنى؛ النص أدناه من المرجع، والترجمة الظاهرة في الفيديو مسودة لكلام المتحدث وليست ترجمة حرفية من المصدر.</p>':''}<p dir="ltr">${esc(r.english||s.en)}</p><dl class="source-list">${r.surah?`<dt>الموضع</dt><dd>${esc(r.title)}</dd>`:''}${r.translator?`<dt>الترجمة</dt><dd>${esc(r.translator)}</dd>`:''}${r.narrator?`<dt>الراوي</dt><dd>${esc(/^[-–—]+$/.test(r.narrator.trim())?'غير مذكور في هذا المرجع':r.narrator)}</dd>`:''}${r.attribution?`<dt>التخريج</dt><dd>${esc(r.attribution)}</dd>`:''}${r.grade?`<dt>الحكم</dt><dd>${esc(r.grade)}</dd>`:''}</dl>${r.explanation?`<h3>الشرح</h3><p>${esc(r.explanation)}</p>`:''}<div class="modal-actions">${JisrCitationLinks.links(r,s.type).map(link=>`<a class="button secondary" href="${esc(link.href)}" target="_blank" rel="noopener noreferrer" data-citation-link="${link.role}">${esc(link.label)} ↗</a>`).join('')}</div>${r.explanation_status!=='available'&&!r.explanation?'<p class="modal-note">لا يوجد شرح مرتبط بهذا الاقتباس حاليًا.</p>':''}${!project?'<p class="modal-note">هذا مثال توضيحي، وليس نتيجة تحقق آلي.</p>':''}<div class="modal-actions"><button class="button secondary" id="jumpRef">الانتقال إلى المقطع</button></div>`);$('#jumpRef').onclick=()=>{$('#modal').close();seek(i)}}
 $('#sourcesNav').onclick=()=>$('#referencePanel').scrollIntoView({behavior:'smooth'});$('#editorNav').onclick=()=>window.scrollTo({top:0,behavior:'smooth'});$('#help').onclick=()=>modal('عن جسر','<p>ارفع فيديو، ثم فرّغه عبر ElevenLabs وترجمه عبر خدمة الذكاء الاصطناعي. راجع الاقتباسات والمصادر وعدّل النص والتوقيت، ثم صدّر الفيديو والترجمة وقائمة المصادر.</p><p class="modal-note">لا يوجد تسجيل دخول؛ احفظ رابط التحرير في متصفحك.</p>');
-async function download(kind){let r=await fetch(`/api/projects/${project.id}/export/${kind}`,{headers:{'X-Edit-Token':token}});if(!r.ok)throw Error((await r.json()).error||'تعذر التصدير');let blob=await r.blob(),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='jisr-'+project.id.slice(0,8)+'.'+(kind==='sources'?'json':kind);a.click();setTimeout(()=>URL.revokeObjectURL(url),3000)}
-$('#export').onclick=()=>{if(!project)return modal('المشروع التجريبي','<p>ارفع فيديو حقيقياً أولاً لتفعيل التصدير والمشاركة.</p>');modal('تصدير المشروع','<p class="modal-note">راجع النصوص والاقتباسات قبل النشر. رابط المشاهدة عام لمن يملكه.</p><div class="export-grid"><button class="export-option" id="srtExport"><b>ملف الترجمة · SRT</b></button><button class="export-option" id="sourcesExport"><b>قائمة المصادر · JSON</b></button><button class="export-option" id="videoExport"><b>الفيديو المترجم · MP4</b><span>يتطلب FFmpeg</span></button><button class="export-option" id="shareExport"><b>رابط المشاهدة</b></button></div>');[['srtExport','srt'],['sourcesExport','sources'],['videoExport','mp4']].forEach(([id,kind])=>$('#'+id).onclick=async()=>{try{toast('جارٍ تجهيز الملف...');await download(kind);toast('تم تجهيز الملف')}catch(e){toast(e.message)}});$('#shareExport').onclick=async()=>{let url=new URL(project.share_url,location.origin).href;try{await navigator.clipboard.writeText(url);toast('تم نسخ رابط المشاهدة')}catch{toast(url)}$('#modal').close()}};
-async function boot(){let share=location.pathname.match(/^\/view\/([0-9a-f]{32})$/);if(share){readOnly=true;try{setProject(await api('/api/share/'+share[1]))}catch(e){toast(e.message)}return}let saved=JSON.parse(localStorage.getItem('jisr-edit')||'null'),wanted=new URLSearchParams(location.search).get('project');if(saved&&(!wanted||wanted===saved.id)){token=saved.token;try{setProject(await api('/api/projects/'+saved.id));return}catch{localStorage.removeItem('jisr-edit');token=''}}status();render();applyStyle()}
+let activeExport=null;
+const exportNames={srt:'ملف الترجمة',sources:'قائمة المصادر',mp4:'الفيديو'};
+function renderExportState(){
+  const panel=$('#exportStatus');
+  if(!panel||!activeExport||panel.dataset.project!==activeExport.id)return;
+  const run=activeExport,busy=run.phase==='working';
+  $('#exportGrid').setAttribute('aria-busy',String(busy));
+  if($('#deleteProject'))$('#deleteProject').disabled=busy;
+  [['srtExport','srt'],['sourcesExport','sources'],['videoExport','mp4']].forEach(([id,kind])=>{
+    $('#'+id).disabled=busy||(kind!=='sources'&&!project.publishable);
+  });
+  panel.hidden=false;panel.dataset.state=run.phase;panel.setAttribute('role',run.phase==='error'?'alert':'status');
+  panel.replaceChildren();
+  const message=document.createElement('p');
+  message.textContent=busy?`جارٍ تجهيز ${exportNames[run.kind]}… ${run.kind==='mp4'?'قد يستغرق ذلك بعض الوقت حسب طول الفيديو.':''}`:run.phase==='error'?run.error:`${exportNames[run.kind]} جاهز. اضغط على زر التنزيل لحفظ الملف.`;
+  panel.append(message);
+  if(run.phase==='ready'){
+    const link=document.createElement('a');
+    link.className='button primary export-download';link.href=run.result.download_url;link.download=run.result.filename;
+    link.textContent=`تنزيل ${exportNames[run.kind]} · ${run.kind==='sources'?'JSON':run.kind.toUpperCase()}`;
+    link.onclick=e=>{
+      if(run.expires<=Date.now()){
+        e.preventDefault();run.phase='error';run.error='انتهت صلاحية رابط التنزيل؛ جهّز الملف مجدداً';renderExportState();
+      }
+    };
+    panel.append(link);
+    const note=document.createElement('small');
+    note.textContent='الرابط متاح لمدة ١٠ دقائق. يمكنك تجهيز الملف مجدداً عند الحاجة.';
+    panel.append(note);
+  }
+}
+async function download(kind){
+  const id=project.id,editToken=token,settings={...style};
+  const options={headers:{'X-Edit-Token':editToken}};
+  clearTimeout(styleTimer);styleTimer=null;
+  await Promise.all([...pendingStyleSaves]);
+  let latest=await api('/api/projects/'+id,options);
+  const saved={font:'plex',size:18,color:'#ffffff',backdrop:true,bilingual:true,position:'bottom',...latest.style};
+  if(Object.keys(settings).some(key=>settings[key]!==saved[key])){
+    latest=await api('/api/projects/'+id+'/style',{...options,method:'POST',body:JSON.stringify(settings)});
+  }
+  if(project?.id===id)Object.assign(project,{style:latest.style,updated:latest.updated,publishable:latest.publishable});
+  const result=await api(`/api/projects/${id}/export/${kind}`,{...options,method:'POST',body:'{}'});
+  if(!/^\/api\/downloads\/[A-Za-z0-9_-]{43}$/.test(result.download_url))throw Error('تعذر تجهيز رابط التنزيل');
+  return result;
+}
+$('#export').onclick=()=>{
+  if(!project){
+    modal('تصدير فيديوك','<p>هذه مساحة تجريبية ببيانات توضيحية. ارفع فيديوك لتفريغه وترجمته، ثم صدّره مع الترجمة.</p><div class="modal-actions"><button class="button primary" id="demoUploadForExport">رفع فيديو للتصدير</button></div>');
+    $('#demoUploadForExport').onclick=()=>{$('#modal').close();$('#upload').click()};
+    return;
+  }
+  if(activeExport?.phase==='ready'&&(activeExport.id!==project.id||activeExport.result.project_updated!==project.updated||activeExport.settings!==JSON.stringify(style)||activeExport.expires<=Date.now()))activeExport=null;
+  modal('تصدير المشروع',`<p class="modal-note">اختر الملف لتجهيزه، ثم اضغط على التنزيل. رابط المشاهدة عام لمن يملكه.</p><section id="exportStatus" class="export-status" data-project="${project.id}" role="status" aria-live="polite" hidden></section><div class="export-grid" id="exportGrid" aria-busy="false"><button class="export-option" id="srtExport"><b>ملف الترجمة · SRT</b><span>الترجمة مع التوقيت</span></button><button class="export-option" id="sourcesExport"><b>قائمة المصادر · JSON</b></button><button class="export-option" id="videoExport"><b>الفيديو المترجم · MP4</b><span>ترجمة مدمجة، مع الصوت الأصلي</span></button><button class="export-option" id="shareExport"><b>رابط المشاهدة</b></button></div>`);
+  [['srtExport','srt'],['sourcesExport','sources'],['videoExport','mp4']].forEach(([id,kind])=>$('#'+id).onclick=async()=>{
+    if(activeExport?.phase==='working'&&activeExport.id===project.id)return;
+    const run={id:project.id,kind,phase:'working',settings:JSON.stringify(style)};
+    activeExport=run;renderExportState();
+    try{run.result=await download(kind);run.expires=Date.now()+run.result.expires_in*1000-5000;run.phase='ready'}
+    catch(e){run.phase='error';run.error=e.message||'تعذر تجهيز الملف؛ حاول مجدداً'}
+    if(activeExport===run){
+      renderExportState();
+      if(run.phase==='ready'&&$('#modal').open)$('#exportStatus .export-download')?.focus();
+    }
+  });
+  $('#shareExport').onclick=async()=>{let url=new URL(project.share_url,location.origin).href;try{await navigator.clipboard.writeText(url);toast('تم نسخ رابط المشاهدة')}catch{toast(url)}$('#modal').close()};
+  renderExportState();
+};
+async function boot(){let share=location.pathname.match(/^\/view\/([0-9a-f]{32})$/);if(share){readOnly=true;try{setProject(await api('/api/share/'+share[1]))}catch(e){toast(e.message)}return}const query=new URLSearchParams(location.search),wanted=query.get('project');let saved=null;try{saved=JSON.parse(localStorage.getItem('jisr-edit')||'null')}catch{}if(saved&&!query.has('demo')&&(wanted===saved.id||query.get('studio')==='1')){token=saved.token;try{setProject(await api('/api/projects/'+saved.id));return}catch{localStorage.removeItem('jisr-edit');token=''}}status();render();applyStyle()}
 const processButton=document.createElement('button');processButton.className='button secondary';processButton.textContent='متابعة المعالجة';processButton.onclick=()=>processDialog();$('#upload').after(processButton);
 const originalStatus=status;status=function(){originalStatus();processButton.style.display=project&&!readOnly&&['uploaded','error'].includes(project.status)?'':'none';$('.eyebrow').innerHTML=project?'مساحة العمل <span>/</span> مشروع مرفوع':'مساحة العمل <span>/</span> مشروع تجريبي';$('.page-footer').lastElementChild.textContent=project?'تحرير دون تسجيل دخول':'نموذج واجهة توضيحي';video.setAttribute('aria-label',project?'فيديو المشروع':'فيديو تجريبي صامت');const steps=$$('.workflow .step'),active=project&&['uploaded','processing','error'].includes(project.status)?1:2;steps.forEach((step,i)=>{step.classList.toggle('done',readOnly||i<active);step.classList.toggle('current',!readOnly&&i===active);step.querySelector('b').textContent=readOnly||i<active?'✓':String(i+1)})};
 const originalRender=render;render=function(){originalRender();$$('#segments .segment').forEach(el=>{const i=+el.querySelector('[data-seek]').dataset.seek,s=segments[i];if(s?.unclear_words?.length&&!s.reviewed)el.querySelector('.segment-body').insertAdjacentHTML('beforeend',`<div class="review-message">△ كلمات غير واضحة: ${s.unclear_words.map(w=>esc(w.text)+' ('+fmt(w.start)+')').join('، ')}</div>`);})};
 const originalReference=reference;reference=function(i){originalReference(i);const source=segments[i]?.source;if(source&&$('#modalBody .source-list'))$('#modalBody .source-list').insertAdjacentHTML('beforeend',`<dt>الاقتباس</dt><dd>${source.partial?'جزئي':'كامل'}</dd>`)};
-const originalExport=$('#export').onclick;$('#export').onclick=()=>{originalExport();if(!project)return;$('#modalBody .export-grid').insertAdjacentHTML('beforeend','<button class="export-option" id="editLink"><b>رابط التحرير الخاص</b><span>احتفظ به لاستئناف المشروع دون حساب</span></button><button class="export-option" id="deleteProject"><b>حذف المشروع</b><span>يحذف الفيديو والملفات ورابط المشاهدة نهائياً</span></button>');if(!project.publishable){$('#modalBody .export-grid').insertAdjacentHTML('beforebegin','<p class="modal-note">أكمل ترجمة ومراجعة كل المقاطع لفتح SRT وMP4 ورابط المشاهدة.</p>');['srtExport','videoExport','shareExport'].forEach(id=>$('#'+id).disabled=true)}$('#editLink').onclick=async()=>{const url=new URL('/?project='+project.id+'#edit='+encodeURIComponent(token),location.origin).href;try{await navigator.clipboard.writeText(url);toast('تم نسخ رابط التحرير الخاص')}catch{toast(url)}};$('#deleteProject').onclick=async()=>{if(!confirm('سيُحذف الفيديو والمشروع نهائياً. هل تريد المتابعة؟'))return;try{await api('/api/projects/'+project.id,{method:'DELETE'});localStorage.removeItem('jisr-edit');location.href='/'}catch(e){toast(e.message)}}};
+const originalExport=$('#export').onclick;
+$('#export').onclick=()=>{
+  originalExport();if(!project)return;
+  $('#modalBody .export-grid').insertAdjacentHTML('beforeend','<button class="export-option" id="editLink"><b>رابط التحرير الخاص</b><span>احتفظ به لاستئناف المشروع دون حساب</span></button><button class="export-option" id="deleteProject"><b>حذف المشروع</b><span>يحذف الفيديو والملفات ورابط المشاهدة نهائياً</span></button>');
+  if(!project.publishable){
+    const missing=segments.filter(s=>!s.en?.trim()).length;
+    const pending=segments.filter(s=>s.needs_review||(s.candidate||{}).kind==='quran'||(s.candidate||{}).kind==='hadith'||(['quran','hadith'].includes(s.type)&&(!s.source||!s.reviewed))).length;
+    const details=project.status!=='ready'?'أكمل معالجة الفيديو قبل التصدير.':`أكمل المراجعة قبل التصدير${pending?' · '+pending+' مقطع يحتاج مراجعة':''}${missing?' · '+missing+' مقطع دون ترجمة':''}.`;
+    $('#exportGrid').insertAdjacentHTML('beforebegin',`<div class="modal-note"><p>${esc(details)}</p><button class="button secondary" id="reviewForExport" ${project.status==='processing'?'disabled':''}>${['uploaded','error'].includes(project.status)?'متابعة المعالجة':'الانتقال إلى المراجعة'}</button></div>`);
+    ['srtExport','videoExport','shareExport'].forEach(id=>$('#'+id).disabled=true);
+    $('#reviewForExport').onclick=()=>{
+      $('#modal').close();
+      if(['uploaded','error'].includes(project.status)){processDialog();return}
+      const first=segments.findIndex(s=>!s.en?.trim()||s.needs_review||(s.candidate||{}).kind==='quran'||(s.candidate||{}).kind==='hadith'||(['quran','hadith'].includes(s.type)&&(!s.source||!s.reviewed)));
+      if(first>=0){seek(first);edit(first)}else{filter='review';render();$('.transcript-panel').scrollIntoView({behavior:'smooth'})}
+    };
+  }
+  $('#editLink').onclick=async()=>{const url=new URL('/?project='+project.id+'#edit='+encodeURIComponent(token),location.origin).href;try{await navigator.clipboard.writeText(url);toast('تم نسخ رابط التحرير الخاص')}catch{toast(url)}};
+  $('#deleteProject').onclick=async()=>{if(!confirm('سيُحذف الفيديو والمشروع نهائياً. هل تريد المتابعة؟'))return;try{await api('/api/projects/'+project.id,{method:'DELETE'});localStorage.removeItem('jisr-edit');location.href='/'}catch(e){toast(e.message)}};
+  renderExportState();
+};
 async function bootLive(){const id=new URLSearchParams(location.search).get('project'),fromHash=new URLSearchParams(location.hash.slice(1)).get('edit');if(id&&fromHash)localStorage.setItem('jisr-edit',JSON.stringify({id,token:fromHash}));await boot();if(location.pathname.startsWith('/view/')&&!project){segments=[];video.removeAttribute('src');project={title:'المشروع قيد المراجعة',status:'error',stage:'المشاهدة غير متاحة حالياً',duration:0};status();render()}}
 const baseEdit=edit;
 edit=function(i){
@@ -128,5 +250,4 @@ reference=function(i){
   list.insertAdjacentHTML('beforeend',`<dt>حالة الترجمة</dt><dd>${sourced?'ترجمة من المصدر؛ تحتاج تأكيد المحرر':'مسودة آلية تحتاج مراجعة'}</dd>${source.verification?`<dt>التحقق الإضافي</dt><dd>الدرر السنية · ${esc(source.verification.attribution)} · ${esc(source.verification.grade)}</dd>`:''}`);
 };
 bootLive();
-
 

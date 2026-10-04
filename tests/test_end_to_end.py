@@ -62,6 +62,7 @@ class EndToEndTests(unittest.TestCase):
             patch.object(server, "DATA", self.root),
             patch.object(server, "DB", self.root / "test.sqlite3"),
             patch.object(server, "RECENT_UPLOADS", {}),
+            patch.object(server, "DOWNLOAD_TICKETS", {}),
             patch.object(server, "TAFSIR_INDEX", {}),
             patch.object(server, "TERM_CACHE", {}),
             patch.dict(os.environ, {"ELEVENLABS_API_KEY": "fake-stt", "OPENAI_API_KEY": "fake-translation"}),
@@ -219,7 +220,7 @@ class EndToEndTests(unittest.TestCase):
         _, raw = self.request(prefix, token=token)
         self.assertFalse(json.loads(raw)["publishable"])  # The audio gap still blocks publication.
         self.request(prefix + "/segments/" + gaps[0]["id"], "POST", b'{"dismiss_gap":true}', token)
-        self.request(prefix + "/style", "POST", b'{"font":"amiri","size":26,"position":"bottom","bilingual":true}', token)
+        self.request(prefix + "/style", "POST", b'{"font":"cairo","size":12,"color":"#c9b8ff","position":"top","bilingual":true}', token)
         _, raw = self.request(prefix, token=token)
         self.assertTrue(json.loads(raw)["publishable"])
         _, subtitles = self.request(prefix + "/export/srt")
@@ -249,8 +250,20 @@ class EndToEndTests(unittest.TestCase):
         self.assertAlmostEqual(server.video_duration(target), 8, delta=.3)
         self.assertGreater(target.stat().st_size, 1000)
         ass = target.with_name("subtitles.ass").read_text(encoding="utf-8")
+        self.assertIn("Style: Default,Cairo,12,&H00ffb8c9", ass)
+        self.assertIn(",2,45,45,48,1", ass)  # Bottom alignment even for an older saved top setting.
+        self.assertEqual((target.parent / "fonts" / "cairo.ttf").read_bytes(), (server.DIST / "fonts" / "cairo.ttf").read_bytes())
         self.assertIn(HADITH_EXCERPT, ass)
         self.assertNotIn("under his nails", ass)
+        # A cached export from the former top-position setting must be rebuilt.
+        target.with_name("subtitles.ass").write_text(ass.replace(",2,45,45,48,1", ",8,45,45,48,1"), encoding="utf-8")
+        self.request(prefix + "/export/mp4", token=token)
+        self.assertIn(",2,45,45,48,1", target.with_name("subtitles.ass").read_text(encoding="utf-8"))
+        _, raw = self.request(prefix + "/export/mp4", "POST", b"{}", token)
+        prepared = json.loads(raw)
+        _, downloaded = self.request(prepared["download_url"])
+        self.assertEqual(downloaded, target.read_bytes())
+        self.assertEqual(prepared["size"], len(downloaded))
         self.assertEqual(sum("api.openai.com" in url for url in self.calls), 4)
         self.assertEqual(sum("api.elevenlabs.io" in url for url in self.calls), 1)
         self.assertEqual(self.request(prefix, "DELETE", token=token)[0], 200)
