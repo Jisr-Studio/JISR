@@ -1,0 +1,40 @@
+const assert = require('node:assert/strict');
+const {presentation, transcriptForSave} = require('../dist/js/citation-text.js');
+const {sourceCaption} = require('../dist/js/citation-text.js');
+const sourceSegment={type:'quran',source:{title:'الكهف، الآية 30'}};
+assert.equal(sourceCaption(sourceSegment),'الكهف، الآية 30');
+assert.equal(sourceCaption({...sourceSegment,source_caption:'Al-Kahf 18:30'}),'Al-Kahf 18:30');
+assert.equal(sourceCaption({...sourceSegment,source_caption:''}),'');
+assert.equal(sourceCaption({...sourceSegment,source_caption:'Custom'},true),'الكهف، الآية 30');
+assert.equal(sourceCaption({type:'speech',source:null,source_caption:'Old source'}),'');
+
+const original = 'ومن أتاني يمشي أتيتوه هرولة';
+const canonical = 'ومن أتاني يمشي أتيتُه هَرولةً';
+const hadith = {type:'hadith',ar:original,en:'Draft',needs_review:true,source:{arabic:canonical,subtitle_arabic:canonical}};
+const before = JSON.stringify(hadith);
+assert.equal(presentation(hadith).arabic,canonical);
+assert.equal(presentation(hadith).originalArabic,original);
+assert.equal(presentation(hadith).fromSource,true);
+assert.equal(presentation(hadith).changed,true);
+assert.equal(JSON.stringify(hadith),before);
+assert.equal(transcriptForSave(hadith,canonical),original);
+assert.equal(transcriptForSave(hadith,' '+canonical+' '),original);
+assert.equal(transcriptForSave(hadith,'نص مختلف'), 'نص مختلف');
+
+const verse = {type:'quran',ar:'تفريغ خاطئ',source:{partial:true,arabic:'نص الآية كاملة',subtitle_arabic:'جزء الآية الصحيح'}};
+assert.equal(presentation(verse).arabic,'جزء الآية الصحيح');
+assert.equal(transcriptForSave(verse,'جزء الآية الصحيح'), 'تفريغ خاطئ');
+const unaligned = {...verse,source:{partial:true,arabic:'نص الآية كاملة'}};
+assert.equal(presentation(unaligned).arabic,unaligned.ar);
+assert.equal(presentation(unaligned).fromSource,false);
+assert.equal(presentation({...hadith,source:{arabic:canonical}}).arabic,canonical);
+
+const paraphrase = {...hadith,source:{...hadith.source,quotation_mode:'paraphrase'}};
+assert.equal(presentation(paraphrase).arabic,original);
+assert.equal(presentation(paraphrase).fromSource,false);
+assert.equal(transcriptForSave(paraphrase,canonical),canonical);
+assert.equal(presentation({type:'speech',ar:original,source:hadith.source}).arabic,original);
+assert.equal(presentation({...hadith,source:null}).arabic,original);
+assert.equal(presentation({...hadith,source:{}}).fromSource,false);
+assert.equal(presentation(undefined).arabic,'');
+console.log('Canonical citation text and edit-save checks passed.');

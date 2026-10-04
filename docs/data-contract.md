@@ -69,6 +69,10 @@ Changing a linked citation's Arabic or English removes its reference and flags i
 
 Scripture sources retain the full `arabic` and `english` reference texts separately from `subtitle_arabic` and `subtitle_english`. `alignment_status` is `full` for a complete quotation, `matched` for a model-selected verbatim excerpt, `selected` for an editor-selected excerpt, or `needs_selection` when a partial quotation is unresolved. Partial quotations require both excerpt fields and `matched`/`selected` status before publication, including older records. Source text is never replaced with model-generated canonical text. `english_span` contains zero-based, end-exclusive Unicode code-point offsets into the full source English.
 
+For literal Quran/Hadith quotations, the editor, segment list, source cards, and Arabic preview display `source.subtitle_arabic`, falling back to `source.arabic` only for a complete quotation. The original `segment.ar` remains available in the edit dialog for comparison. Saving the displayed source Arabic unchanged sends the original `ar`, so displaying a correction does not invalidate the source link. An actual text edit still invalidates the link. Paraphrases keep the speaker's wording, and an unresolved partial quotation never falls back to the full source text.
+
+`source_caption` is an optional per-segment display override for the attribution line beneath video subtitles. The segment endpoint accepts a single-line string of up to 200 characters; `""` hides the line and `null` restores the automatic label. Editing this field alone preserves canonical source metadata, source URLs, transcript, timing, and review decisions. Preview, MP4, and SRT use the same caption. The JSON sources list continues to contain the original reference. Replacing or removing the reference clears the override. Editing requires the private editor token and a linked Quran/Hadith source.
+
 The editor may send `source_english_span: {"start": 24, "end": 48}` to the segment endpoint. Offsets must select a nonempty source substring; selecting the whole translation for a partial quotation is rejected. If `en` is supplied, it must equal the trimmed selected substring. Arabic must remain unchanged and the source link must exist. This preserves the citation reference and still requires `reviewed: true`; an ordinary free-text English edit removes the reference as before.
 
 ## Endpoints
@@ -113,6 +117,12 @@ If a Quran candidate names a surah but omits its verse number, only a unique lit
 ## Translation provider health
 
 `GET /api/health` reports `translation_provider` (`openai`), `translation` (OpenAI key present), `openai`, `elevenlabs`, and `ffmpeg`. Key-presence booleans do not validate credentials, billing, or model access. Set `OPENAI_API_KEY` and optionally `OPENAI_MODEL` (default `gpt-6-luna`). Public project JSON and edit endpoints are unchanged.
+
+### Citation retrieval failures
+
+Unresolved Quran/Hadith candidates retain `candidate`, set `needs_review: true` and `reviewed: false`, and expose `citation_lookup` with `status`, `provider`, and a safe editor-facing `message`. Status values distinguish `not_matched`, `unavailable`, and `invalid_response`; HTTP failures also include `http_status`. The editor displays the message beside the segment. Successful or manually linked references clear this diagnostic. Retrying processing reuses the saved transcription and completed translations.
+
+Hadith matching ranks the spoken passage inside a full source report. Passage matching uses the existing 0.86 similarity threshold; a one-word difference in token counts additionally requires compatible beginning/end boundaries and at least 0.98 similarity without spaces. This tolerates a near-identical ASR boundary error without absorbing an introduction. The original transcript stays unchanged and human review remains required. A transcription error in a complete quotation does not make it a partial quotation. Longer source reports remain partial and require the correct sourced subtitle excerpt. Failed long queries may use up to two shorter normalized anchors; every result must still pass passage matching and metadata checks. This is source retrieval and validation, not an embedding/vector RAG pipeline.
 
 ## Citation destinations
 

@@ -186,6 +186,50 @@ class ProcessingHTTPTests(unittest.TestCase):
                         getattr(handler, route)()
                         fail.assert_not_called()
 
+    def test_source_caption_edits_preserve_provenance_and_review(self):
+        project_id, token = "c" * 32, "caption-editor"
+        source = {"title": "الكهف، الآية 30", "kind": "quran", "arabic": "إنا لا نضيع أجر من أحسن عملا",
+                  "english": "We do not let good deeds go unrewarded.", "url": "https://quranpedia.net/ar/surah/18/30"}
+        segment = {"id": "c" * 12, "start": 0, "end": 4, "ar": source["arabic"], "en": source["english"],
+                   "type": "quran", "source": source, "needs_review": False, "reviewed": True,
+                   "words": [{"text": "إنا", "start": 0, "end": 1}]}
+        with server.db() as con:
+            con.execute("INSERT INTO projects(id,edit_token,share_token,title,filename,status,duration,segments,created,updated) VALUES(?,?,?,?,?,?,?,?,?,?)",
+                        (project_id, token, "d" * 32, "Caption test", "original.mp4", "ready", 4, json.dumps([segment]), time.time(), time.time()))
+        path = f"/api/projects/{project_id}/segments/{segment['id']}"
+        with self.assertRaises(urllib.error.HTTPError) as denied:
+            self.request(path, "POST", b'{"source_caption":"changed"}')
+        self.assertEqual(denied.exception.code, 403)
+        for caption in ("Al-Kahf 18:30", ""):
+            _, raw = self.request(path, "POST", json.dumps({"source_caption": caption}).encode(), token)
+            project = json.loads(raw)
+            item = project["segments"][0]
+            self.assertEqual(item["source_caption"], caption)
+            self.assertEqual(item["source"], source)
+            self.assertEqual(item["words"], segment["words"])
+            self.assertTrue(project["publishable"])
+            self.assertTrue(item["reviewed"])
+            _, saved = self.request(f"/api/projects/{project_id}", token=token)
+            self.assertEqual(json.loads(saved)["segments"][0]["source_caption"], caption)
+            _, subtitles = self.request(f"/api/projects/{project_id}/export/srt")
+            self.assertIn(source["english"], subtitles.decode())
+            if caption:
+                self.assertIn(caption, subtitles.decode())
+            else:
+                self.assertNotIn(source["title"], subtitles.decode())
+        for invalid in (123, True, "x" * 201, "two\nlines", "tab\ttext", {"text": "caption"}):
+            with self.subTest(invalid=invalid), self.assertRaises(urllib.error.HTTPError) as rejected:
+                self.request(path, "POST", json.dumps({"source_caption": invalid}).encode(), token)
+            self.assertEqual(rejected.exception.code, 400)
+        _, raw = self.request(path, "POST", b'{"source_caption":null}', token)
+        self.assertNotIn("source_caption", json.loads(raw)["segments"][0])
+        self.request(path, "POST", b'{"source_caption":"custom"}', token)
+        _, raw = self.request(path, "POST", b'{"reject_source":true}', token)
+        self.assertNotIn("source_caption", json.loads(raw)["segments"][0])
+        with self.assertRaises(urllib.error.HTTPError) as missing:
+            self.request(path, "POST", b'{"source_caption":"custom"}', token)
+        self.assertEqual(missing.exception.code, 400)
+
     def test_terminology_provenance_tracks_editor_changes(self):
         project_id, token = "e" * 32, "private-editor"
         segment = {"id": "f" * 12, "start": 0, "end": 5, "ar": "الاجتهاد علم", "en": "Ijtihad is a discipline.",

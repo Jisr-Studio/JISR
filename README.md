@@ -6,7 +6,7 @@
 > Built for the [AI Challenge for Serving Islamic Content](https://islamicaich.org/), October 2026.  
 > Jisr is an AI-assisted tool. Every matched Quranic or Hadith citation requires human confirmation before export or sharing. Unresolved segments block publication.
 
-**Current status:** The local application integrates **ElevenLabs Scribe v2** for transcription and **OpenAI GPT-6 Luna** for translation, quotation detection, terminology review, and source-excerpt alignment. The latest local verification passed **89 Python tests**, including actual FFmpeg video export, plus the JavaScript citation-link checks. Live-provider testing and deployment verification remain necessary before public launch.
+**Current status:** The local application integrates **ElevenLabs Scribe v2** for transcription and **OpenAI GPT-6 Luna** for translation, quotation detection, terminology review, and source-excerpt alignment. The latest local verification passed **105 Python tests**, including actual FFmpeg video export, plus the JavaScript citation-link and citation-text checks. Live-provider testing and deployment verification remain necessary before public launch.
 
 ![Jisr translation studio — desktop preview](docs/previews/studio-desktop.png)
 
@@ -21,12 +21,21 @@ Islamic organizations produce valuable Arabic videos, but reaching English-speak
 3. **Translate** ordinary speech with GPT-6 Luna. Sentence context helps keep connected phrases together; the server validates that subtitle parts preserve every original word and its timing. Al-Jamhara definitions guide translation of detected Islamic terms.
 4. **Verify Quran quotations** against Quranpedia's Hafs text and attach sourced Saheeh International English. The model does not generate canonical verse translations.
 5. **Verify Hadith quotations** against Dorar and search HadeethEnc for a matching translation and explanation. A unique complete match can be attached automatically; ambiguous or unavailable records require editor selection or manual linking. Unverified English remains a labelled machine draft.
-6. **Review** Arabic and English text, timing, narrator, grading, attribution, sources, and subtitle appearance. Editing a verified quotation invalidates its source verification and requires another review.
+6. **Review** source Arabic and English text, timing, narrator, grading, attribution, and subtitle appearance. The editor displays matched Quran/Hadith wording from the reference and keeps the original transcript available for comparison. Saving that wording unchanged preserves the reference; changing quotation text invalidates the link and requires verification again.
 7. **Export** a subtitled MP4, an SRT file, or a JSON citations list, or publish a read-only video link after all review requirements are resolved.
 
 For partial quotations, citation details retain the full source while subtitles use the corresponding Arabic and English excerpt. The model can select an exact English substring from the sourced translation; it cannot invent a canonical translation. Uncertain alignment requires manual selection before confirmation and export.
 
 Source, translation, explanation, and search links are displayed separately. A Dorar direct link is used only when the published record matches the full text and attribution metadata. If no unique record can be resolved, the interface explicitly labels the search fallback.
+
+## Reviewing citations and subtitle source lines
+
+- **Canonical Arabic:** literal Quran/Hadith quotations use the matched source excerpt in the segment list, edit dialog, source cards, and Arabic video preview. When it differs from speech recognition, expand **التفريغ الأصلي** in the edit dialog to compare the original transcript. Partial quotations use their selected excerpt; unresolved excerpts are not replaced by the full reference.
+- **Human confirmation:** source matching does not approve a quotation automatically. Check its wording, translation, and attribution before selecting **راجعت هذا المقطع**. Unmatched citations remain flagged, with a message distinguishing no match, service unavailability, and an invalid response.
+- **Hadith paraphrases:** editors can explicitly link a related Hadith as **نقل بالمعنى**. This preserves the speaker's wording and its translation, labels the relationship as a paraphrase, and still requires review before publication.
+- **Editable source caption:** select a Quran/Hadith segment, then click **تعديل سطر المصدر** above the video preview, or edit **سطر المصدر أسفل الترجمة** in the segment dialog. Save a custom single-line caption of up to 200 characters, leave it empty to hide the line, or choose **استعادة السطر الأصلي** to restore the automatic label.
+
+Source-caption changes persist after reloading and appear in the preview, MP4, and SRT exports. They preserve the canonical reference, its URL, and existing review decisions; the JSON sources list retains the original source metadata. Replacing or removing a reference clears its custom caption. The shared viewer is read-only.
 
 ## Project structure
 
@@ -34,10 +43,10 @@ Source, translation, explanation, and search links are displayed separately. A D
 server.py               Standard-library Python HTTP API, AI pipeline, storage, and exports
 dist/                   Active RTL frontend; no build step
   index.html            App shell
-  js/                   Editor, studio, splash, and citation-link helpers
+  js/                   Editor, studio, splash, citation-link and citation-text helpers
   css/                  Editor and responsive styles
   demo.mp4              Silent illustrative demo video
-tests/                  Python tests and JavaScript citation-link checks
+tests/                  Python tests and JavaScript citation-link/text checks
 scripts/                Public-source checks and saved citation-link repairs
 docs/                   API contract, source policy, implementation notes, and previews
 .vscode/                Run, debug, and test configuration
@@ -111,11 +120,14 @@ Run the local tests:
 
 ```bash
 python -m unittest discover -s tests -v
-# Optional JavaScript check; requires Node.js
+# Optional JavaScript checks; require Node.js
 node tests/test_citation_links.js
+node tests/test_citation_text.js
 ```
 
-The latest run passed **89 Python tests with no skips**, with FFmpeg available. External AI and source-service responses are mocked in the suite; no paid API requests are made by these tests. The integration test uploads a video with audio, processes word timestamps and mixed quotations, enforces review, renders an actual MP4, and checks subtitle/source exports, sharing permissions, retries, and deletion. These checks establish local integration rather than live model accuracy.
+The latest run passed **105 Python tests with no skips**, with FFmpeg available. External AI and source-service responses are mocked in the suite; no paid API requests are made by these tests. The integration test uploads a video with audio, processes word timestamps and mixed quotations, enforces review, renders an actual MP4, and checks subtitle/source exports, sharing permissions, retries, and deletion. These checks establish local integration rather than live model accuracy.
+
+Citation checks also cover displaying source wording while preserving the original transcript, retaining the reference when saving unchanged displayed Arabic, and keeping partial quotations and paraphrases distinct. Caption tests cover saving, hiding, resetting, input validation, editor access, source replacement, and subtitle output without changing source metadata. The caption workflow was also checked in the browser for saving, persistence after reload, hiding, and restoration.
 
 Optional checks against public citation services:
 
