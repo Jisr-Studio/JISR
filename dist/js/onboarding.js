@@ -8,10 +8,25 @@
   const replay = document.querySelector('#motionReplay');
   const motion = matchMedia('(prefers-reduced-motion: reduce)');
   const labels = ['الفكرة', 'ارفع فيديوك', 'فرّغ وترجم', 'راجع المصادر', 'صدّر وشارك'];
-  const nextLabels = ['ابدأ الجولة', 'كيف تتم الترجمة؟', 'كيف أراجع المصادر؟', 'وماذا بعد المراجعة؟', 'ابدأ بفيديوك'];
   let current = 0;
   let paused = motion.matches;
   let touchStart = null;
+  let autoTimer = null;
+
+  function scheduleAuto() {
+    clearTimeout(autoTimer);
+    if (paused || motion.matches || document.hidden || document.querySelector('#landing').hidden || !document.querySelector('#questions').hidden) return;
+    autoTimer = setTimeout(() => {
+      showStep((current + 1) % slides.length, false);
+      scheduleAuto();
+    }, 4000);
+  }
+
+  function resetAuto() {
+    scheduleAuto();
+  }
+  tour.addEventListener('pointerdown', resetAuto);
+  tour.addEventListener('keydown', resetAuto);
 
   function updateMotion() {
     tour.classList.toggle('motion-paused', paused || document.hidden || document.querySelector('#landing').hidden);
@@ -21,6 +36,7 @@
     toggle.disabled = motion.matches;
     replay.disabled = motion.matches;
     if (motion.matches) toggle.innerHTML = '<span aria-hidden="true">◇</span> حركة مخففة';
+    scheduleAuto();
   }
 
   function resetReview() {
@@ -51,7 +67,7 @@
       tabs[i].classList.toggle('step-visited', i < current);
     });
     back.disabled = current === 0;
-    next.innerHTML = `${nextLabels[current]} <span aria-hidden="true">←</span>`;
+    next.innerHTML = 'ابدأ بفيديوك <span aria-hidden="true">←</span>';
     document.querySelector('#journeyCounter').innerHTML = `${String(current + 1).padStart(2, '0')} <span>/ 05</span>`;
     document.querySelector('#journeyAnnouncement').textContent = `المحطة ${current + 1} من ${slides.length}: ${labels[current]}`;
     if (current === 3) resetReview();
@@ -60,11 +76,11 @@
     if (tour.getBoundingClientRect().top < 0) {
       tour.scrollIntoView({behavior: motion.matches ? 'instant' : 'smooth', block: 'start'});
     }
+    scheduleAuto();
   }
 
   next.onclick = () => {
-    if (current === slides.length - 1) document.querySelector('#fileInput').click();
-    else showStep(current + 1);
+    document.querySelector('#fileInput').click();
   };
   back.onclick = () => showStep(current - 1);
   tabs.forEach((tab, index) => {
@@ -84,6 +100,7 @@
   motion.addEventListener('change', () => { paused = motion.matches; updateMotion(); });
   document.addEventListener('visibilitychange', updateMotion);
   new MutationObserver(updateMotion).observe(document.querySelector('#landing'), {attributes: true, attributeFilter: ['hidden']});
+  new MutationObserver(updateMotion).observe(document.querySelector('#questions'), {attributes: true, attributeFilter: ['hidden']});
 
   // Horizontal touch gestures leave vertical scrolling and scene buttons alone.
   document.querySelector('#journeyStage').addEventListener('touchstart', event => {

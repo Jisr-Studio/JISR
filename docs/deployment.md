@@ -1,6 +1,23 @@
 # JISR hackathon deployment
 
-Status: configuration prepared; no public service has been created or verified yet.
+Status: public demo deployed at https://jisr-3ue4.onrender.com/. Initial health and asset checks passed; a complete live upload-to-export workflow remains to be verified.
+
+## Selected plan: Free (October 5 update)
+
+The user selected free hosting. `render.yaml` now uses `plan: free`, has no
+persistent disk, and limits FFmpeg to one thread. Deploy the `main` branch using
+New → Blueprint, select `turki125/JISR`, and verify the dashboard shows Free
+and no disk before creation. Enter provider keys privately in Render.
+
+Render sleeps after 15 minutes without traffic and takes about a minute to wake.
+Uploads, edits, SQLite projects, and exports are lost on sleep, restart, or
+redeployment. Download outputs during the active session; viewer links to
+temporary projects will not survive those events. Hosting is free within its
+included limits; ElevenLabs/OpenAI usage is billed separately. A short full workflow still needs verification on the Free instance.
+
+The paid persistent-storage setup described below is an alternative only; it
+is no longer the configuration in `render.yaml` and is not authorized for this
+deployment. See https://render.com/docs/free for current free-tier limits.
 
 Preparation checks: 20 focused local tests passed, including a real FFmpeg MP4
 download with mocked external providers. The read-only local route/asset check

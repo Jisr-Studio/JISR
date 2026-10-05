@@ -1,21 +1,16 @@
-# Always-on hackathon configuration. Review billing before creating the service.
-# Compute: $25/month; 10 GB disk: $2.50/month, plus AI and excess usage.
+# Free demo hosting. Uploads and SQLite data are temporary and lost on restart.
+# Sleeps after 15 minutes idle. External AI services retain their own charges.
 services:
   - type: web
     name: jisr-hackathon
     runtime: docker
-    plan: 1c-2g
+    plan: free
     region: frankfurt
     dockerfilePath: ./Dockerfile
     dockerContext: .
     healthCheckPath: /api/health
     numInstances: 1
-    # A disk requires a brief stop during deployment. Keep judging uninterrupted.
     autoDeployTrigger: "off"
-    disk:
-      name: jisr-data
-      mountPath: /app/data
-      sizeGB: 10
     envVars:
       - key: JISR_HOST
         value: 0.0.0.0
@@ -28,7 +23,7 @@ services:
       - key: JISR_MAX_UPLOAD_MB
         value: "250"
       - key: JISR_FFMPEG_THREADS
-        value: "2"
+        value: "1"
       - key: OPENAI_MODEL
         value: gpt-6-luna
       - key: OPENAI_API_KEY

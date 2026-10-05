@@ -22,10 +22,16 @@ Maintain a development log after each completed task:
 
 Final links to fill:
 
-- Application URL:
+- Application URL: https://jisr-3ue4.onrender.com/
 - Reviewed sample viewer URL:
 - Public repository URL:
 - Release revision:
 - Submission confirmation and Riyadh timestamp:
+
+Public deployment initial check on October 5, 2026: homepage opened in browser;
+deployment checker passed backend/FFmpeg, configured AI keys, frontend assets,
+font and demo video. A fresh live upload, processing, review and export on this
+host remain unverified. Free hosting has temporary storage; saved projects
+and viewer links do not survive a service sleep/restart/redeployment.
 
 Keep raw licensed/private media and private permission evidence outside public publication when release is not permitted. Do not add API keys or private project edit links. Review the exact files before making the submission repository public.
