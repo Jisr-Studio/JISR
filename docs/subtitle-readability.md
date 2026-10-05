@@ -15,3 +15,11 @@ The reported Hadith transcript contains `سفرا` where the source has `صفر�
 - Python regression coverage includes readability repair, complete word/timing coverage, preservation on provider failure, greetings, reviewed-source preservation, glossary expansion, unrelated Hadith results, full-record rechecking, and explicit source suggestions. Existing rendering/export and browser-helper tests also pass. The Windows run skips the Unix-only deployment module.
 
 Scope: this fixes oversized ordinary-speech cues and provides recoverable retrieval for abbreviated Hadith wording. It does not certify all machine translations or turn a paraphrase into a literal source quotation.
+
+## Quran boundaries across adjacent cues
+
+I5 exposed another failure: punctuation split Quran 33:56, the model retained `عباد الله` with its first half, and per-cue verification rejected that mixed segment while accepting the second half. The pipeline now checks normalized, contiguous source-text matches across up to two adjacent cues on each side of a known Quran candidate or verified source. Original word timestamps determine the new boundaries; only residual speech receives machine translation. The complete recited verse receives its source Arabic and English.
+
+Recovery requires an unambiguous exact source span and aligned source English. It cannot cross a gap over two seconds, a conflicting citation, reviewed text, an explicit source-caption override, or Arabic edits that no longer match the saved words. Partial recitations remain partial; unrelated speaker words are never appended to the canonical verse. Source failures leave existing cues intact, and residual-translation failure commits no boundary changes. This conservative pass does not solve every transcription error or discover scripture without any Quran location candidate.
+
+The reported I5 project was repaired from its saved word timings without repeating transcription: `عباد الله` at 0.34–0.94 seconds, then the complete recited Quran 33:56 at 1.24–7.06 seconds. The other five cues were preserved exactly. The verse uses its existing source translation and still requires human review. Its generated bilingual SRT contains the complete verse and source caption.

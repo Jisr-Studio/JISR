@@ -69,6 +69,7 @@ main{max-width:1760px;padding:32px 3% 0}.studio-intro{display:flex;justify-conte
 .splash-mark{display:flex;flex-direction:column;align-items:center;animation:splash-reveal .45s ease both}
 .splash-mark img{width:96px;height:96px;margin-bottom:18px;border-radius:24px;box-shadow:0 0 80px #eab16a12}
 .splash-name{font:48px/1.4 Amiri,serif}.splash-mark small{font-size:12px;letter-spacing:1px;color:#d5b18a;margin-top:7px}
+.source-excerpt{background:#e9b471;color:#182236;border-radius:3px;padding:0 2px}.source-excerpt-hint{font-size:12px;color:#b3bfd2;margin-top:-8px}.source-actions{flex-wrap:wrap}.source-actions .button{white-space:normal}.source-list dd{overflow-wrap:anywhere}
 .splash-skip{position:absolute;bottom:40px;inset-inline-end:40px;border:1px solid #40506b;background:#202c46;color:#c8d2e4;padding:9px 16px;border-radius:7px;font-size:12px}
 @keyframes splash-reveal{from{opacity:0;transform:translateY(8px) scale(.96)}to{opacity:1;transform:none}}
 @keyframes splash-exit{to{opacity:0}}

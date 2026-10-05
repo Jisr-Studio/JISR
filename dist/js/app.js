@@ -45,7 +45,7 @@ function setProject(p){
   render();applyStyle();status();clearInterval(poll);
   if(p.status==='processing')poll=setInterval(async()=>{try{let next=await api('/api/projects/'+p.id);setProject(next);if(next.status==='ready')toast('اكتملت المعالجة؛ راجع النصوص والمراجع');if(next.status==='error')toast(next.error)}catch(e){clearInterval(poll);toast(e.message)}},2500);
 }
-function status(){$('#projectTitle').textContent=project?.title||'الطهارة.. بداية كل عبادة';$('#saveState').textContent=project?({uploaded:'تم الرفع',processing:project.stage,ready:'التعديلات محفوظة',error:project.error}[project.status]||''):'بيانات توضيحية';$('#durationLabel').textContent=project?fmt(project.duration||video.duration||0):'٤٨ ثانية';$('.demo-pill').textContent=project?'مشروع حقيقي':'نسخة تجريبية';$('.workflow-note').textContent=project?(project.stage||'جاهز للمعالجة'):'بيانات توضيحية · لا توجد معالجة آلية';$('.preview-note').textContent=project?'راجع النصوص والمصادر قبل نشر الفيديو.':'الفيديو صامت والنصوص أمثلة مستقلة للتجربة.';$('.video-title').style.display=project?'none':'';$('.video-top').style.display=project?'none':'';$('#upload').style.display=readOnly?'none':'';$('#export').style.display=readOnly?'none':'';document.body.classList.toggle('viewer-mode',readOnly)}
+function status(){$('#projectTitle').textContent=project?.title||'الطهارة.. بداية كل عبادة';$('#saveState').textContent=project?({uploaded:'تم الرفع',processing:project.stage,ready:'التعديلات محفوظة',error:project.error}[project.status]||''):'بيانات توضيحية';$('#durationLabel').textContent=project?fmt(project.duration||video.duration||0):'٤٨ ثانية';$('.demo-pill').textContent=project?'مشروع حقيقي':'نسخة تجريبية';$('.workflow-note').textContent=project?(project.stage||'جاهز للمعالجة'):'بيانات توضيحية · لا توجد معالجة آلية';$('.preview-note').textContent=project?'راجع النصوص والمصادر قبل النشر. المقاطع الطويلة تُصغّر تلقائيًا لتلائم الفيديو.':'الفيديو صامت والنصوص أمثلة مستقلة للتجربة.';$('.video-title').style.display=project?'none':'';$('.video-top').style.display=project?'none':'';$('#upload').style.display=readOnly?'none':'';$('#export').style.display=readOnly?'none':'';document.body.classList.toggle('viewer-mode',readOnly)}
 function sourceLabel(s){let r=s.source;if(!r)return '';if(r.quotation_mode==='paraphrase')return 'نقل بالمعنى · مرجع مرتبط · '+(r.attribution||r.title||'حديث');return s.type==='quran'?r.title||'آية قرآنية':(r.attribution||r.title||'حديث')+' · '+(r.grade||'الحكم غير مذكور')+(s.needs_review?' · بانتظار المراجعة':'')}
 function render(){let counts={all:segments.length,quran:segments.filter(x=>x.type==='quran').length,hadith:segments.filter(x=>x.type==='hadith').length,review:segments.filter(JisrCitationText.reviewPending).length};$$('[data-filter]').forEach(b=>{b.querySelector('span').textContent=counts[b.dataset.filter]});$('.transcript-panel .count').textContent=segments.length+' مقاطع';$('#reviewCount').textContent=counts.review;$('#reviewSummary').textContent=counts.review?counts.review+' مقطع يحتاج انتباهك':'لا توجد مقاطع تنتظر المراجعة';$('.topbar nav .count').textContent=counts.quran+counts.hadith;
 let list=segments.map((s,i)=>({s,i})).filter(({s})=>filter==='all'||(filter==='review'?JisrCitationText.reviewPending(s):s.type===filter));
@@ -71,14 +71,18 @@ function citationSuggestion(i,j){
   if(!source||!project||readOnly)return;
   const projectId=project.id,segmentId=segment.id;
   const paraphrase=source.quotation_mode==='paraphrase';
+  const group=segment.citation_group?segments.filter(s=>s.citation_group===segment.citation_group):[segment];
   modal('مراجعة المصدر المقترح',`<p class="modal-note">${paraphrase?'هذا مصدر محتمل لعبارة مختصرة أو مختلفة. عند ربطه نحافظ على كلام المتحدث ونميزه كنقل بالمعنى؛ لا نستبدله بالرواية كاملة.':'قارن الاقتباس بالمصدر قبل الربط.'}</p><h3>التفريغ الأصلي</h3><p class="modal-verse">${esc(segment.ar)}</p><h3>نص المصدر</h3><p class="modal-verse">${esc(source.arabic)}</p><p dir="ltr">${esc(source.english)}</p><dl class="source-list"><dt>الراوي</dt><dd>${esc(source.narrator)}</dd><dt>الحكم</dt><dd>${esc(source.grade)}</dd><dt>التخريج</dt><dd>${esc(source.attribution)}</dd></dl><div class="modal-actions"><a class="button secondary" href="https://hadeethenc.com/ar/browse/hadith/${esc(source.id)}" target="_blank" rel="noopener noreferrer">قراءة المصدر ↗</a><button class="button" id="acceptCitationSuggestion">${paraphrase?'ربط كنقل بالمعنى':'ربط الاقتباس'}</button></div><p class="modal-note">الربط يبقى بانتظار تأكيد المراجعة.</p>`);
   $('#acceptCitationSuggestion').onclick=async event=>{
     event.target.disabled=true;
     try{
-      const updated=await api(`/api/projects/${projectId}/hadith/${segmentId}`,{method:'POST',body:JSON.stringify({hadith_id:source.id,paraphrase})});
+      const updated=await api(`/api/projects/${projectId}/hadith/${segmentId}`,{method:'POST',body:JSON.stringify({hadith_id:source.id,paraphrase,apply_to_group:!!$('#applyCitationGroup')?.checked})});
       setProject(updated);$('#modal').close();toast('تم ربط المصدر؛ راجع النص والترجمة قبل تأكيده');
     }catch(error){event.target.disabled=false;toast(error.message)}
   };
+  if(group.length>1){
+    $('#modalBody .modal-actions').insertAdjacentHTML('beforebegin',`<label class="check"><input id="applyCitationGroup" type="checkbox" checked> تطبيق المرجع على أجزاء الاقتباس المتصل (${group.length})</label><p class="modal-note">التفريغ المتصل: ${esc(group.map(s=>s.ar).join(' '))}</p>`);
+  }
 }
 function renderSources(){let cards=segments.map((s,i)=>({s,i})).filter(({s})=>s.source&&['quran','hadith'].includes(s.type));$('#referencePanel').querySelectorAll('.reference-card,.source-disclaimer').forEach(x=>x.remove());$('#referencePanel').insertAdjacentHTML('beforeend',cards.map(({s,i})=>`<button class="reference-card" data-ref="${i}"><div><span class="tag ${s.type}">${s.type==='quran'?'قرآن كريم':'حديث نبوي'}</span><span class="ref-time">${fmt(s.start)}</span></div><h3>${esc(s.source.title||'مصدر الاقتباس')}</h3><p class="verse">${esc(JisrCitationText.presentation(s).arabic)}</p><footer>${esc(sourceLabel(s))}<span>عرض التفاصيل ‹</span></footer></button>`).join('')+(!cards.length?'<div class="source-disclaimer">لم تُوثَّق اقتباسات بعد. الاقتباسات المحتملة تنتظر المراجعة.</div>':''));$('#referencePanel').querySelectorAll('[data-ref]').forEach(b=>b.onclick=()=>reference(+b.dataset.ref))}
 function seek(i){if(!segments[i])return;video.currentTime=segments[i].start;selected=i;render()}
@@ -203,10 +207,27 @@ function edit(i){
     try{const p=await api(`/api/projects/${project.id}/hadith/${s.id}`,{method:'POST',body:JSON.stringify({hadith_id:$('#hadithId').value.trim(),paraphrase:!!$('#hadithParaphrase')?.checked})});setProject(p);$('#modal').close();toast(p.segments.find(x=>x.id===s.id)?.source?.quotation_mode==='paraphrase'?'تم ربط المرجع كنقل بالمعنى؛ راجع الترجمة':'تم توثيق الحديث')}catch(e){toast(e.message)}
   };
 }
-function reference(i){let s=segments[i],r=s.source;if(!r)return;modal(r.title||'تفاصيل المصدر',`<span class="tag ${s.type}">${s.type==='quran'?'قرآن كريم':'حديث نبوي'}</span><p class="modal-verse">${esc(r.arabic||s.ar)}</p>${r.quotation_mode==='paraphrase'?'<p class="modal-note">كلام المتحدث نقل بالمعنى؛ النص أدناه من المرجع، والترجمة الظاهرة في الفيديو مسودة لكلام المتحدث وليست ترجمة حرفية من المصدر.</p>':''}<p dir="ltr">${esc(r.english||s.en)}</p><dl class="source-list">${r.surah?`<dt>الموضع</dt><dd>${esc(r.title)}</dd>`:''}${r.translator?`<dt>الترجمة</dt><dd>${esc(r.translator)}</dd>`:''}${r.narrator?`<dt>الراوي</dt><dd>${esc(/^[-–—]+$/.test(r.narrator.trim())?'غير مذكور في هذا المرجع':r.narrator)}</dd>`:''}${r.attribution?`<dt>التخريج</dt><dd>${esc(r.attribution)}</dd>`:''}${r.grade?`<dt>الحكم</dt><dd>${esc(r.grade)}</dd>`:''}</dl>${r.explanation?`<h3>الشرح</h3><p>${esc(r.explanation)}</p>`:''}<div class="modal-actions">${JisrCitationLinks.links(r,s.type).map(link=>`<a class="button secondary" href="${esc(link.href)}" target="_blank" rel="noopener noreferrer" data-citation-link="${link.role}">${esc(link.label)} ↗</a>`).join('')}</div>${r.explanation_status!=='available'&&!r.explanation?'<p class="modal-note">لا يوجد شرح مرتبط بهذا الاقتباس حاليًا.</p>':''}${!project?'<p class="modal-note">هذا مثال توضيحي، وليس نتيجة تحقق آلي.</p>':''}<div class="modal-actions"><button class="button secondary" id="jumpRef">الانتقال إلى المقطع</button></div>`);$('#jumpRef').onclick=()=>{$('#modal').close();seek(i)}}
+function reference(i){
+  const s=segments[i],r=s.source;if(!r)return;
+  const paraphrase=r.quotation_mode==='paraphrase',arabic=r.arabic||s.ar,range=JisrCitationText.sourceExcerptRange(s);
+  const sourceArabic=range?esc(arabic.slice(0,range.start))+`<mark class="source-excerpt">${esc(arabic.slice(range.start,range.end))}</mark>`+esc(arabic.slice(range.end)):esc(arabic);
+  const url=JisrCitationLinks.safeUrl(r.url),host=url?new URL(url).hostname:'';
+  const provider=({'quranpedia.net':'Quranpedia','dorar.net':'الدرر السنية','hadeethenc.com':'موسوعة الأحاديث النبوية · HadeethEnc'})[host]||host;
+  const scope=paraphrase?'نقل بالمعنى':r.partial?(s.type==='quran'?'جزء من الآية':'جزء من الحديث'):(s.type==='quran'?'الآية كاملة':'الحديث كامل');
+  modal(r.title||'تفاصيل المصدر',`<span class="tag ${s.type}">${s.type==='quran'?'قرآن كريم':'حديث نبوي'}</span><p class="modal-verse">${sourceArabic}</p>${range?'<p class="source-excerpt-hint">الجزء المميز هو الاقتباس المستخدم في الفيديو.</p>':''}${paraphrase?'<p class="modal-note">كلام المتحدث نقل بالمعنى؛ النص المعروض من المرجع، وترجمة الفيديو مسودة لكلام المتحدث.</p>':''}<p dir="ltr">${esc(r.english||s.en)}</p><h3>تفاصيل الاقتباس</h3><dl class="source-list">
+    ${r.surah?`<dt>الموضع</dt><dd>${esc(r.title||`سورة ${r.surah}، الآية ${r.ayah}`)}</dd>`:''}
+    <dt>الاقتباس</dt><dd>${esc(scope)}</dd><dt>التوقيت</dt><dd><span dir="ltr">${fmt(s.start)} – ${fmt(s.end)}</span></dd>
+    <dt>المراجعة</dt><dd>${!project?'مثال توضيحي':JisrCitationText.reviewPending(s)?'بانتظار تأكيد المراجعة':'تمت مراجعته'}</dd>
+    ${provider?`<dt>مصدر النص</dt><dd>${esc(provider)}</dd>`:''}${r.translator?`<dt>الترجمة</dt><dd>${esc(r.translator)}</dd>`:''}
+    ${r.narrator?`<dt>الراوي</dt><dd>${esc(/^[-–—]+$/.test(r.narrator.trim())?'غير مذكور في هذا المرجع':r.narrator)}</dd>`:''}
+    ${r.attribution?`<dt>التخريج</dt><dd>${esc(r.attribution)}</dd>`:''}${r.grade?`<dt>حكم المحدّث</dt><dd>${esc(r.grade)}</dd>`:''}
+  </dl><div class="modal-actions source-actions">${JisrCitationLinks.links(r,s.type).map(link=>`<a class="button secondary" href="${esc(link.href)}" target="_blank" rel="noopener noreferrer" data-citation-link="${link.role}">${esc(link.label)} ↗</a>`).join('')}<button class="button secondary" id="jumpRef">تشغيل المقطع</button></div>`);
+  $('#modal').scrollTop=0;
+  $('#jumpRef').onclick=()=>{$('#modal').close();seek(i);video.play().catch(()=>toast('اضغط تشغيل الفيديو للاستماع إلى المقطع'))};
+}
 $('#sourcesNav').onclick=()=>$('#referencePanel').scrollIntoView({behavior:'smooth'});$('#editorNav').onclick=()=>window.scrollTo({top:0,behavior:'smooth'});$('#help').onclick=()=>modal('عن جسر','<p>ارفع فيديو، ثم فرّغه عبر ElevenLabs وترجمه عبر خدمة الذكاء الاصطناعي. راجع الاقتباسات والمصادر وعدّل النص والتوقيت، ثم صدّر الفيديو والترجمة وقائمة المصادر.</p><p class="modal-note">لا يوجد تسجيل دخول؛ احفظ رابط التحرير في متصفحك.</p>');
 let activeExport=null;
-const exportNames={srt:'ملف الترجمة',sources:'قائمة المصادر',mp4:'الفيديو'};
+const exportNames={srt:'ملف الترجمة',sources:'قائمة المصادر المؤكدة','sources-draft':'مسودة المصادر',mp4:'الفيديو'};
 function renderExportWarnings(warnings=project?.export_warnings||[]){
   const panel=$('#exportWarnings');if(!panel)return;
   const messages=[...warnings];
@@ -223,8 +244,8 @@ function renderExportState(){
   renderExportWarnings(run.phase==='ready'?run.result.warnings:project.export_warnings);
   $('#exportGrid').setAttribute('aria-busy',String(busy));
   if($('#deleteProject'))$('#deleteProject').disabled=busy;
-  [['srtExport','srt'],['sourcesExport','sources'],['videoExport','mp4']].forEach(([id,kind])=>{
-    $('#'+id).disabled=busy||(kind!=='sources'&&!project.exportable);
+  [['srtExport','srt'],['sourcesExport','sources'],['draftSourcesExport','sources-draft'],['videoExport','mp4']].forEach(([id,kind])=>{
+    $('#'+id).disabled=busy||(!['sources','sources-draft'].includes(kind)&&!project.exportable);
   });
   panel.hidden=false;panel.dataset.state=run.phase;panel.setAttribute('role',run.phase==='error'?'alert':'status');
   panel.replaceChildren();
@@ -234,7 +255,7 @@ function renderExportState(){
   if(run.phase==='ready'){
     const link=document.createElement('a');
     link.className='button primary export-download';link.href=run.result.download_url;link.download=run.result.filename;
-    link.textContent=`تنزيل ${exportNames[run.kind]} · ${run.kind==='sources'?'JSON':run.kind.toUpperCase()}`;
+    link.textContent=`تنزيل ${exportNames[run.kind]} · ${['sources','sources-draft'].includes(run.kind)?'JSON':run.kind.toUpperCase()}`;
     link.onclick=e=>{
       if(run.expires<=Date.now()){
         e.preventDefault();run.phase='error';run.error='انتهت صلاحية رابط التنزيل؛ جهّز الملف مجدداً';renderExportState();
@@ -268,8 +289,8 @@ $('#export').onclick=()=>{
     return;
   }
   if(activeExport?.phase==='ready'&&(activeExport.id!==project.id||activeExport.result.project_updated!==project.updated||activeExport.settings!==JSON.stringify(style)||activeExport.expires<=Date.now()))activeExport=null;
-  modal('تصدير المشروع',`<p class="modal-note">اختر الملف لتجهيزه، ثم اضغط على التنزيل. رابط المشاهدة عام لمن يملكه.</p><section id="exportWarnings" class="modal-note" role="status" hidden></section><section id="exportStatus" class="export-status" data-project="${project.id}" role="status" aria-live="polite" hidden></section><div class="export-grid" id="exportGrid" aria-busy="false"><button class="export-option" id="srtExport"><b>ملف الترجمة · SRT</b><span>الترجمة مع التوقيت</span></button><button class="export-option" id="sourcesExport"><b>قائمة المصادر المؤكدة · JSON</b><span>المراجع المراجعة فقط</span></button><button class="export-option" id="videoExport"><b>الفيديو المترجم · MP4</b><span>ترجمة مدمجة، مع الصوت الأصلي</span></button><button class="export-option" id="shareExport"><b>رابط المشاهدة</b></button></div>`);
-  [['srtExport','srt'],['sourcesExport','sources'],['videoExport','mp4']].forEach(([id,kind])=>$('#'+id).onclick=async()=>{
+  modal('تصدير المشروع',`<p class="modal-note">اختر الملف لتجهيزه، ثم اضغط على التنزيل. رابط المشاهدة عام لمن يملكه.</p><section id="exportWarnings" class="modal-note" role="status" hidden></section><section id="exportStatus" class="export-status" data-project="${project.id}" role="status" aria-live="polite" hidden></section><div class="export-grid" id="exportGrid" aria-busy="false"><button class="export-option" id="srtExport"><b>ملف الترجمة · SRT</b><span>الترجمة مع التوقيت</span></button><button class="export-option" id="sourcesExport"><b>قائمة المصادر المؤكدة · JSON</b><span>المراجع المراجعة فقط؛ تكون فارغة قبل التأكيد</span></button><button class="export-option" id="draftSourcesExport"><b>مسودة المصادر · JSON</b><span>المراجع المقترحة وحالة مراجعتها؛ للمراجع فقط</span></button><button class="export-option" id="videoExport"><b>الفيديو المترجم · MP4</b><span>ترجمة مدمجة، مع الصوت الأصلي</span></button><button class="export-option" id="shareExport"><b>رابط المشاهدة</b></button></div>`);
+  [['srtExport','srt'],['sourcesExport','sources'],['draftSourcesExport','sources-draft'],['videoExport','mp4']].forEach(([id,kind])=>$('#'+id).onclick=async()=>{
     if(activeExport?.phase==='working'&&activeExport.id===project.id)return;
     const run={id:project.id,kind,phase:'working',settings:JSON.stringify(style)};
     activeExport=run;renderExportState();
@@ -286,8 +307,7 @@ $('#export').onclick=()=>{
 async function boot(){let share=location.pathname.match(/^\/view\/([0-9a-f]{32})$/);if(share){readOnly=true;try{setProject(await api('/api/share/'+share[1]))}catch(e){toast(e.message)}return}const query=new URLSearchParams(location.search),wanted=query.get('project');let saved=null;try{saved=JSON.parse(localStorage.getItem('jisr-edit')||'null')}catch{}if(saved&&!query.has('demo')&&(wanted===saved.id||query.get('studio')==='1')){token=saved.token;try{setProject(await api('/api/projects/'+saved.id));return}catch{localStorage.removeItem('jisr-edit');token=''}}status();render();applyStyle()}
 const processButton=document.createElement('button');processButton.className='button secondary';processButton.textContent='متابعة المعالجة';processButton.onclick=()=>processDialog();$('#upload').after(processButton);
 const originalStatus=status;status=function(){originalStatus();processButton.style.display=project&&!readOnly&&['uploaded','error'].includes(project.status)?'':'none';$('.eyebrow').innerHTML=project?'مساحة العمل <span>/</span> مشروع مرفوع':'مساحة العمل <span>/</span> مشروع تجريبي';$('.page-footer').lastElementChild.textContent=project?'تحرير دون تسجيل دخول':'نموذج واجهة توضيحي';video.setAttribute('aria-label',project?'فيديو المشروع':'فيديو تجريبي صامت');const steps=$$('.workflow .step'),active=project&&['uploaded','processing','error'].includes(project.status)?1:2;steps.forEach((step,i)=>{step.classList.toggle('done',readOnly||i<active);step.classList.toggle('current',!readOnly&&i===active);step.querySelector('b').textContent=readOnly||i<active?'✓':String(i+1)})};
-const originalRender=render;render=function(){originalRender();$$('#segments .segment').forEach(el=>{const i=+el.querySelector('[data-seek]').dataset.seek,s=segments[i];if(s?.unclear_words?.length&&!s.reviewed)el.querySelector('.segment-body').insertAdjacentHTML('beforeend',`<div class="review-message">△ كلمات غير واضحة: ${s.unclear_words.map(w=>esc(w.text)+' ('+fmt(w.start)+')').join('، ')}</div>`);})};
-const originalReference=reference;reference=function(i){originalReference(i);const source=segments[i]?.source;if(source&&$('#modalBody .source-list'))$('#modalBody .source-list').insertAdjacentHTML('beforeend',`<dt>الاقتباس</dt><dd>${source.quotation_mode==='paraphrase'?'نقل بالمعنى · ليس اقتباسًا حرفيًا':source.partial?'جزئي':'كامل'}</dd>`)};
+const originalRender=render;render=function(){originalRender();$$('#segments .segment').forEach(el=>{const i=+el.querySelector('[data-seek]').dataset.seek,s=segments[i];if(s?.review_issues?.length)el.querySelector('.segment-body').insertAdjacentHTML('beforeend',`<ul class="review-message">${s.review_issues.map(issue=>`<li>${esc(issue.message)}</li>`).join('')}</ul>`);if(s?.source?.translation_status==='machine_draft')el.querySelector('.segment-body').insertAdjacentHTML('beforeend','<p class="review-message">ترجمة الحديث الإنجليزية مسودة آلية؛ لم تُسترجع من مصدر ترجمة موثق.</p>');if(s?.unclear_words?.length&&!s.reviewed)el.querySelector('.segment-body').insertAdjacentHTML('beforeend',`<div class="review-message">△ كلمات غير واضحة: ${s.unclear_words.map(w=>esc(w.text)+' ('+fmt(w.start)+')').join('، ')}</div>`);})};
 const originalExport=$('#export').onclick;
 $('#export').onclick=()=>{
   originalExport();if(!project)return;
@@ -327,6 +347,13 @@ reference=function(i){
   const sourced=source.translation_status==='sourced';
   const translationLabel=source.quotation_mode==='paraphrase'?'ترجمة المرجع من المصدر؛ ترجمة كلام المتحدث مسودة آلية':sourced?'ترجمة من المصدر؛ تحتاج تأكيد المحرر':'مسودة آلية تحتاج مراجعة';
   list.insertAdjacentHTML('beforeend',`<dt>حالة الترجمة</dt><dd>${translationLabel}</dd>${source.verification?`<dt>التحقق الإضافي</dt><dd>الدرر السنية · ${esc(source.verification.attribution)} · ${esc(source.verification.grade)}</dd>`:''}`);
+};
+const qualityStatus=status;
+status=function(){
+  qualityStatus();
+  if(project?.status==='ready'&&project.retryable&&!readOnly){
+    processButton.style.display='';processButton.textContent='إعادة فحص المعنى والمصادر';
+  }else processButton.textContent='متابعة المعالجة';
 };
 bootLive();
 

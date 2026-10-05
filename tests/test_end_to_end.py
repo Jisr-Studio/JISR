@@ -112,6 +112,9 @@ class EndToEndTests(unittest.TestCase):
             if isinstance(inputs, dict):
                 excerpt = VERSE_EXCERPT if inputs["full_english"] == VERSE_EN else HADITH_EXCERPT
                 result = {"english_excerpt": excerpt, "confident": True}
+            elif "quality_items" in payload["text"]["format"]["schema"]["properties"]:
+                result = {"quality_items": [{"id": item["id"], "english": item["english"],
+                          "confident": True, "issues": []} for item in inputs]}
             elif "dictionary" in inputs[0]:
                 self.assertEqual(len(inputs), 1)
                 self.assertEqual(inputs[0]["dictionary"][0]["english_term"], "Ablution")
@@ -186,6 +189,15 @@ class EndToEndTests(unittest.TestCase):
             time.sleep(.05)
         self.assertEqual(project["status"], "ready", project["error"])
         self.assertFalse(project["publishable"])
+        with self.assertRaises(urllib.error.HTTPError) as private:
+            self.request(prefix + "/export/sources-draft", "POST", b"{}")
+        self.assertEqual(private.exception.code, 403)
+        _, raw = self.request(prefix + "/export/sources-draft", "POST", b"{}", token)
+        _, raw = self.request(json.loads(raw)["download_url"])
+        inventory = json.loads(raw)
+        self.assertEqual(inventory["status"], "draft")
+        self.assertEqual(len(inventory["citations"]), 2)
+        self.assertTrue(all(c["review_pending"] for c in inventory["citations"]))
         parts = [s for s in project["segments"] if not s.get("audio_gap")]
         gaps = [s for s in project["segments"] if s.get("audio_gap")]
         self.assertEqual([s["type"] for s in parts], ["speech", "quran", "speech", "hadith", "speech"])
@@ -271,7 +283,7 @@ class EndToEndTests(unittest.TestCase):
         _, downloaded = self.request(prepared["download_url"])
         self.assertEqual(downloaded, target.read_bytes())
         self.assertEqual(prepared["size"], len(downloaded))
-        self.assertEqual(sum("api.openai.com" in url for url in self.calls), 4)
+        self.assertEqual(sum("api.openai.com" in url for url in self.calls), 5)  # Translation, glossary, independent meaning check, two source spans.
         self.assertEqual(sum("api.elevenlabs.io" in url for url in self.calls), 1)
         self.assertEqual(self.request(prefix, "DELETE", token=token)[0], 200)
         self.assertFalse(target.parent.exists())

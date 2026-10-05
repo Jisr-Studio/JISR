@@ -12,7 +12,7 @@ OUTPUT = ROOT / "submission" / "deployment" / "jisr-hackathon-deploy.zip"
 
 def main():
     files = [ROOT / name for name in (
-        "Dockerfile", ".dockerignore", "docker-entrypoint.py", "server.py", "subtitle_png.py", "render.yaml",
+        "Dockerfile", ".dockerignore", "docker-entrypoint.py", "server.py", "subtitle_png.py", "pipeline_quality.py", "render.yaml",
         "docs/deployment.md", "scripts/check_deployment.py",
     )]
     files += sorted(path for path in (ROOT / "dist").rglob("*") if path.is_file())

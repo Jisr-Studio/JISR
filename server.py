@@ -29,6 +29,7 @@ from html.parser import HTMLParser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from subtitle_png import alpha_bounds
+from pipeline_quality import check_meaning, annotate_readability, coherent_hadith_groups, classify_hadith_choices, input_hash as quality_input_hash
 
 
 ROOT = Path(__file__).resolve().parent
@@ -72,7 +73,7 @@ PROCESS_SLOTS = threading.Semaphore(2)
 RECENT_UPLOADS = {}
 DOWNLOAD_TICKETS = {}
 DOWNLOAD_TTL = 600
-SUBTITLE_RENDER_VERSION = "shared-png-v3"
+SUBTITLE_RENDER_VERSION = "shared-png-v4"
 PREVIEW_LOCK = threading.Lock()
 MEDIA_INFO_CACHE = {}
 TAFSIR_INDEX = {}
@@ -144,6 +145,7 @@ def project_json(row, editable=False):
     result["publishable"] = publishable(row)
     result["exportable"] = exportable(row)
     result["export_warnings"] = export_warnings(row)
+    result["retryable"] = ready_for_retry(row) if editable else False
     if not editable:
         for segment in result["segments"]:
             if segment.get("needs_review") and not segment.get("reviewed"):
@@ -167,7 +169,7 @@ def quote_alignment_ready(source):
 
 
 def segment_review_pending(segment):
-    return bool(not str(segment.get("en") or "").strip() or segment.get("needs_review")
+    return bool(segment.get("reviewed") is not True or not str(segment.get("en") or "").strip() or segment.get("needs_review")
                 or (segment.get("candidate") or {}).get("kind") in ("quran", "hadith")
                 or (segment.get("type") in ("quran", "hadith")
                     and (not segment.get("source") or segment.get("reviewed") is not True))
@@ -185,9 +187,7 @@ def exportable(row):
 
 def export_warnings(row):
     segments = json.loads(row["segments"])
-    pending = sum(bool(s.get("needs_review") or (s.get("candidate") or {}).get("kind") in ("quran", "hadith")
-                       or (s.get("type") in ("quran", "hadith") and (not s.get("source") or not s.get("reviewed"))))
-                  for s in segments)
+    pending = sum(segment_review_pending(s) for s in segments)
     missing = sum(not s.get("en", "").strip() for s in segments)
     unresolved = sum(not quote_alignment_ready(s.get("source") or {}) for s in segments)
     warnings = []
@@ -197,6 +197,9 @@ def export_warnings(row):
         warnings.append(f"{missing} مقطع دون ترجمة؛ سيظهر تنبيه مكان الترجمة المفقودة.")
     if unresolved:
         warnings.append(f"{unresolved} اقتباس جزئي يحتاج اختيار نص المصدر؛ لن يُستبدل بالمرجع الكامل.")
+    fast = sum(bool((s.get("readability") or {}).get("issues")) for s in segments)
+    if fast:
+        warnings.append(f"{fast} مقطع يحتاج فحص سرعة القراءة ومدة ظهور الترجمة.")
     if row["status"] == "error":
         warnings.append("المعالجة لم تكتمل؛ سيُصدَّر المحتوى المتاح فقط.")
     return warnings
@@ -208,6 +211,15 @@ def save_project(project_id, **changes):
     with LOCK, db() as con:
         columns = ", ".join(f"{k}=?" for k in changes)
         con.execute(f"UPDATE projects SET {columns}, updated=? WHERE id=?", (*changes.values(), time.time(), project_id))
+
+
+def ready_for_retry(row):
+    return row["status"] == "ready" and any(
+        s.get("reviewed") is not True and s.get("translation_origin") != "human" and "source_caption" not in s and (
+            (s.get("candidate") and s.get("needs_review")) or needs_speech_reflow(s)
+            or (s.get("type") == "speech" and not s.get("source") and s.get("quality_input_hash") != quality_input_hash(s))
+            or (s.get("type") == "hadith" and (s.get("source") or {}).get("translation_status") != "sourced")
+        ) for s in json.loads(row["segments"]))
 
 
 def save_edit(project_id, **changes):
@@ -852,6 +864,21 @@ def verify_hadith(seg):
     except (OSError, ValueError, TypeError, KeyError):
         reference["translation_lookup_status"] = "unavailable"
     attach_source(seg, "hadith", reference)
+    if reference.get("translation_lookup_status") == "not_found":
+        # Select a unique independently matching record with its OWN narrator,
+        # grade and English. Do not label a different narration as the English
+        # translation of the previously selected Dorar record.
+        alternative = copy.deepcopy(seg)
+        alternative["candidate"] = {"kind": "hadith", "hadith_query": seg["ar"]}
+        try:
+            if suggest_hadith_references(alternative):
+                seg.clear()
+                seg.update(alternative)
+            elif alternative.get("citation_suggestions"):
+                seg["citation_suggestions"] = alternative["citation_suggestions"]
+                seg["citation_suggestion_status"] = alternative.get("citation_suggestion_status", "suggested")
+        except (OSError, ValueError, TypeError, KeyError):
+            pass
     return True
 
 
@@ -861,7 +888,8 @@ def resolve_segment_citation(seg):
     if kind not in ("quran", "hadith"):
         seg.pop("candidate", None)
         seg.pop("citation_lookup", None)
-        seg.pop("citation_suggestions", None)
+        if not seg.get("source"):
+            seg.pop("citation_suggestions", None)
         return True
     provider = "Quranpedia" if kind == "quran" else "Dorar"
     try:
@@ -1312,9 +1340,21 @@ def lookup_hadith(hadith_id, spoken, *, paraphrase=False):
     narrator = ar.get("narrator") or ""
     if not narrator:
         plain = re.sub(r"[\u064b-\u065f\u0670\u06d6-\u06ed]", "", arabic)
+        comma_opening = re.match(r"^\s*عن\s+([^،:：]{2,100}?)\s*،\s*عن\s+(?:النبي|رسول الله)\b", plain)
         opening = re.match(r"^\s*عن\s+(.{2,120}?)(?:\s+قال(?:ت)?\s*[:：]|\s+رضي الله عن(?:ه|ها|هم|هما)\s+عن النبي)", plain)
-        if opening:
+        if comma_opening:
+            narrator = comma_opening.group(1).strip()
+        elif opening:
             narrator = re.sub(r"\s*[-–]\s*رضي الله عن(?:ه|ها|هم|هما)\s*[-–]?\s*", " ", opening.group(1)).strip(" -–،")
+        else:
+            opening = re.match(r"^\s*عن\s+([^،:：]{2,100}?)\s*،\s*عن\s+(?:النبي|رسول الله)\b", plain)
+            if opening:
+                narrator = opening.group(1).strip()
+        # Some published records contain two reports. Preserve both explicit
+        # narrators instead of assigning the first narrator to the second text.
+        additional = re.findall(r"(?:^|\n)\s*وعن\s+(.{2,100}?)\s+رضي الله عن(?:ه|ها|هم|هما)\s*[:：]", plain)
+        if additional:
+            narrator = "؛ ".join(dict.fromkeys([*([narrator] if narrator else []), *additional]))
     return {"kind": "hadith", "title": ar.get("title") or "حديث نبوي", "arabic": arabic, "english": en.get("hadeeth", ""), "narrator": narrator, "grade": ar.get("grade") or "", "attribution": ar.get("attribution") or "", "explanation": ar.get("explanation") or "", "translation_explanation": en.get("explanation") or "", "url": f"https://hadeethenc.com/ar/browse/hadith/{hadith_id}", "id": str(hadith_id), "partial": spoken_norm != full_norm if paraphrase else quotation_is_partial(spoken, arabic),
             "quotation_mode": "paraphrase" if paraphrase else "quotation", "relation_method": "editor_selected" if paraphrase else "text_match",
             "translator": "موسوعة الأحاديث النبوية · HadeethEnc", "translation_url": f"https://hadeethenc.com/en/browse/hadith/{hadith_id}",
@@ -1367,12 +1407,20 @@ def hadith_related_score(spoken, canonical):
     from difflib import SequenceMatcher
     stop = {"ان", "الله", "ربكم", "قال", "من", "في", "الي", "اليه", "اذا", "علي", "عن", "هو", "لا", "ما"}
     left = set(normalize_ar(spoken).split()) - stop
-    right = set(normalize_ar(canonical).split()) - stop
-    if len(left) < 4 or not right:
+    tokens = normalize_ar(canonical).split()
+    if len(left) < 4 or not tokens:
         return 0.0
-    matched = sum(any(a == b or (min(len(a), len(b)) >= 4 and SequenceMatcher(None, a, b).ratio() >= .75)
-                      for b in right) for a in left)
-    return matched / len(left) if matched >= 4 else 0.0
+    # A long story may contain every generic word somewhere. Require their
+    # proximity inside a passage, not scattered across the full report.
+    size = min(len(tokens), len(normalize_ar(spoken).split()) + 4)
+    best = 0.0
+    for first in range(max(1, len(tokens) - size + 1)):
+        right = set(tokens[first:first + size]) - stop
+        matched = sum(any(a == b or (min(len(a), len(b)) >= 4 and SequenceMatcher(None, a, b).ratio() >= .75)
+                          for b in right) for a in left)
+        if matched >= 4:
+            best = max(best, matched / len(left))
+    return best
 
 
 def suggest_hadith_references(seg):
@@ -1388,7 +1436,7 @@ def suggest_hadith_references(seg):
                     candidates.setdefault(entry["id"], (score, entry))
         except (OSError, ValueError, TypeError, KeyError):
             failures = True
-    ranked = sorted(candidates.values(), key=lambda item: item[0], reverse=True)
+    ranked = sorted(candidates.values(), key=lambda item: (quotation_similarity(seg["ar"], item[1]["arabic"]), item[0]), reverse=True)
     suggestions, exact_sources = [], []
     for _, entry in ranked[:3]:
         try:
@@ -1417,6 +1465,13 @@ def suggest_hadith_references(seg):
 def enrich_hadith_translation(spoken, query, reference):
     """Attach only a unique complete record matching both speech and Dorar."""
     candidates = [item for item in search_hadeethenc(query) if quotation_matches(spoken, item["arabic"])]
+    if not candidates:
+        found = {}
+        for anchor in hadith_anchor_queries(spoken):
+            for item in search_hadeethenc(anchor):
+                if quotation_matches(spoken, item["arabic"]):
+                    found.setdefault(item["id"], item)
+        candidates = list(found.values())
     result = dict(reference)
     result["translation_candidates"] = [{"id": c["id"], "title": c["arabic"][:140], "url": c["url"]} for c in candidates[:8]]
     if len(candidates) > 8:
@@ -1429,7 +1484,7 @@ def enrich_hadith_translation(spoken, query, reference):
             # A matching short phrase alone cannot identify a different report.
             if not quotation_matches(reference["arabic"], source["arabic"]):
                 continue
-            if all(source.get(field) for field in ("english", "narrator", "grade", "attribution", "explanation")):
+            if all(source.get(field) for field in ("english", "narrator", "grade", "attribution")):
                 matches.append(source)
         except (OSError, ValueError, TypeError, KeyError):
             failures = True
@@ -1439,6 +1494,10 @@ def enrich_hadith_translation(spoken, query, reference):
         source = matches[0]
         return {**source, "verification": {"provider": "Dorar", **{k: reference[k] for k in ("arabic", "narrator", "grade", "attribution", "url")}, **{k: reference[k] for k in ("scholar", "search_url", "record_id", "link_status", "origins_url") if k in reference}},
                 "translation_lookup_status": "matched"}
+    if len(matches) > 1 and not failures:
+        result["translation_candidates"] = [{k: source.get(k, "") for k in
+            ("id", "title", "arabic", "english", "url", "narrator", "grade", "attribution", "quotation_mode")}
+            for source in matches]
     result["translation_lookup_status"] = "ambiguous" if len(matches) > 1 else "unavailable" if failures else "not_found"
     return result
 
@@ -1522,6 +1581,132 @@ def prepare_quote_subtitles(spoken, source):
         return source
 
 
+def repair_quran_boundaries(segments):
+    """Recover exact Quran spans across model/ASR boundaries, using timed words.
+
+    Source text determines quotation boundaries. Similarity is deliberately not
+    used to absorb introductions, fill unspoken words, or cross reviewed edits.
+    """
+    from difflib import SequenceMatcher
+
+    def location(segment):
+        value = segment.get("source") if segment.get("type") == "quran" else segment.get("candidate")
+        if not value or value.get("kind") != "quran":
+            return None
+        surah, ayah = value.get("surah"), value.get("ayah")
+        return (surah, ayah) if type(surah) is int and type(ayah) is int and 1 <= surah <= 114 and 1 <= ayah <= 286 else None
+
+    def eligible(segment, key):
+        words = segment.get("words") or []
+        return bool(words and not segment.get("reviewed") and "source_caption" not in segment
+                    and segment.get("type") != "hadith" and (segment.get("candidate") or {}).get("kind") != "hadith"
+                    and location(segment) in (None, key)
+                    and normalize_ar(segment.get("ar", "")) == normalize_ar(" ".join(w["text"] for w in words)))
+
+    offsets, units, sources, proposals = [], [], {}, {}
+    for i, segment in enumerate(segments):
+        offsets.append(len(units))
+        units.extend((i, word) for word in (segment.get("words") or [None]))
+        if location(segment) and segment.get("source"):
+            sources[location(segment)] = segment["source"]
+    offsets.append(len(units))
+    canonical_cache = {key: value["arabic"] for key, value in sources.items()}
+    for i, segment in enumerate(segments):
+        key = location(segment)
+        if not key or not eligible(segment, key):
+            continue
+        if key not in canonical_cache:
+            try:
+                record = get_json(f"https://api.quranpedia.net/v1/mushafs/1/{key[0]}/{key[1]}")
+                canonical_cache[key] = record.get("text", "") if isinstance(record, dict) and isinstance(record.get("text"), str) else ""
+            except (OSError, ValueError, TypeError, KeyError):
+                canonical_cache[key] = ""
+        canonical = normalize_ar(canonical_cache[key]).split()
+        if not canonical:
+            continue
+        left = right = i
+        while left > max(0, i - 2) and eligible(segments[left - 1], key) and 0 <= segments[left]["start"] - segments[left - 1]["end"] <= 2:
+            left -= 1
+        while right < min(len(segments) - 1, i + 2) and eligible(segments[right + 1], key) and 0 <= segments[right + 1]["start"] - segments[right]["end"] <= 2:
+            right += 1
+        tokens, positions = [], []
+        for pos in range(offsets[left], offsets[right + 1]):
+            for token in normalize_ar(units[pos][1]["text"]).split():
+                tokens.append(token)
+                positions.append(pos)
+        for block in SequenceMatcher(None, canonical, tokens, autojunk=False).get_matching_blocks():
+            if not block.size or (block.size < 4 and block.size != len(canonical)):
+                continue
+            first, last = block.b, block.b + block.size
+            # Do not cut inside one ASR word containing multiple Arabic tokens.
+            if (first and positions[first - 1] == positions[first]) or (last < len(tokens) and positions[last] == positions[last - 1]):
+                continue
+            start, end = positions[first], positions[last - 1] + 1
+            if end <= offsets[i] or start >= offsets[i + 1]:
+                continue
+            snippet = tokens[first:last]
+            if sum(canonical[j:j + len(snippet)] == snippet for j in range(len(canonical) - len(snippet) + 1)) != 1:
+                continue
+            # Already isolated cues are handled by the regular verifier.
+            owner = units[start][0]
+            if start == offsets[owner] and end == offsets[owner + 1]:
+                continue
+            proposals[(start, end, key)] = None
+    # Keep maximal spans of one verse; never choose between conflicting verses.
+    spans = [span for span in proposals if not any(other[2] == span[2] and other != span and other[0] <= span[0] and other[1] >= span[1] for other in proposals)]
+    spans = [span for span in spans if not any(other != span and max(other[0], span[0]) < min(other[1], span[1]) for other in spans)]
+    replacements = {}
+    for start, end, key in sorted(spans):
+        words = [word for _, word in units[start:end]]
+        spoken = " ".join(w["text"] for w in words)
+        try:
+            source = copy.deepcopy(sources.get(key))
+            if source:
+                for field in ("subtitle_arabic", "subtitle_english", "english_span", "alignment_status"):
+                    source.pop(field, None)
+                source["partial"] = quotation_is_partial(spoken, source["arabic"])
+            else:
+                source = lookup_quran(*key, spoken)
+            owner = units[start][0]
+            child = {"id": segments[owner]["id"] if start == offsets[owner] else uuid.uuid4().hex[:12],
+                     "ar": spoken, "en": "", "start": words[0]["start"], "end": words[-1]["end"],
+                     "words": words, "unclear_words": [flag for index in sorted({index for index, _ in units[start:end]}) for flag in segments[index].get("unclear_words", [])
+                                                         if words[0]["start"] <= flag["start"] <= words[-1]["end"]]}
+            attach_source(child, "quran", source)
+            if not child["en"] or not quote_alignment_ready(child["source"]):
+                continue
+            replacements[start] = (end, child)
+        except (OSError, ValueError, TypeError, KeyError):
+            continue
+    if not replacements:
+        return False
+    output, pos = [], 0
+    while pos < len(units):
+        if pos in replacements:
+            pos, child = replacements[pos]
+            output.append(child)
+            continue
+        owner = units[pos][0]
+        end = min([offsets[owner + 1], *(point for point in replacements if point > pos)])
+        original = segments[owner]
+        if pos == offsets[owner] and end == offsets[owner + 1]:
+            output.append(copy.deepcopy(original))
+        else:
+            words = [word for _, word in units[pos:end]]
+            output.append({"id": original["id"] if pos == offsets[owner] else uuid.uuid4().hex[:12],
+                           "type": "speech", "ar": " ".join(w["text"] for w in words), "en": "",
+                           "start": words[0]["start"], "end": words[-1]["end"], "words": words,
+                           "source": None, "reviewed": False, "needs_review": True,
+                           "unclear_words": [flag for flag in original.get("unclear_words", [])
+                                             if words[0]["start"] <= flag["start"] <= words[-1]["end"]]})
+        pos = end
+    # Translate only the residual speech. New quotation English is sourced.
+    if any(s.get("ar") and not s.get("en") for s in output):
+        translate_segments(output)
+    segments[:] = output
+    return True
+
+
 def process_project(project_id):
     try:
         row = project_row(project_id)
@@ -1559,8 +1744,32 @@ def process_project(project_id):
             save_project(project_id, segments=json.dumps(segments, ensure_ascii=False), stage="مطابقة الآيات والمراجع")
         else:
             save_project(project_id, stage="مطابقة الآيات والمراجع")
+        save_project(project_id, stage="فحص حدود المعنى والترجمة")
+        check_meaning(segments, translation_request, translation_key(), normalize_ar)
+        save_project(project_id, segments=json.dumps(segments, ensure_ascii=False), stage="مطابقة الاقتباس المتصل والمراجع")
+        coherent_hadith_groups(segments, verify_hadith, suggest_hadith_references, attach_source, quotation_matches, quotation_is_partial)
         for seg in segments:
+            if (seg.get("type") == "hadith" and seg.get("source") and not seg.get("citation_group")
+                and seg.get("reviewed") is not True and seg.get("translation_origin") != "human"
+                and "source_caption" not in seg and seg["source"].get("translation_status") != "sourced"):
+                staged = copy.deepcopy(seg)
+                staged["candidate"] = {"kind": "hadith", "hadith_query": seg["ar"]}
+                if resolve_segment_citation(staged):
+                    seg.clear()
+                    seg.update(staged)
+            choices = (seg.get("source") or {}).get("translation_candidates", [])
+            if choices and all(c.get("arabic") and c.get("english") for c in choices):
+                seg["citation_suggestions"] = copy.deepcopy(choices)
+                group = [s for s in segments if seg.get("citation_group") and s.get("citation_group") == seg["citation_group"]] or [seg]
+                for choice in seg["citation_suggestions"]:
+                    choice["quotation_mode"] = "quotation" if all(quotation_matches(s["ar"], choice["arabic"]) for s in group) else "paraphrase"
             resolve_segment_citation(seg)
+        if repair_quran_boundaries(segments):
+            for seg in segments:
+                if seg.get("candidate"):
+                    resolve_segment_citation(seg)
+        classify_hadith_choices(segments, quotation_matches)
+        annotate_readability(segments)
         duration = max(row["duration"], max(float(s["end"]) for s in segments))
         save_project(project_id, segments=json.dumps(segments, ensure_ascii=False), duration=duration, status="ready", stage="جاهز للمراجعة")
     except Exception as exc:
@@ -1597,10 +1806,13 @@ def source_caption(segment):
     if isinstance(segment.get("source_caption"), str):
         return segment["source_caption"]
     if source.get("quotation_mode") == "paraphrase":
-        return "نقل بالمعنى · مرجع مرتبط · " + (source.get("attribution") or source.get("title") or "حديث")
+        return "نقل بالمعنى · مرجع مرتبط · " + (source.get("attribution") or source.get("title") or "حديث") + (" · English: machine draft" if segment.get("translation_origin") != "human" and segment.get("reviewed") is not True else "")
     if segment["type"] == "quran":
-        return source.get("title") or "آية قرآنية"
-    return (source.get("attribution") or source.get("title") or "حديث") + " · " + (source.get("grade") or "الحكم غير مذكور")
+        return (source.get("title") or "آية قرآنية") + " · ترجمة معاني القرآن الكريم" + (" · " + source["translator"] if source.get("translator") else "")
+    caption = (source.get("attribution") or source.get("title") or "حديث") + " · " + (source.get("grade") or "الحكم غير مذكور")
+    if source.get("translation_status") != "sourced":
+        caption += " · English: machine draft"
+    return caption
 
 
 def subtitle_arabic(segment):
@@ -1628,6 +1840,17 @@ def make_srt(segments, bilingual=True):
 def make_sources(segments):
     return [{**s["source"], "start": s["start"], "end": s["end"]} for s in segments
             if s.get("source") and s.get("type") in ("quran", "hadith") and not segment_review_pending(s)]
+
+
+def make_draft_sources(segments):
+    """Private review inventory, explicitly separate from confirmed sources."""
+    return {"status": "draft", "notice": "مسودة للمراجعة؛ لا تمثل اعتمادًا شرعيًا للنص أو الترجمة.",
+            "citations": [{"segment_id": s["id"], "start": s["start"], "end": s["end"],
+                "citation_group": s.get("citation_group"), "reviewed": s.get("reviewed") is True,
+                "review_pending": segment_review_pending(s), "source": s.get("source"),
+                "candidate": s.get("candidate"), "lookup": s.get("citation_lookup"),
+                "suggestions": s.get("citation_suggestions", [])}
+                for s in segments if s.get("source") or (s.get("candidate") or {}).get("kind") in ("quran", "hadith")]}
 
 
 def ass_time(seconds):
@@ -1739,7 +1962,7 @@ def subtitle_image(row, segment, style, width, height):
         while True:
             sample = png(sample_width, sample_height)
             bounds = alpha_bounds(sample)
-            if bounds is None or bounds[0] >= round(sample_height * .12) or size <= 6:
+            if bounds is None or bounds[0] >= round(sample_height * .52) or size <= 6:
                 break
             size = max(6, round(size * .85, 2))
         output = sample if (width, height) == (sample_width, sample_height) else png(width, height)
@@ -2043,7 +2266,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def post(self):
         path = urllib.parse.urlsplit(self.path).path
-        match = re.fullmatch(r"/api/projects/([0-9a-f]{32})/export/(srt|sources|mp4)", path)
+        match = re.fullmatch(r"/api/projects/([0-9a-f]{32})/export/(srt|sources|sources-draft|mp4)", path)
         if match:
             row = project_row(match.group(1))
             if not row:
@@ -2052,15 +2275,15 @@ class Handler(BaseHTTPRequestHandler):
                 return self.fail(403, "رابط التحرير غير صالح")
             self.body_json()
             kind = match.group(2)
-            if kind != "sources" and not exportable(row):
+            if kind not in ("sources", "sources-draft") and not exportable(row):
                 return self.fail(409, "انتظر انتهاء المعالجة أو أضف مقاطع قبل التصدير")
             if kind == "mp4":
                 file = render_video(row)
             else:
                 segments = json.loads(row["segments"])
                 content = (make_srt(segments, json.loads(row["style"]).get("bilingual", True))
-                           if kind == "srt" else json.dumps(make_sources(segments), ensure_ascii=False, indent=2))
-                file = DATA / row["id"] / ("subtitles.srt" if kind == "srt" else "sources.json")
+                           if kind == "srt" else json.dumps(make_draft_sources(segments) if kind == "sources-draft" else make_sources(segments), ensure_ascii=False, indent=2))
+                file = DATA / row["id"] / ("subtitles.srt" if kind == "srt" else kind + ".json")
                 with LOCK:
                     file.write_text(content, encoding="utf-8")
             with LOCK:
@@ -2072,7 +2295,7 @@ class Handler(BaseHTTPRequestHandler):
                 for key in expired:
                     DOWNLOAD_TICKETS.pop(key, None)
                 download_token = secrets.token_urlsafe(32)
-                filename = f"jisr-{row['id'][:8]}.{'json' if kind == 'sources' else kind}"
+                filename = f"jisr-{row['id'][:8]}{'-draft-sources' if kind == 'sources-draft' else ''}.{'json' if kind in ('sources', 'sources-draft') else kind}"
                 DOWNLOAD_TICKETS[download_token] = {"project_id": row["id"], "kind": kind, "path": file,
                     "updated": row["updated"], "expires": now + DOWNLOAD_TTL, "filename": filename}
             return self.json(200, {"download_url": f"/api/downloads/{download_token}", "filename": filename,
@@ -2103,8 +2326,12 @@ class Handler(BaseHTTPRequestHandler):
             title = Path(name).stem[:120] or "مشروع جديد"
             now = time.time()
             duration = video_duration(folder / filename)
+            initial_style = {}
+            if FFMPEG:
+                width, height, _ = media_info(folder / filename)
+                initial_style = {"size": 24 if height > width else 22 if height == width else SUBTITLE_DEFAULT_SIZE}
             with db() as con:
-                con.execute("INSERT INTO projects(id,edit_token,share_token,title,filename,status,duration,created,updated) VALUES(?,?,?,?,?,?,?,?,?)", (project_id, edit_token, share_token, title, filename, "uploaded", duration, now, now))
+                con.execute("INSERT INTO projects(id,edit_token,share_token,title,filename,status,duration,style,created,updated) VALUES(?,?,?,?,?,?,?,?,?,?)", (project_id, edit_token, share_token, title, filename, "uploaded", duration, json.dumps(initial_style), now, now))
             with LOCK:
                 RECENT_UPLOADS[client].append(now)
             row = project_row(project_id)
@@ -2121,7 +2348,7 @@ class Handler(BaseHTTPRequestHandler):
                 return self.fail(409, "أضف مفتاح ElevenLabs ومفتاح خدمة الترجمة إلى بيئة الخادم أولاً")
             with LOCK:
                 current = project_row(row["id"])
-                pending_sources = current["status"] == "ready" and any((s.get("candidate") and s.get("needs_review")) or needs_speech_reflow(s) for s in json.loads(current["segments"]))
+                pending_sources = ready_for_retry(current)
                 if current["status"] not in ("uploaded", "error") and not pending_sources:
                     return self.fail(409, "هذا المشروع قيد المعالجة أو جاهز بالفعل")
                 if not PROCESS_SLOTS.acquire(blocking=False):
@@ -2221,6 +2448,12 @@ class Handler(BaseHTTPRequestHandler):
                 seg["terminology_edited"] = True
             if seg["ar"] != previous_ar or "start" in data or "end" in data:
                 seg.pop("words", None)
+            if seg["ar"] != previous_ar or seg["en"] != previous_en:
+                seg["translation_origin"] = "human"
+                seg.pop("quality_review", None)
+                seg.pop("quality_input_hash", None)
+                seg.pop("citation_group", None)
+            annotate_readability(segments)
             if not seg.get("source"):
                 seg.pop("source_caption", None)
             if not save_edit(row["id"], segments=json.dumps(segments, ensure_ascii=False)):
@@ -2233,10 +2466,25 @@ class Handler(BaseHTTPRequestHandler):
                 return self.fail(404, "المقطع غير موجود")
             if "paraphrase" in data and type(data["paraphrase"]) is not bool:
                 raise ValueError("paraphrase must be a JSON boolean")
-            source = lookup_hadith(data.get("hadith_id", ""), seg["ar"], paraphrase=True) if data.get("paraphrase") else lookup_hadith(data.get("hadith_id", ""), seg["ar"])
+            if "apply_to_group" in data and type(data["apply_to_group"]) is not bool:
+                raise ValueError("apply_to_group must be a JSON boolean")
+            targets = [s for s in segments if seg.get("citation_group") and s.get("citation_group") == seg["citation_group"]] if data.get("apply_to_group") else [seg]
+            if not targets:
+                raise ValueError("لا يوجد اقتباس متصل لتطبيق المرجع عليه")
+            if len(targets) > 1 and any(s.get("reviewed") is True or s.get("translation_origin") == "human" or "source_caption" in s for s in targets):
+                return self.fail(409, "أجزاء الاقتباس تتضمن مراجعة أو تعديلًا يدويًا؛ عدّل المقطع المطلوب منفردًا")
+            spoken = " ".join(s["ar"] for s in targets)
+            source = lookup_hadith(data.get("hadith_id", ""), spoken, paraphrase=True) if data.get("paraphrase") else lookup_hadith(data.get("hadith_id", ""), spoken)
             if not all(source.get(field) for field in ("english", "narrator", "grade", "attribution")):
                 return self.fail(422, "مرجع الحديث لا يتضمن الراوي والحكم والتخريج والترجمة كاملة؛ اختر مرجعاً آخر")
-            attach_source(seg, "hadith", source)
+            if len(targets) > 1 and not data.get("paraphrase") and not all(quotation_matches(s["ar"], source["arabic"]) for s in targets):
+                raise ValueError("بعض أجزاء الاقتباس تختلف عن هذه الرواية؛ صحّح التفريغ أو اختر الربط كنقل بالمعنى")
+            for target in targets:
+                reference = copy.deepcopy(source)
+                if len(targets) > 1:
+                    reference["partial"] = (normalize_ar(target["ar"]) != normalize_ar(reference["arabic"])) if data.get("paraphrase") else quotation_is_partial(target["ar"], reference["arabic"])
+                attach_source(target, "hadith", reference)
+            annotate_readability(segments)
             if not save_edit(row["id"], segments=json.dumps(segments, ensure_ascii=False)):
                 return self.fail(409, "بدأت المعالجة أثناء التعديل؛ حاول بعد انتهائها")
             return self.json(200, project_json(project_row(row["id"]), True))

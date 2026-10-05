@@ -119,7 +119,7 @@ Processing blocks transcript edits, manual replacement, source linking, and dele
 
 ## Verification limits
 
-Tests exercise local processing and HTTP flows with mocked external responses. `scripts/check_sources.py` separately checks real public source responses; `source-check.json` records sample connectivity and field availability for Quranpedia, HadeethEnc, Dorar Hadith, Dorar tafsir, and Al-Jamhara. It does not verify the whole corpus. Live transcription quality, paid-provider compatibility, and translation accuracy still need verification with API keys and a real Arabic video. This contract documents the current backend; separate upload and processing screens are deferred.
+Tests exercise local processing and HTTP flows with mocked external responses. `scripts/check_sources.py` separately checks real public source responses; `source-check.json` records sample connectivity and field availability for Quranpedia, HadeethEnc, Dorar Hadith, Dorar tafsir, and Al-Jamhara. It does not verify the whole corpus. The October 5 six-video audit exercised actual providers and exported media; independent listening, expert meaning review and public deployment verification remain necessary. See verification-2026-10-05.md. This contract documents the current backend; separate upload and processing screens are deferred.
 
 When matched speech terms exist, the server makes a second OpenAI call with the source definitions. Its response must contain every target ID exactly once. The original transcript, timestamps, quotation candidates, and word partitions remain fixed. A failed refinement does not commit that batch's draft translations; completed earlier batches remain available for retry.
 
@@ -150,3 +150,63 @@ Hadith matching ranks the spoken passage inside a full source report. Passage ma
 `explanation_url` points to a retrieved explanation only when `explanation_status` is `available`. `explanation_index_url` is a broader surah index and must be labelled as browsing. Source, translation, verification, origins and explanation destinations are rendered separately. Legacy search URLs are recognised even without `link_status`. A missing narrator marker is displayed as unspecified, never replaced with a guessed narrator.
 
 For existing projects, run `python scripts/refresh_source_links.py` to preview repairs and add `--apply` to save them. This uses public-source requests only. It preserves texts, translations, grading and review flags, skips active processing, and refuses stale writes after concurrent edits.
+
+
+## October 5 quality and connected quotation checks
+
+Every segment with `reviewed !== true` is pending, including ordinary speech.
+Private draft SRT/MP4 remains exportable. A successful AI check is never human
+approval. `quality_review` has `status: checked|unavailable` and an `issues` array
+of `boundary`, `meaning`, `transcript`, `duplicate` or `not_checked`.
+`quality_input_hash` caches checks for unchanged Arabic/English.
+`quality_previous_english` retains the first machine draft when a correction is
+applied. `translation_origin: human` protects saved text edits from automated
+meaning repair. Ambiguous ASR is flagged without silently reconstructing it.
+The original Arabic, word timestamps, IDs and canonical source text are preserved.
+Editable project JSON exposes boolean `retryable`, computed from the same
+eligibility check as the processing endpoint. It shows the retry button on ready
+projects with pending automatic work; public JSON sets it to false. Reviewed
+text, human translations and custom captions do not qualify for automatic retry.
+
+Meaning checks use batches of at most 12 draft speech cues with neighboring
+Arabic as context. IDs, nonempty English, boolean confidence and issue codes
+must validate for the entire batch before corrections commit. An unavailable
+provider keeps translations and flags `not_checked`; retry does not retranscribe.
+
+`readability` reports `characters_per_second`, `duration_seconds`, and `issues`:
+`reading_speed` above the local 25 English characters/second heuristic and
+`short_display` below one second. `review_issues` contains safe code/message pairs
+for the UI. These checks do not retime words or shorten sourced scripture.
+Human confirmation acknowledges warnings; metrics remain available.
+
+Connected unreviewed Hadith candidates, at most eight with no gap over two
+seconds, are retrieved as one quotation. Every child must match the same source
+before a grouped update commits. `citation_group` identifies its timed parts.
+Reviewed/manual/custom-caption/paraphrase segments form boundaries. Source
+translations use their own record metadata; a related narration is never
+presented as a verified English translation of a different Dorar record.
+Competing complete translation records are exposed as comparison suggestions.
+Search anchors are evidence for retrieval only; a failed candidate cannot make
+another result uniquely verified. Narrator extraction preserves explicit
+published attributions, including records containing more than one report.
+
+`POST /api/projects/{id}/hadith/{segment_id}` additionally accepts boolean
+`apply_to_group`. With true, the selected record applies transactionally to the
+connected group; reviewed/manual/custom-caption parts block a bulk overwrite.
+Literal linking requires a match for every child. Explicit `paraphrase: true`
+preserves each child's spoken Arabic/English and labels the relationship.
+Neither operation confirms human review. Invalid booleans return 400.
+
+`POST /api/projects/{id}/export/sources-draft` is editor-only and returns the
+usual expiring download ticket. Its JSON has `status: draft`, `notice`, and
+`citations` with `segment_id`, timing, `citation_group`, `reviewed`,
+`review_pending`, `source`, `candidate`, `lookup`, and `suggestions`.
+The existing `sources` export is unchanged: it contains confirmed citations only.
+Draft inventories do not appear on a public unauthenticated export route.
+
+Automatic Quran captions include ترجمة معاني القرآن الكريم and the translator.
+Unsourced Hadith English and unreviewed paraphrase subtitles carry an English
+machine-draft label. Explicit custom/hidden source captions remain supported.
+`shared-png-v4` invalidates earlier images/MP4 caches, fitting long subtitles
+approximately into the lower half of the frame. New uploads default to size
+24 for portrait, 22 for square and 18 for landscape; saved styles are preserved.

@@ -4,5 +4,6 @@
 !docker-entrypoint.py
 !server.py
 !subtitle_png.py
+!pipeline_quality.py
 !dist/
 !dist/**

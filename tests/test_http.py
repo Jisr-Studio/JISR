@@ -133,6 +133,46 @@ class ProcessingHTTPTests(unittest.TestCase):
         self.assertFalse(corrected["publishable"])
         self.assertIsNone(corrected["segments"][0]["source"])
 
+    def test_group_source_selection_is_atomic_and_protects_reviewed_parts(self):
+        project_id, token = "9" * 32, "group-edit-token"
+        segments = [{"id": c * 12, "start": i * 2, "end": i * 2 + 1,
+                     "ar": text, "en": "Draft", "type": "hadith", "reviewed": False,
+                     "needs_review": True, "citation_group": "shared"}
+                    for i, (c, text) in enumerate((("1", "من تقرب إلي شبرا تقربت إليه ذراعا"),
+                                                  ("2", "ومن أتاني يمشي أتيته هرولة")))]
+        with server.db() as con:
+            con.execute("INSERT INTO projects(id,edit_token,share_token,title,filename,status,duration,segments,created,updated) VALUES(?,?,?,?,?,?,?,?,?,?)",
+                        (project_id, token, "8" * 32, "Group review", "original.mp4", "ready", 5, json.dumps(segments), time.time(), time.time()))
+        source = {"kind": "hadith", "arabic": " ".join(s["ar"] for s in segments), "english": "Source English",
+                  "narrator": "Narrator", "grade": "Grade", "attribution": "Book", "translation_status": "sourced",
+                  "url": "https://hadeethenc.com/ar/browse/hadith/123"}
+        payload = json.dumps({"hadith_id": "123", "apply_to_group": True}).encode()
+        with patch.object(server, "lookup_hadith", return_value=source) as lookup, patch.object(server, "translation_key", return_value=""):
+            _, raw = self.request(f"/api/projects/{project_id}/hadith/{segments[0]['id']}", "POST", payload, token)
+            lookup.assert_called_once_with("123", source["arabic"])
+        linked = json.loads(raw)["segments"]
+        self.assertEqual([s["source"]["url"] for s in linked], [source["url"]] * 2)
+        self.assertTrue(all(s["needs_review"] and not s["reviewed"] for s in linked))
+        self.assertEqual([(s["start"], s["end"]) for s in linked], [(0, 1), (2, 3)])
+        linked[1]["ar"] = "عبارة منقولة بالمعنى وليست اقتباسا حرفيا"
+        server.save_project(project_id, segments=json.dumps(linked))
+        paraphrase_source = {**source, "quotation_mode": "paraphrase", "relation_method": "editor_selected"}
+        paraphrase_payload = json.dumps({"hadith_id": "123", "apply_to_group": True, "paraphrase": True}).encode()
+        with patch.object(server, "lookup_hadith", return_value=paraphrase_source):
+            _, raw = self.request(f"/api/projects/{project_id}/hadith/{segments[0]['id']}", "POST", paraphrase_payload, token)
+        paraphrased = json.loads(raw)["segments"]
+        self.assertEqual(paraphrased[1]["ar"], linked[1]["ar"])
+        self.assertEqual(paraphrased[1]["en"], "Draft")
+        self.assertTrue(all(s["source"]["quotation_mode"] == "paraphrase" for s in paraphrased))
+        linked = paraphrased
+        linked[1].update(reviewed=True, needs_review=False)
+        server.save_project(project_id, segments=json.dumps(linked))
+        with patch.object(server, "lookup_hadith") as lookup, self.assertRaises(urllib.error.HTTPError) as blocked:
+            self.request(f"/api/projects/{project_id}/hadith/{segments[0]['id']}", "POST", payload, token)
+        self.assertEqual(blocked.exception.code, 409)
+        lookup.assert_not_called()
+        self.assertEqual(json.loads(server.project_row(project_id)["segments"]), linked)
+
     def test_manual_citation_link_resolves_candidate_then_requires_confirmation(self):
         for kind, letter in (("quran", "a"), ("hadith", "b")):
             with self.subTest(kind=kind):
