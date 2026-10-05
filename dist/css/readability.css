@@ -342,13 +342,6 @@ body:not(.start-view) .demo-pill{font-size:15px;color:#d0daea}
 }
 
 /* Keep the closing note readable at normal browser zoom. */
-.stage-panel{background:transparent;border:0;border-radius:0;padding:4px 0 18px;margin:0;box-shadow:none}
-.stage-panel>b{font-size:19px;color:#efbd78}
-.stage-panel>p{font-size:17px;line-height:1.7;margin:6px 0;color:#c8d2e2}
-.stage-panel .processing-meta{display:flex;flex-wrap:wrap;gap:10px 24px;font-size:14px;color:#aebdd2;margin-top:8px}
-.workflow.is-processing .step.current b{animation:workflow-pulse 2s ease-in-out infinite}
-@keyframes workflow-pulse{0%,100%{box-shadow:0 0 0 5px rgba(239,189,120,.08)}50%{box-shadow:0 0 0 11px rgba(239,189,120,.2)}}
-@media(prefers-reduced-motion:reduce){.workflow.is-processing .step.current b{animation:none}}
 .workspace .appearance-panel .settings{grid-template-columns:1fr;gap:0;padding:0 20px 18px}
 .workspace .appearance-panel .panel-heading{padding:18px 20px}
 .workspace .appearance-panel h2{font-size:21px;line-height:1.5}
