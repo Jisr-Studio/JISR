@@ -10,18 +10,18 @@ import server
 
 
 VERSE = "إن الله وملائكته يصلون على النبي يا أيها الذين آمنوا صلوا عليه وسلموا تسليما"
-ENGLISH = "Full sourced English translation."
+ENGLISH = "Full sourced translation translation."
 
 
 def cue(text, start, ident, source=False):
     words = [{"text": w, "start": start + i * .3, "end": start + i * .3 + .2}
              for i, w in enumerate(text.split())]
-    result = {"id": ident, "ar": text, "en": "Original translation", "type": "speech",
+    result = {"id": ident, "ar": text, "translation": "Original translation", "type": "speech",
               "start": words[0]["start"], "end": words[-1]["end"], "words": words,
               "reviewed": False, "needs_review": True, "unclear_words": []}
     if source:
         result.update(type="quran", source={"kind": "quran", "surah": 33, "ayah": 56,
-                      "arabic": VERSE, "english": ENGLISH, "partial": True,
+                      "arabic": VERSE, "translation": ENGLISH, "partial": True,
                       "title": "Quran 33:56", "url": "https://example.test/33/56"})
     return result
 
@@ -34,8 +34,8 @@ def fixture():
 
 def translate_residual(segments):
     for seg in segments:
-        if not seg.get("en"):
-            seg["en"] = "Servants of God."
+        if not seg.get("translation"):
+            seg["translation"] = "Servants of God."
     return segments
 
 
@@ -53,7 +53,7 @@ class QuranBoundaryTests(unittest.TestCase):
         self.assertEqual(segments[0]["ar"], "عباد الله")
         quote = segments[1]
         self.assertEqual(server.normalize_ar(quote["ar"]), server.normalize_ar(VERSE))
-        self.assertEqual(quote["en"], ENGLISH)
+        self.assertEqual(quote["translation"], ENGLISH)
         self.assertFalse(quote["source"]["partial"])
         self.assertFalse(quote["reviewed"])
         self.assertTrue(quote["needs_review"])
@@ -97,7 +97,7 @@ class QuranBoundaryTests(unittest.TestCase):
     def test_intervening_speech_is_not_absorbed(self):
         segments = fixture()
         segments.insert(1, cue("وهذه آية عظيمة", 2.95, "comment"))
-        # Refuse partial source alignment in this test: no speculative English.
+        # Refuse partial source alignment in this test: no speculative translation.
         with patch.object(server, "translation_key", return_value=""):
             self.assertFalse(server.repair_quran_boundaries(segments))
         self.assertEqual(segments[1]["ar"], "وهذه آية عظيمة")
@@ -143,7 +143,7 @@ class QuranBoundaryTests(unittest.TestCase):
         source["partial"] = False
         with patch.object(server, "get_json", return_value={"text": VERSE}), patch.object(server, "lookup_quran", return_value=source):
             self.assertTrue(server.repair_quran_boundaries(segments))
-        self.assertEqual(segments[1]["en"], ENGLISH)
+        self.assertEqual(segments[1]["translation"], ENGLISH)
         self.assertFalse(segments[1]["source"]["partial"])
 
     def test_pipeline_saves_recovered_source_boundaries(self):

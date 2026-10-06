@@ -1,6 +1,6 @@
 # Jisr submission workspace
 
-Preparation started October 3, 2026. This workspace does not contain final submission artifacts yet.
+Preparation started October 3, 2026. The current source release passed the [October 6 final delivery check](../docs/final-delivery-check-2026-10-06.md). Final presentation/video artifacts and the final deployed revision have not been supplied in this folder.
 
 Start with [the team preparation pack](../docs/team-preparation/README.md). Follow its task board and official requirement list.
 
@@ -24,14 +24,19 @@ Final links to fill:
 
 - Application URL: https://jisr-3ue4.onrender.com/
 - Reviewed sample viewer URL:
-- Public repository URL:
+- Public repository URL: https://github.com/turki125/JISR (public access checked October 6; final local source push still pending)
 - Release revision:
 - Submission confirmation and Riyadh timestamp:
 
-Public deployment initial check on October 5, 2026: homepage opened in browser;
-deployment checker passed backend/FFmpeg, configured AI keys, frontend assets,
-font and demo video. A fresh live upload, processing, review and export on this
-host remain unverified. Free hosting has temporary storage; saved projects
-and viewer links do not survive a service sleep/restart/redeployment.
+Public deployment final read-only check on October 6, 2026: health returned 200,
+with FFmpeg and both provider keys configured. `/languages.json` returned 404;
+the public host still runs an older release. After the final push, manually deploy
+the latest commit and verify the current full workflow. Free hosting has temporary
+storage; saved projects and viewer links do not survive a service sleep/restart/redeployment.
+
+Clean source package: `deployment/jisr-final-source.zip`, generated with
+`python scripts/package_source.py`. Extract its contents into the repository;
+it excludes secrets and private user projects. The runtime-only ZIP is generated
+with `python scripts/package_demo.py`. Both contain file-hash manifests.
 
 Keep raw licensed/private media and private permission evidence outside public publication when release is not permitted. Do not add API keys or private project edit links. Review the exact files before making the submission repository public.

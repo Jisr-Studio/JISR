@@ -14,28 +14,28 @@ import server
 def check_sources():
     report = {"checked_at": datetime.now(timezone.utc).isoformat(), "checks": []}
     samples = [
-        ("Quranpedia", lambda: server.lookup_quran(2, 222, "إن الله يحب التوابين ويحب المتطهرين"), ("arabic", "english", "translator")),
-        ("HadeethEnc", lambda: server.lookup_hadith("65004", "الطهور شطر الإيمان"), ("arabic", "english", "narrator", "grade", "attribution", "explanation")),
+        ("Quranpedia", lambda: server.lookup_quran(2, 222, "إن الله يحب التوابين ويحب المتطهرين"), ("arabic", "translation", "translator")),
+        ("HadeethEnc", lambda: server.lookup_hadith("65004", "الطهور شطر الإيمان"), ("arabic", "translation", "narrator", "grade", "attribution", "explanation")),
     ]
     def dorar_sample():
-        segment = {"ar": "الطهور شطر الإيمان", "en": "Draft for review", "candidate": {"hadith_query": "الطهور شطر الإيمان"}}
+        segment = {"ar": "الطهور شطر الإيمان", "translation": "Draft for review", "candidate": {"hadith_query": "الطهور شطر الإيمان"}}
         if not server.verify_hadith(segment):
             raise ValueError("No complete source match returned")
         return segment["source"]
     samples.append(("Dorar", dorar_sample, ("arabic", "narrator", "grade", "attribution")))
     samples.append(("Dorar tafsir", lambda: server.lookup_tafsir(2, 222), ("explanation", "explanation_scope", "explanation_source", "surah_name")))
-    samples.append(("Al-Jamhara bilingual term", lambda: server.lookup_term("الاجتهاد"), ("term", "definition_ar", "english_term", "definition_en", "english_url")))
+    samples.append(("Al-Jamhara bilingual term", lambda: server.lookup_term("الاجتهاد"), ("term", "definition_ar", "translation_term", "definition_en", "translation_url")))
     samples.append(("Al-Jamhara ablution term", lambda: server.lookup_term("الوضوء"), ("term", "definition_ar", "url")))
     def automatic_hadith():
         spoken = "من توضأ فأحسن الوضوء خرجت خطاياه"
-        segment = {"ar": spoken, "en": "Draft for review", "candidate": {"kind": "hadith", "hadith_query": spoken}}
+        segment = {"ar": spoken, "translation": "Draft for review", "candidate": {"kind": "hadith", "hadith_query": spoken}}
         if not server.verify_hadith(segment):
             raise ValueError("No Hadith match returned")
         source = segment["source"]
         if source.get("translation_status") != "sourced" or source.get("translation_lookup_status") != "matched":
             raise ValueError("No unique sourced translation returned")
         return source
-    samples.append(("Automatic Dorar + HadeethEnc match", automatic_hadith, ("english", "explanation", "verification", "translation_url")))
+    samples.append(("Automatic Dorar + HadeethEnc match", automatic_hadith, ("translation", "explanation", "verification", "translation_url")))
     for name, lookup, fields in samples:
         result = {"service": name, "ok": False}
         try:
@@ -48,7 +48,7 @@ def check_sources():
             for field in ("translation_status", "translation_lookup_status", "alignment_status"):
                 if field in source:
                     result[field] = source[field]
-            for field in ("arabic", "english", "explanation", "definition_ar", "definition_en"):
+            for field in ("arabic", "translation", "explanation", "definition_ar", "definition_en"):
                 if source.get(field):
                     result[field + "_sha256"] = hashlib.sha256(source[field].encode()).hexdigest()
         except Exception as exc:

@@ -19,9 +19,15 @@ def main():
         ("/", b"JISR", "text/html"),
         ("/js/app.js", b"function", "javascript"),
         ("/js/subtitle-preview.js", b"JisrSubtitlePreview", "javascript"),
+        ("/js/languages.js", b"JisrLanguages", "javascript"),
+        ("/languages.json", b'"zh-Hans"', "application/json"),
         ("/source-caption-labels.json", b'"surahs"', "application/json"),
         ("/css/onboarding.css", b"{", "text/css"),
         ("/fonts/plex.ttf", None, "font"),
+        ("/fonts/noto-latin.ttf", None, "font"),
+        ("/fonts/noto-urdu.ttf", None, "font"),
+        ("/fonts/noto-devanagari.ttf", None, "font"),
+        ("/fonts/noto-cjk.otf", None, "font"),
         ("/demo.mp4", b"ftyp", "video/mp4"),
     )
     with urllib.request.urlopen(base + "/api/health", timeout=30) as response:

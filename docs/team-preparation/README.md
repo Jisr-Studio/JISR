@@ -1,5 +1,7 @@
 # Jisr team preparation
 
+> The plan below is historical. The current release implements seven target languages at the user's request; the old English-only scope and language-expansion restriction below no longer apply. See the [final delivery check](../final-delivery-check-2026-10-06.md) for current code and remaining submission artifacts.
+
 > Update after GitHub integration: OpenAI translation and the Hadith paraphrase fix are now in the shared code. FFmpeg is installed locally; the combined suite passes 90 tests, including MP4 export. The starting-state table and baseline.json below are historical snapshots from 17:23 on October 3, not current app status.
 
 Prepared October 3, 2026. All dates and times below use Riyadh time.

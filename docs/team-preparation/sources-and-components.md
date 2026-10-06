@@ -1,5 +1,7 @@
 # Sources, tools, and components working register
 
+> October 6 release update: the actual translation provider is OpenAI GPT-6 Luna, transcription is ElevenLabs Scribe v2, and Quranpedia/HadeethEnc use the seven verified language mappings in [language/source coverage](../languages.md). The ten bundled subtitle fonts have adjacent SIL OFL notices and exact source links in [the font manifest](../../dist/fonts/README.md). The current release checks are in [final delivery](../final-delivery-check-2026-10-06.md). License/permission decisions left blank below have not been invented by this technical audit.
+
 Anas completes AI/reference entries. Turki completes code, media, fonts, and hosting. This is a working register; license verification is not complete. Fill dates and exact applicable terms before releasing or packaging material.
 
 ## Content sources

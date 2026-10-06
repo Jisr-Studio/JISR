@@ -22,11 +22,11 @@ class PipelineTests(unittest.TestCase):
         get_json.side_effect = [ar, en]
         source = server.lookup_hadith("4817", spoken, paraphrase=True)
         self.assertEqual(source["narrator"], "أبي هريرة")
-        segment = {"ar": spoken, "en": "Speaker's translation", "candidate": {"kind": "hadith"}}
+        segment = {"ar": spoken, "translation": "Speaker's translation", "candidate": {"kind": "hadith"}}
         server.attach_source(segment, "hadith", source)
         self.assertEqual(segment["ar"], spoken)
-        self.assertEqual(segment["en"], "Speaker's translation")
-        self.assertEqual(segment["source"]["english"], en["hadeeth"])
+        self.assertEqual(segment["translation"], "Speaker's translation")
+        self.assertEqual(segment["source"]["translation"], en["hadeeth"])
         self.assertTrue(segment["needs_review"])
         self.assertFalse(segment["reviewed"])
         row = {"status": "ready", "segments": json.dumps([segment])}
@@ -38,7 +38,7 @@ class PipelineTests(unittest.TestCase):
         self.assertIn("[Hadith paraphrase]", server.make_ass([segment], {}))
         self.assertEqual(server.make_sources([segment])[0]["quotation_mode"], "paraphrase")
         with self.assertRaises(ValueError):
-            server.select_source_english(source, spoken, {"start": 0, "end": 10})
+            server.select_source_translation(source, spoken, {"start": 0, "end": 10})
 
     def test_audio_gap_marks_untranscribed_sound_for_review(self):
         log = "silence_start: 0\nsilence_end: 1 | silence_duration: 1\nsilence_start: 7\nsilence_end: 8 | silence_duration: 1"
@@ -47,7 +47,7 @@ class PipelineTests(unittest.TestCase):
         self.assertEqual(len(gaps), 1)
         self.assertEqual((gaps[0]["start"], gaps[0]["end"]), (3.35, 7.0))
         self.assertTrue(gaps[0]["audio_gap"] and gaps[0]["needs_review"])
-        self.assertEqual(gaps[0]["en"], "")
+        self.assertEqual(gaps[0]["translation"], "")
 
     def test_proxy_client_identity_requires_explicit_trust(self):
         headers = {"X-Real-IP": "203.0.113.9"}
@@ -120,12 +120,12 @@ class PipelineTests(unittest.TestCase):
             {"translation_text": "Indeed, Allah loves those who are constantly repentant."},
             {"book": {"name": "تيسير التفسير"}, "content": [{"text": "شرح الآية."}]},
         ]
-        seg = {"ar": "إن الله يحب التوابين ويحب المتطهرين", "en": "machine draft", "type": "speech", "candidate": {"surah": 2, "ayah": 222}}
+        seg = {"ar": "إن الله يحب التوابين ويحب المتطهرين", "translation": "machine draft", "type": "speech", "candidate": {"surah": 2, "ayah": 222}}
         self.assertTrue(server.verify_quran(seg))
         self.assertEqual(seg["source"]["translator"], "Saheeh International")
         self.assertFalse(seg["source"]["arabic"].startswith("\ufeff"))
         self.assertEqual(seg["source"]["explanation"], "شرح الآية.")
-        self.assertNotEqual(seg["en"], "machine draft")
+        self.assertNotEqual(seg["translation"], "machine draft")
         self.assertTrue(seg["needs_review"])
         self.assertFalse(seg["reviewed"])
         self.assertNotIn("candidate", seg)
@@ -133,7 +133,7 @@ class PipelineTests(unittest.TestCase):
     @patch.object(server, "get_json")
     def test_quran_rejects_unrelated_text(self, get_json):
         get_json.return_value = {"text": "قُلْ هُوَ اللَّهُ أَحَدٌ"}
-        seg = {"ar": "الوضوء عبادة عظيمة", "en": "Ablution is worship", "type": "speech", "candidate": {"surah": 112, "ayah": 1}}
+        seg = {"ar": "الوضوء عبادة عظيمة", "translation": "Ablution is worship", "type": "speech", "candidate": {"surah": 112, "ayah": 1}}
         self.assertFalse(server.verify_quran(seg))
         self.assertEqual(get_json.call_count, 1)
 
@@ -144,14 +144,14 @@ class PipelineTests(unittest.TestCase):
         self.assertEqual(parsed[0]["narrator"], "أبو مالك الأشعري")
         self.assertEqual(parsed[0]["grade"], "صحيح")
         with patch.object(server, "get_json", return_value={"ahadith": {"result": fragment}}), patch.object(server, "get_html", return_value=""):
-            seg = {"start": 0, "end": 4, "ar": "الطهور شطر الإيمان", "en": "Purification is half of faith.", "candidate": {"hadith_query": "الطهور شطر الإيمان"}, "type": "speech"}
+            seg = {"start": 0, "end": 4, "ar": "الطهور شطر الإيمان", "translation": "Purification is half of faith.", "candidate": {"hadith_query": "الطهور شطر الإيمان"}, "type": "speech"}
             self.assertTrue(server.verify_hadith(seg))
             self.assertTrue(seg["needs_review"])
             self.assertEqual(server.make_sources([seg]), [])
             seg.update(needs_review=False, reviewed=True)
             self.assertEqual(len(server.make_sources([seg])), 1)
         with patch.object(server, "get_json", return_value={"ahadith": [{"th": fragment}]}):
-            seg = {"ar": "الطهور شطر الإيمان", "en": "Purification is half of faith.", "candidate": {"hadith_query": "الطهور شطر الإيمان"}, "type": "speech"}
+            seg = {"ar": "الطهور شطر الإيمان", "translation": "Purification is half of faith.", "candidate": {"hadith_query": "الطهور شطر الإيمان"}, "type": "speech"}
             self.assertTrue(server.verify_hadith(seg))
 
     @patch.object(server, "get_json")
@@ -161,14 +161,14 @@ class PipelineTests(unittest.TestCase):
             {"hadeeth": "Purification is half of faith."},
         ]
         source = server.lookup_hadith("123", "الطهور شطر الإيمان")
-        self.assertEqual(source["english"], "Purification is half of faith.")
+        self.assertEqual(source["translation"], "Purification is half of faith.")
         self.assertEqual(source["grade"], "صحيح")
         self.assertEqual(source["narrator"], "أبي مالك الأشعري")
         with self.assertRaises(ValueError):
             server.lookup_hadith("bad-id", "الطهور شطر الإيمان")
 
     def test_subtitle_exports(self):
-        segments = [{"start": 1.25, "end": 3.5, "type": "speech", "ar": "بسم الله", "en": "In the name of Allah.", "source": None}]
+        segments = [{"start": 1.25, "end": 3.5, "type": "speech", "ar": "بسم الله", "translation": "In the name of Allah.", "source": None}]
         self.assertIn("00:00:01,250 --> 00:00:03,500", server.make_srt(segments))
         self.assertIn("In the name of Allah.", server.make_ass(segments, {"backdrop": True, "color": "#ffffff"}))
         segments[0].update(type="quran", needs_review=False, reviewed=True)
@@ -194,12 +194,12 @@ class PipelineTests(unittest.TestCase):
     @patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"})
     @patch.object(server, "post_json")
     def test_openai_responses_contract(self, post_json):
-        post_json.return_value = {"status": "completed", "output": [{"type": "message", "content": [{"type": "output_text", "text": '{"items":[{"id":"one","english":"Ablution is worship.","kind":"speech","terms":[]}]}'}]}]}
-        segments = [{"id": "one", "ar": "الوضوء عبادة", "en": "", "needs_review": False},
-                    {"id": "gap", "ar": "", "en": "", "audio_gap": True, "needs_review": True}]
+        post_json.return_value = {"status": "completed", "output": [{"type": "message", "content": [{"type": "output_text", "text": '{"items":[{"id":"one","translation":"Ablution is worship.","kind":"speech","terms":[]}]}'}]}]}
+        segments = [{"id": "one", "ar": "الوضوء عبادة", "translation": "", "needs_review": False},
+                    {"id": "gap", "ar": "", "translation": "", "audio_gap": True, "needs_review": True}]
         server.translate_segments(segments)
-        self.assertEqual(segments[0]["en"], "Ablution is worship.")
-        self.assertEqual(segments[1]["en"], "")
+        self.assertEqual(segments[0]["translation"], "Ablution is worship.")
+        self.assertEqual(segments[1]["translation"], "")
         url, payload, headers = post_json.call_args.args
         self.assertEqual(url, "https://api.openai.com/v1/responses")
         self.assertIsInstance(payload["input"], str)
@@ -211,20 +211,20 @@ class PipelineTests(unittest.TestCase):
     @patch.object(server, "post_json")
     def test_translation_retry_skips_completed_batches(self, post_json):
         size = server.TRANSLATION_BATCH_SIZE
-        segments = [{"id": str(i), "ar": "الوضوء", "en": "", "needs_review": False} for i in range(size + 1)]
-        first = {"status": "completed", "output": [{"type": "message", "content": [{"type": "output_text", "text": json.dumps({"items": [{"id": str(i), "english": "Ablution", "kind": "speech", "terms": []} for i in range(size)]})}]}]}
-        last = {"status": "completed", "output": [{"type": "message", "content": [{"type": "output_text", "text": json.dumps({"items": [{"id": str(size), "english": "Ablution", "kind": "speech", "terms": []}]})}]}]}
+        segments = [{"id": str(i), "ar": "الوضوء", "translation": "", "needs_review": False} for i in range(size + 1)]
+        first = {"status": "completed", "output": [{"type": "message", "content": [{"type": "output_text", "text": json.dumps({"items": [{"id": str(i), "translation": "Ablution", "kind": "speech", "terms": []} for i in range(size)]})}]}]}
+        last = {"status": "completed", "output": [{"type": "message", "content": [{"type": "output_text", "text": json.dumps({"items": [{"id": str(size), "translation": "Ablution", "kind": "speech", "terms": []}]})}]}]}
         snapshots = []
         post_json.side_effect = [first, RuntimeError("temporary failure")]
         with self.assertRaises(RuntimeError):
             server.translate_segments(segments, checkpoint=lambda items: snapshots.append(json.dumps(items)))
         self.assertEqual(len(snapshots), 1)
-        self.assertTrue(all(item["en"] for item in segments[:size]))
-        self.assertFalse(segments[size]["en"])
+        self.assertTrue(all(item["translation"] for item in segments[:size]))
+        self.assertFalse(segments[size]["translation"])
         post_json.side_effect = [last]
         server.translate_segments(segments)
         self.assertEqual(len(json.loads(post_json.call_args.args[1]["input"].split("Input: ", 1)[1])), 1)
-        self.assertTrue(all(item["en"] for item in segments))
+        self.assertTrue(all(item["translation"] for item in segments))
 
     @patch.object(server, "project_row")
     @patch.object(server, "save_project")
@@ -235,7 +235,7 @@ class PipelineTests(unittest.TestCase):
         project_row.return_value = {"id": "a" * 32, "filename": "original.mp4", "segments": "[]", "duration": 0}
         transcribe.return_value = {"words": [{"type": "word", "text": "الوضوء", "start": 0, "end": .5}, {"type": "word", "text": "عبادة.", "start": .6, "end": 1.0}]}
         def classify(items, checkpoint=None):
-            items[0]["en"] = "Ablution is worship."
+            items[0]["translation"] = "Ablution is worship."
             items[0]["candidate"] = {"kind": "quran", "surah": 1, "ayah": 1}
             return items
         translate_segments.side_effect = classify
@@ -252,7 +252,7 @@ class PipelineTests(unittest.TestCase):
     @patch.object(server, "transcribe")
     @patch.object(server, "translate_segments")
     def test_retry_reuses_saved_transcript_and_translation(self, translate_segments, transcribe, save_project, project_row):
-        segment = {"id": "one", "ar": "الوضوء عبادة", "en": "Ablution is worship.", "start": 0, "end": 1,
+        segment = {"id": "one", "ar": "الوضوء عبادة", "translation": "Ablution is worship.", "start": 0, "end": 1,
                    "type": "speech", "source": None, "needs_review": False, "candidate": {"kind": "speech"}}
         project_row.return_value = {"id": "a" * 32, "filename": "original.mp4", "segments": json.dumps([segment]), "duration": 3}
         self.assertTrue(server.PROCESS_SLOTS.acquire(blocking=False))

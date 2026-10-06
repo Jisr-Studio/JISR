@@ -21,10 +21,10 @@ class QuranLocationTests(unittest.TestCase):
         text = "إن الذين آمنوا وعملوا الصالحات سيجعل لهم الرحمن ودا"
         get_json.side_effect = [[{"number": 96, "text": text}, {"number": 97, "text": "كلام آخر"}],
                                {"text": text}, {"translation_text": "Sourced verse translation."}]
-        seg = {"ar": text, "en": "Draft", "type": "speech", "candidate": {"kind": "quran", "surah": 19, "ayah": None}}
+        seg = {"ar": text, "translation": "Draft", "type": "speech", "candidate": {"kind": "quran", "surah": 19, "ayah": None}}
         self.assertTrue(server.verify_quran(seg))
         self.assertEqual(seg["source"]["ayah"], 96)
-        self.assertEqual(seg["en"], "Sourced verse translation.")
+        self.assertEqual(seg["translation"], "Sourced verse translation.")
         self.assertFalse(seg["reviewed"])
         self.assertTrue(seg["needs_review"])
 
@@ -32,10 +32,10 @@ class QuranLocationTests(unittest.TestCase):
     def test_repeated_excerpt_does_not_guess_location(self, get_json):
         text = "إن الذين آمنوا وعملوا الصالحات"
         get_json.return_value = [{"number": 1, "text": text + " كلام أول"}, {"number": 2, "text": text + " كلام ثان"}]
-        seg = {"ar": text, "en": "Draft", "candidate": {"surah": 19, "ayah": None}}
+        seg = {"ar": text, "translation": "Draft", "candidate": {"surah": 19, "ayah": None}}
         self.assertFalse(server.verify_quran(seg))
         self.assertEqual(get_json.call_count, 1)
-        self.assertEqual(seg["en"], "Draft")
+        self.assertEqual(seg["translation"], "Draft")
 
     @patch.object(server, "get_json")
     def test_explicit_wrong_location_is_not_replaced(self, get_json):

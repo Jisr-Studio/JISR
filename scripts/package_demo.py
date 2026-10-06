@@ -12,8 +12,10 @@ OUTPUT = ROOT / "submission" / "deployment" / "jisr-hackathon-deploy.zip"
 
 def main():
     files = [ROOT / name for name in (
-        "Dockerfile", ".dockerignore", "docker-entrypoint.py", "server.py", "subtitle_png.py", "pipeline_quality.py", "render.yaml",
-        "docs/deployment.md", "scripts/check_deployment.py",
+        "Dockerfile", ".dockerignore", "docker-entrypoint.py", "server.py", "subtitle_png.py", "pipeline_quality.py", "languages.py", "render.yaml",
+        "docs/deployment.md", "docs/languages.md", "docs/data-contract.md",
+        "docs/verification-multilingual-2026-10-06.md", "docs/final-delivery-check-2026-10-06.md",
+        ".env.example", "scripts/check_deployment.py",
     )]
     files += sorted(path for path in (ROOT / "dist").rglob("*") if path.is_file())
     payloads = {}
@@ -25,6 +27,9 @@ def main():
     payloads["README.md"] = (
         "# JISR hackathon application\n\n"
         "Full Python/Docker application with the Arabic landing page and editor.\n\n"
+        "Arabic video translation into English, Spanish, Urdu, Hindi, Indonesian,\n"
+        "Simplified Chinese and Turkish. See [language/source coverage](docs/languages.md),\n"
+        "[the data contract](docs/data-contract.md) and [verification](docs/verification-multilingual-2026-10-06.md).\n\n"
         "Deploy using [the hosting guide](docs/deployment.md) and `render.yaml`.\n"
         "API keys must be entered in hosting secret fields. This package contains\n"
         "no local projects, credentials or Git history.\n"

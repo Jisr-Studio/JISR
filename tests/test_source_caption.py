@@ -11,10 +11,10 @@ import server
 
 class SourceCaptionTests(unittest.TestCase):
     def setUp(self):
-        self.segment = {"start": 0, "end": 4, "type": "quran", "ar": "تفريغ", "en": "Translation",
+        self.segment = {"start": 0, "end": 4, "type": "quran", "ar": "تفريغ", "translation": "Translation",
                         "needs_review": False, "reviewed": True,
                         "source": {"kind": "quran", "surah": 18, "ayah": 30, "title": "الكهف، الآية 30", "arabic": "نص المصدر",
-                                   "english": "Translation", "url": "https://quranpedia.net/ar/surah/18/30"}}
+                                   "translation": "Translation", "url": "https://quranpedia.net/ar/surah/18/30"}}
 
     def test_custom_default_and_hidden_caption_in_video_and_srt(self):
         source = copy.deepcopy(self.segment["source"])
@@ -43,7 +43,7 @@ class SourceCaptionTests(unittest.TestCase):
         self.assertNotIn(r"{\pos(0,0)}", ass)
         self.assertIn("Custom (/pos(0,0)) caption", ass)
 
-    def test_legacy_quran_link_gets_english_reference_without_mutating_source(self):
+    def test_legacy_quran_link_gets_translation_reference_without_mutating_source(self):
         del self.segment["source"]["surah"]
         del self.segment["source"]["ayah"]
         source = copy.deepcopy(self.segment["source"])
@@ -54,7 +54,7 @@ class SourceCaptionTests(unittest.TestCase):
         segment = {"type": "hadith", "source": {"attribution": "صحيح مسلم ٢٢٣", "grade": "صحيح", "translation_status": "sourced"}}
         self.assertEqual(server.source_caption(segment), "Sahih Muslim 223 · Sahih (authentic)")
         segment["source"].update(attribution="مرجع طويل", grade="لم يذكر حكمًا", url="https://dorar.net/h/test123", translation_status="machine_draft")
-        self.assertEqual(server.source_caption(segment), "Dorar · Hadith test123 · See source for grading · English: machine draft")
+        self.assertEqual(server.source_caption(segment), "Dorar · Hadith test123 · See source for grading · Machine draft · Review required")
 
     def test_shared_labels_keep_preview_and_export_attributions_equal(self):
         import shutil

@@ -1,5 +1,7 @@
 # Implementation audit — October 3, 2026
 
+> Historical snapshot. Use the [October 6 final delivery check](final-delivery-check-2026-10-06.md) and [multilingual verification](verification-multilingual-2026-10-06.md) for the current release. The provider failures, missing pages and test counts below describe the earlier audit, not the current implementation.
+
 OpenAI GPT-6 Luna is integrated across translation, terminology review, and partial-source alignment. I1's saved 113-word transcript now has complete English translation and a sourced Quran quotation. The current ElevenLabs key returned HTTP 401 in a 12-second test; new automatic transcription remains blocked. Human review and public deployment remain unfinished.
 
 ## Requirements and evidence

@@ -4,3 +4,8 @@
 @font-face{font-family:'Jisr Tajawal';src:url('/fonts/tajawal.ttf') format('truetype');font-weight:400;font-style:normal;font-display:swap}
 @font-face{font-family:'Jisr Noto Sans Arabic';src:url('/fonts/noto-sans.ttf') format('truetype');font-weight:400;font-style:normal;font-display:swap}
 @font-face{font-family:'Jisr Noto Naskh Arabic';src:url('/fonts/noto-naskh.ttf') format('truetype');font-weight:400;font-style:normal;font-display:swap}
+
+@font-face{font-family:'Noto Nastaliq Urdu';src:url('/fonts/noto-urdu.ttf') format('truetype');font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:'Noto Sans Devanagari';src:url('/fonts/noto-devanagari.ttf') format('truetype');font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:'Noto Sans CJK SC';src:url('/fonts/noto-cjk.otf') format('opentype');font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:'Noto Sans';src:url('/fonts/noto-latin.ttf') format('truetype');font-weight:400;font-style:normal;font-display:swap}

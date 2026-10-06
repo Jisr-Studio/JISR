@@ -11,8 +11,8 @@ import server
 import pipeline_quality as quality
 
 
-def cue(id="one", ar="ولا تنسى أن", en="And do not forget the whole following hadith", **changes):
-    return {"id": id, "ar": ar, "en": en, "start": 1, "end": 1.6,
+def cue(id="one", ar="ولا تنسى أن", translation="And do not forget the whole following hadith", **changes):
+    return {"id": id, "ar": ar, "translation": translation, "start": 1, "end": 1.6,
             "type": "speech", "reviewed": False, "needs_review": False, **changes}
 
 
@@ -27,10 +27,10 @@ class PipelineQualityTests(unittest.TestCase):
     def test_introduction_does_not_keep_borrowed_hadith_or_candidate(self):
         segment = cue(candidate={"kind": "hadith"})
         original_ar = segment["ar"]
-        request = Mock(return_value=response([{"id": "one", "english": "And do not forget that",
+        request = Mock(return_value=response([{"id": "one", "translation": "And do not forget that",
                             "confident": True, "issues": ["boundary", "duplicate"]}]))
         self.check([segment], request)
-        self.assertEqual(segment["en"], "And do not forget that")
+        self.assertEqual(segment["translation"], "And do not forget that")
         self.assertEqual(segment["ar"], original_ar)
         self.assertEqual((segment["start"], segment["end"]), (1, 1.6))
         self.assertNotIn("candidate", segment)
@@ -41,19 +41,19 @@ class PipelineQualityTests(unittest.TestCase):
 
     def test_bad_ids_do_not_commit_partial_corrections(self):
         segments = [cue(), cue(id="two")]
-        request = Mock(return_value=response([{"id": "one", "english": "Changed", "confident": True, "issues": []},
-                                             {"id": "invented", "english": "Changed", "confident": True, "issues": []}]))
-        before = [s["en"] for s in segments]
+        request = Mock(return_value=response([{"id": "one", "translation": "Changed", "confident": True, "issues": []},
+                                             {"id": "invented", "translation": "Changed", "confident": True, "issues": []}]))
+        before = [s["translation"] for s in segments]
         self.check(segments, request)
-        self.assertEqual([s["en"] for s in segments], before)
+        self.assertEqual([s["translation"] for s in segments], before)
         self.assertTrue(all(s["quality_review"]["status"] == "unavailable" for s in segments))
 
     def test_uncertain_attribution_is_flagged_not_reconstructed(self):
-        segment = cue(ar="إن الله يقول عليه الصلاة والسلام", en="God says, blessings upon him")
-        request = Mock(return_value=response([{"id": "one", "english": "The Prophet said", "confident": True,
+        segment = cue(ar="إن الله يقول عليه الصلاة والسلام", translation="God says, blessings upon him")
+        request = Mock(return_value=response([{"id": "one", "translation": "The Prophet said", "confident": True,
                                              "issues": ["transcript"]}]))
         self.check([segment], request)
-        self.assertEqual(segment["en"], "God says, blessings upon him")
+        self.assertEqual(segment["translation"], "God says, blessings upon him")
         quality.annotate_readability([segment])
         self.assertIn("transcript", [i["code"] for i in segment["review_issues"]])
 
@@ -62,7 +62,7 @@ class PipelineQualityTests(unittest.TestCase):
         self.check([segment], Mock(side_effect=OSError("offline")))
         self.assertEqual(segment["quality_review"]["status"], "unavailable")
         self.assertNotIn("quality_input_hash", segment)
-        self.assertIn("whole following", segment["en"])
+        self.assertIn("whole following", segment["translation"])
 
     def test_protects_human_translations_reviewed_texts_and_sources(self):
         segments = [cue(reviewed=True), cue(translation_origin="human"), cue(source={"arabic": "source"}),
@@ -74,7 +74,7 @@ class PipelineQualityTests(unittest.TestCase):
         self.assertEqual(segments, before)
 
     def test_fast_reading_warns_without_moving_timing_or_blocking_confirmation(self):
-        segment = cue(en="a" * 90)
+        segment = cue(translation="a" * 90)
         quality.annotate_readability([segment])
         self.assertEqual(segment["readability"]["characters_per_second"], 150)
         self.assertEqual(segment["readability"]["issues"], ["reading_speed", "short_display"])
@@ -109,7 +109,7 @@ class PipelineQualityTests(unittest.TestCase):
         full = first + " " + last
         def verify(combined):
             self.assertEqual(combined["ar"], full)
-            combined["source"] = {"kind": "hadith", "arabic": full, "english": "Source English",
+            combined["source"] = {"kind": "hadith", "arabic": full, "translation": "Source translation",
                                   "url": "https://hadeethenc.com/ar/browse/hadith/1", "translation_status": "sourced"}
             return True
         def attach(child, kind, source):
@@ -155,7 +155,7 @@ class PipelineQualityTests(unittest.TestCase):
         hadith = cue(type="hadith", source={"attribution": "مرجع", "translation_status": "machine_draft"})
         self.assertIn("Translation of Quranic meanings", server.make_srt([quran]))
         self.assertIn("Saheeh International", server.make_ass([quran], {}))
-        self.assertIn("English: machine draft", server.make_srt([hadith]))
+        self.assertIn("Machine draft · Review required", server.make_srt([hadith]))
         quran["source_caption"] = ""
         self.assertEqual(server.source_caption(quran), "")
 

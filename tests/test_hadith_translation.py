@@ -12,8 +12,8 @@ import server
 
 SPOKEN = "الطهور شطر الإيمان"
 FULL = SPOKEN + " والحمد لله تملأ الميزان"
-REFERENCE = {"kind": "hadith", "arabic": FULL, "english": "Machine draft", "narrator": "أبو مالك الأشعري", "grade": "صحيح", "attribution": "مسلم · 223", "scholar": "مسلم", "url": "https://dorar.net/hadith/search?q=test", "translation_status": "machine_draft", "explanation_status": "unavailable"}
-SOURCED = {"kind": "hadith", "id": "65004", "arabic": "عن أبي مالك الأشعري قال: " + FULL, "english": "Source translation", "narrator": "أبو مالك الأشعري", "grade": "صحيح", "attribution": "رواه مسلم", "explanation": "شرح المصدر", "url": "https://hadeethenc.com/ar/browse/hadith/65004", "translation_status": "sourced", "explanation_status": "available"}
+REFERENCE = {"kind": "hadith", "arabic": FULL, "translation": "Machine draft", "narrator": "أبو مالك الأشعري", "grade": "صحيح", "attribution": "مسلم · 223", "scholar": "مسلم", "url": "https://dorar.net/hadith/search?q=test", "translation_status": "machine_draft", "explanation_status": "unavailable"}
+SOURCED = {"kind": "hadith", "id": "65004", "arabic": "عن أبي مالك الأشعري قال: " + FULL, "translation": "Source translation", "narrator": "أبو مالك الأشعري", "grade": "صحيح", "attribution": "رواه مسلم", "explanation": "شرح المصدر", "url": "https://hadeethenc.com/ar/browse/hadith/65004", "translation_status": "sourced", "explanation_status": "available"}
 
 
 def candidate(hadith_id="65004", arabic=FULL):
@@ -40,10 +40,10 @@ class HadithTranslationTests(unittest.TestCase):
 
     @patch.object(server, "search_hadeethenc", return_value=[candidate()])
     @patch.object(server, "lookup_hadith", return_value=SOURCED)
-    def test_unique_match_uses_source_english_and_keeps_dorar_verification(self, lookup, search):
+    def test_unique_match_uses_source_translation_and_keeps_dorar_verification(self, lookup, search):
         original = copy.deepcopy(REFERENCE)
         result = server.enrich_hadith_translation(SPOKEN, SPOKEN, REFERENCE)
-        self.assertEqual(result["english"], "Source translation")
+        self.assertEqual(result["translation"], "Source translation")
         self.assertEqual(result["explanation"], SOURCED["explanation"])
         self.assertEqual(result["verification"]["attribution"], REFERENCE["attribution"])
         self.assertEqual(result["translation_lookup_status"], "matched")
@@ -53,7 +53,7 @@ class HadithTranslationTests(unittest.TestCase):
     @patch.object(server, "lookup_hadith", side_effect=[SOURCED, {**SOURCED, "id": "66526"}])
     def test_multiple_matched_reports_remain_a_draft_with_choices(self, lookup, search):
         result = server.enrich_hadith_translation(SPOKEN, SPOKEN, REFERENCE)
-        self.assertEqual(result["english"], "Machine draft")
+        self.assertEqual(result["translation"], "Machine draft")
         self.assertEqual(result["translation_lookup_status"], "ambiguous")
         self.assertEqual([c["id"] for c in result["translation_candidates"]], ["65004", "66526"])
 
@@ -61,7 +61,7 @@ class HadithTranslationTests(unittest.TestCase):
     @patch.object(server, "lookup_hadith", side_effect=[SOURCED, OSError("unavailable")])
     def test_failed_candidate_does_not_make_remaining_match_unique(self, lookup, search):
         result = server.enrich_hadith_translation(SPOKEN, SPOKEN, REFERENCE)
-        self.assertEqual(result["english"], "Machine draft")
+        self.assertEqual(result["translation"], "Machine draft")
         self.assertEqual(result["translation_lookup_status"], "unavailable")
 
     @patch.object(server, "search_hadeethenc", return_value=[candidate()])
@@ -87,17 +87,19 @@ class HadithTranslationTests(unittest.TestCase):
     @patch.object(server, "enrich_hadith_translation", side_effect=OSError("unavailable"))
     @patch.object(server, "get_json", return_value={"ahadith": {"result": f'<div>{FULL}</div><div class="hadith-info">الراوي : أبو مالك الأشعري | المحدث : مسلم | المصدر : صحيح مسلم | خلاصة حكم المحدث : صحيح</div>'}})
     def test_translation_outage_preserves_dorar_reference_and_review_gate(self, get_json, enrich):
-        segment = {"ar": SPOKEN, "en": "Machine draft", "candidate": {"kind": "hadith", "hadith_query": SPOKEN}}
+        segment = {"ar": SPOKEN, "translation": "Machine draft", "candidate": {"kind": "hadith", "hadith_query": SPOKEN}}
         with patch.object(server, "get_html", return_value=""):
             self.assertTrue(server.verify_hadith(segment))
         self.assertEqual(segment["source"]["translation_lookup_status"], "unavailable")
         self.assertTrue(segment["needs_review"])
         self.assertFalse(server.publishable({"status": "ready", "segments": json.dumps([segment])}))
 
-    @patch.object(server, "get_json", side_effect=[{"id": "123", "hadeeth": FULL}, {"id": "999", "hadeeth": "Wrong English"}])
-    def test_wrong_english_record_id_is_rejected(self, get_json):
-        with self.assertRaises(ValueError):
-            server.lookup_hadith("123", SPOKEN)
+    @patch.object(server, "get_json", side_effect=[{"id": "123", "hadeeth": FULL}, {"id": "999", "hadeeth": "Wrong translation"}])
+    def test_wrong_translation_record_id_is_rejected(self, get_json):
+        source = server.lookup_hadith("123", SPOKEN)
+        self.assertEqual(source["translation_status"], "unavailable")
+        self.assertEqual(source["translation"], "")
+        self.assertEqual(source["translation_fetch_error"], "ValueError")
 
 
 if __name__ == "__main__":

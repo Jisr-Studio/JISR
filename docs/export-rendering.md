@@ -44,3 +44,8 @@ With `FFMPEG_PATH` configured, the October 5 gap audit ran 120 test entries: 119
 - Static fonts/scripts use explicit MIME types rather than Windows registry associations. Video/download ranges clamp a valid end offset to the file length and return a proper 416 response for invalid/empty ranges.
 
 The final I3 export was regenerated with `shared-png-v3` at 1024×576 (8,343,354 bytes). The Quran preview still equaled the image used by MP4, and the encoded audio payload still matched the original. The local deployment smoke check passed, and the runtime ZIP was rebuilt with the new preview helper. No paid AI calls were made for this audit.
+
+
+## Multilingual renderer
+
+`shared-png-v10-multilingual` includes language and the shared language/caption policy in PNG/MP4 cache identities. Bundled target fonts are Noto Sans (Latin), Noto Nastaliq Urdu, Noto Sans Devanagari and Noto Sans CJK SC, with Latin/Plex fallbacks. Arabic and target translations have separate font runs but use one shared RGBA image for preview and MP4. Urdu lines get an explicit RTL marker, including source lines beginning with Latin publisher names. Chinese wraps by characters, including viewer captions. MP4 and manifests use language-specific paths; old download tickets are invalidated by project revisions. SRT contains Unicode and timing, with RTL markers for Urdu; it cannot enforce font or size in another player. See [language coverage](languages.md).

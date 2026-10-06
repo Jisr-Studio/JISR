@@ -7,6 +7,7 @@ WORKDIR /app
 COPY server.py ./
 COPY subtitle_png.py ./
 COPY pipeline_quality.py ./
+COPY languages.py ./
 COPY docker-entrypoint.py ./
 COPY dist ./dist
 RUN mkdir -p /app/data && useradd --system --uid 10001 --home /app jisr && chown -R jisr:jisr /app/data

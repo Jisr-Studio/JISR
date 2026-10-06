@@ -12,11 +12,11 @@ SPOKEN = "الطهور شطر الإيمان"
 AR = "عن أبي مالك قال: الطُّهُورُ شَطْرُ الإِيمَانِ، والحمد لله تملأ الميزان"
 EN = 'The Prophet said: "Purity is half of faith, and praise fills the Scale."'
 EXCERPT = "Purity is half of faith,"
-SOURCE = {"kind": "hadith", "arabic": AR, "english": EN, "partial": True, "translation_status": "sourced"}
+SOURCE = {"kind": "hadith", "arabic": AR, "translation": EN, "partial": True, "translation_status": "sourced"}
 
 
 def alignment(excerpt=EXCERPT, confident=True):
-    return {"status": "completed", "output": [{"type": "message", "content": [{"type": "output_text", "text": json.dumps({"english_excerpt": excerpt, "confident": confident})}]}]}
+    return {"status": "completed", "output": [{"type": "message", "content": [{"type": "output_text", "text": json.dumps({"translation_excerpt": excerpt, "confident": confident})}]}]}
 
 
 class QuoteExcerptTests(unittest.TestCase):
@@ -27,12 +27,12 @@ class QuoteExcerptTests(unittest.TestCase):
         {"translation_text": "Full verse prefix. Indeed, Allah loves those who repent and purify themselves."},
     ])
     def test_quran_lookup_does_not_replace_partial_draft_with_full_translation(self, get_json, tafsir):
-        segment = {"ar": "إن الله يحب التوابين ويحب المتطهرين", "en": "Partial draft",
+        segment = {"ar": "إن الله يحب التوابين ويحب المتطهرين", "translation": "Partial draft",
                    "candidate": {"surah": 2, "ayah": 222}}
         self.assertTrue(server.verify_quran(segment))
-        self.assertEqual(segment["en"], "Partial draft")
+        self.assertEqual(segment["translation"], "Partial draft")
         self.assertEqual(segment["source"]["alignment_status"], "needs_selection")
-        self.assertIn("Full verse prefix.", segment["source"]["english"])
+        self.assertIn("Full verse prefix.", segment["source"]["translation"])
         self.assertTrue(segment["needs_review"])
 
     def test_canonical_arabic_excerpt_comes_from_source_not_transcript(self):
@@ -45,24 +45,24 @@ class QuoteExcerptTests(unittest.TestCase):
 
     @patch.dict("os.environ", {"OPENAI_API_KEY": ""})
     def test_without_key_partial_quote_keeps_draft_and_blocks_export(self):
-        segment = {"ar": SPOKEN, "en": "Machine draft", "start": 0, "end": 4}
+        segment = {"ar": SPOKEN, "translation": "Machine draft", "start": 0, "end": 4}
         server.attach_source(segment, "hadith", SOURCE)
-        self.assertEqual(segment["en"], "Machine draft")
-        self.assertEqual(segment["source"]["english"], EN)
+        self.assertEqual(segment["translation"], "Machine draft")
+        self.assertEqual(segment["source"]["translation"], EN)
         self.assertEqual(segment["source"]["alignment_status"], "needs_selection")
         segment.update(reviewed=True, needs_review=False)
         self.assertFalse(server.publishable({"status": "ready", "segments": json.dumps([segment])}))
 
     @patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"})
     @patch.object(server, "post_json", return_value=alignment())
-    def test_model_only_selects_verbatim_source_english(self, post_json):
-        segment = {"ar": SPOKEN, "en": "Machine draft", "start": 0, "end": 4}
+    def test_model_only_selects_verbatim_source_translation(self, post_json):
+        segment = {"ar": SPOKEN, "translation": "Machine draft", "start": 0, "end": 4}
         server.attach_source(segment, "hadith", SOURCE)
-        self.assertEqual(segment["en"], EXCERPT)
-        self.assertEqual(segment["source"]["english"], EN)
+        self.assertEqual(segment["translation"], EXCERPT)
+        self.assertEqual(segment["source"]["translation"], EN)
         self.assertEqual(segment["source"]["alignment_status"], "matched")
         self.assertTrue(segment["needs_review"])
-        span = segment["source"]["english_span"]
+        span = segment["source"]["translation_span"]
         self.assertEqual(EN[span["start"]:span["end"]], EXCERPT)
         segment.update(reviewed=True, needs_review=False)
         subtitles = server.make_srt([segment])
@@ -72,13 +72,13 @@ class QuoteExcerptTests(unittest.TestCase):
         self.assertNotIn("praise fills", server.make_ass([segment], {"bilingual": True}))
 
     @patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"})
-    def test_generated_full_or_uncertain_english_is_not_accepted(self):
+    def test_generated_full_or_uncertain_translation_is_not_accepted(self):
         responses = [alignment("Purification is half the faith."), alignment(EN), alignment(EXCERPT, False)]
         for response in responses:
             with self.subTest(response=response), patch.object(server, "post_json", return_value=response):
                 source = server.prepare_quote_subtitles(SPOKEN, SOURCE)
                 self.assertEqual(source["alignment_status"], "needs_selection")
-                self.assertNotIn("subtitle_english", source)
+                self.assertNotIn("subtitle_translation", source)
 
     @patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"})
     @patch.object(server, "post_json", side_effect=OSError("unavailable"))
@@ -87,11 +87,11 @@ class QuoteExcerptTests(unittest.TestCase):
 
     def test_human_selection_preserves_reference_and_is_publishable_after_review(self):
         start = EN.index(EXCERPT)
-        source = server.select_source_english(SOURCE, SPOKEN, {"start": start, "end": start + len(EXCERPT)})
-        segment = {"ar": SPOKEN, "en": "Draft", "start": 0, "end": 4}
+        source = server.select_source_translation(SOURCE, SPOKEN, {"start": start, "end": start + len(EXCERPT)})
+        segment = {"ar": SPOKEN, "translation": "Draft", "start": 0, "end": 4}
         with patch.dict("os.environ", {"OPENAI_API_KEY": ""}):
             server.attach_source(segment, "hadith", source)
-        self.assertEqual(segment["en"], EXCERPT)
+        self.assertEqual(segment["translation"], EXCERPT)
         self.assertEqual(segment["source"]["alignment_status"], "selected")
         segment.update(reviewed=True, needs_review=False)
         self.assertTrue(server.publishable({"status": "ready", "segments": json.dumps([segment])}))
@@ -99,7 +99,7 @@ class QuoteExcerptTests(unittest.TestCase):
     def test_invalid_or_full_source_selection_is_rejected(self):
         for span in ({"start": True, "end": 5}, {"start": -1, "end": 2}, {"start": 3, "end": 2}, {"start": 0, "end": len(EN)+1}, {"start": 0, "end": len(EN)}):
             with self.subTest(span=span), self.assertRaises(ValueError):
-                server.select_source_english(SOURCE, SPOKEN, span)
+                server.select_source_translation(SOURCE, SPOKEN, span)
 
 
 if __name__ == "__main__":

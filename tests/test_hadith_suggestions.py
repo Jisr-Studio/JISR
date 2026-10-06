@@ -11,14 +11,14 @@ import server
 SPOKEN = 'إن الله حيي كريم يستحي أن يرد يد عبده سفرا'
 CANONICAL = 'عن سلمان قال قال رسول الله إن ربكم حيي كريم يستحيي من عبده إذا رفع يديه إليه أن يردهما صفرا'
 SOURCE = {'kind': 'hadith', 'id': '5499', 'title': 'حديث رفع اليدين في الدعاء', 'arabic': CANONICAL,
-          'english': 'Source English quotation.', 'narrator': 'سلمان', 'grade': 'حسن', 'attribution': 'أبو داود والترمذي وابن ماجه',
+          'translation': 'Source translation quotation.', 'narrator': 'سلمان', 'grade': 'حسن', 'attribution': 'أبو داود والترمذي وابن ماجه',
           'url': 'https://hadeethenc.com/ar/browse/hadith/5499', 'quotation_mode': 'paraphrase',
           'relation_method': 'editor_selected', 'partial': True}
 
 
 class HadithSuggestionTests(unittest.TestCase):
     def segment(self):
-        return {'ar': SPOKEN, 'en': 'Speaker draft.', 'type': 'speech', 'source': None,
+        return {'ar': SPOKEN, 'translation': 'Speaker draft.', 'type': 'speech', 'source': None,
                 'candidate': {'kind': 'hadith', 'hadith_query': SPOKEN.replace('سفرا', 'صفرا')}}
 
     @patch.object(server, 'search_hadeethenc', return_value=[{'id': '5499', 'arabic': CANONICAL}])
@@ -31,7 +31,7 @@ class HadithSuggestionTests(unittest.TestCase):
         self.assertEqual(segment['citation_suggestions'][0]['id'], '5499')
         self.assertIsNone(segment['source'])
         self.assertEqual(segment['ar'], SPOKEN)
-        self.assertEqual(segment['en'], 'Speaker draft.')
+        self.assertEqual(segment['translation'], 'Speaker draft.')
         self.assertTrue(segment['needs_review'])
         self.assertFalse(server.publishable({'status': 'ready', 'segments': json.dumps([segment])}))
         self.assertLessEqual(search.call_count, 3)

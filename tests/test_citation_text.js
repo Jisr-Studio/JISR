@@ -11,7 +11,7 @@ assert.equal(sourceCaption({type:'speech',source:null,source_caption:'Old source
 
 const original = 'ومن أتاني يمشي أتيتوه هرولة';
 const canonical = 'ومن أتاني يمشي أتيتُه هَرولةً';
-const hadith = {type:'hadith',ar:original,en:'Draft',needs_review:true,source:{arabic:canonical,subtitle_arabic:canonical}};
+const hadith = {type:'hadith',ar:original,translation:'Draft',needs_review:true,source:{arabic:canonical,subtitle_arabic:canonical}};
 const before = JSON.stringify(hadith);
 assert.equal(presentation(hadith).arabic,canonical);
 assert.equal(presentation(hadith).originalArabic,original);
@@ -34,19 +34,31 @@ const paraphrase = {...hadith,source:{...hadith.source,quotation_mode:'paraphras
 assert.equal(presentation(paraphrase).arabic,original);
 assert.equal(presentation(paraphrase).fromSource,false);
 assert.equal(transcriptForSave(paraphrase,canonical),canonical);
+const sourceWording={...paraphrase,translation:'Source clause',reviewed:true,needs_review:false,source:{...paraphrase.source,
+  subtitle_mode:'source_excerpt',partial:true,arabic:canonical,subtitle_arabic:canonical,
+  translation:'Introduction. Source clause',subtitle_translation:'Source clause',translation_status:'sourced',alignment_status:'selected'}};
+assert.equal(presentation(sourceWording).arabic,canonical);
+assert.equal(presentation(sourceWording).originalArabic,original);
+assert.equal(presentation(sourceWording).fromSource,true);
+assert.equal(transcriptForSave(sourceWording,canonical),original);
+assert.equal(require('../dist/js/citation-text.js').reviewPending(sourceWording),false);
+assert.equal(require('../dist/js/citation-text.js').reviewPending({...sourceWording,source:{...sourceWording.source,alignment_status:'needs_selection'}}),true);
+assert.equal(require('../dist/js/citation-text.js').reviewPending({...sourceWording,source:{...sourceWording.source,subtitle_translation:'Invented translation'}}),true);
+assert.match(sourceCaption(sourceWording),/^Source wording · Related narration/);
+assert.doesNotMatch(sourceCaption(sourceWording),/machine draft/);
 assert.equal(presentation({type:'speech',ar:original,source:hadith.source}).arabic,original);
 assert.equal(presentation({...hadith,source:null}).arabic,original);
 assert.equal(presentation({...hadith,source:{}}).fromSource,false);
 assert.equal(presentation(undefined).arabic,'');
 const {reviewPending}=require('../dist/js/citation-text.js');
-const reviewed={...hadith,en:'Source translation',reviewed:true,needs_review:false};
+const reviewed={...hadith,translation:'Source translation',reviewed:true,needs_review:false};
 assert.equal(reviewPending(reviewed),false);
 assert.equal(reviewPending({...reviewed,reviewed:false}),true);
 assert.equal(reviewPending({...reviewed,reviewed:'true'}),true);
-assert.equal(reviewPending({...reviewed,en:'  '}),true);
+assert.equal(reviewPending({...reviewed,translation:'  '}),true);
 assert.equal(reviewPending({...reviewed,candidate:{kind:'quran'}}),true);
 assert.equal(reviewPending({...reviewed,source:{...reviewed.source,partial:true,alignment_status:'needs_selection'}}),true);
-assert.equal(reviewPending({...reviewed,source:{...reviewed.source,partial:true,alignment_status:'selected',subtitle_english:'Selected excerpt'}}),false);
+assert.equal(reviewPending({...reviewed,source:{...reviewed.source,partial:true,alignment_status:'selected',subtitle_translation:'Selected excerpt'}}),false);
 console.log('Canonical citation text and edit-save checks passed.');
 const {sourceExcerptRange}=require('../dist/js/citation-text.js');
 const fullArabic='إِنَّ اللَّهَ يُحِبُّ التَّوَّابِينَ وَيُحِبُّ الْمُتَطَهِّرِينَ';
@@ -59,4 +71,4 @@ assert.equal(sourceExcerptRange({...partialSegment,source:{arabic:'الله يح
 assert.equal(sourceExcerptRange({...partialSegment,source:{...partialSegment.source,subtitle_arabic:'كلام آخر'}}),null);
 
 assert.equal(sourceCaption({type:'hadith',source:{attribution:'صحيح مسلم ٢٢٣',grade:'صحيح',translation_status:'sourced'}}),'Sahih Muslim 223 · Sahih (authentic)');
-assert.equal(sourceCaption({type:'hadith',source:{url:'https://dorar.net/h/test123',grade:'لم يذكر حكمًا'}}),'Dorar · Hadith test123 · See source for grading · English: machine draft');
+assert.equal(sourceCaption({type:'hadith',source:{url:'https://dorar.net/h/test123',grade:'لم يذكر حكمًا'}}),'Dorar · Hadith test123 · See source for grading · Machine draft · Review required');

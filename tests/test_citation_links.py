@@ -83,10 +83,10 @@ class CitationLinksTests(unittest.TestCase):
 
     @patch.object(server, "get_html", return_value=card())
     def test_saved_citation_repair_preserves_text_translation_and_attribution(self, get_html):
-        old = {**REFERENCE, "url": "https://dorar.net/hadith/search?q=test", "english": "Existing draft", "explanation_status": "unavailable"}
+        old = {**REFERENCE, "url": "https://dorar.net/hadith/search?q=test", "translation": "Existing draft", "explanation_status": "unavailable"}
         result = refresh_source(old, "hadith")
         self.assertEqual(result["url"], "https://dorar.net/h/lS2wNsu7")
-        for field in (*REFERENCE, "english", "explanation_status"):
+        for field in (*REFERENCE, "translation", "explanation_status"):
             self.assertEqual(result[field], old[field])
         self.assertIn("/hadith/search?", old["url"])
 

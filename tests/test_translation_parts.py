@@ -22,11 +22,11 @@ class TranslationPartsTests(unittest.TestCase):
         segments = self.transcript()
         original_ar = segments[0]["ar"]
         segment_id = segments[0]["id"]
-        bad = model_response([{"id": segment_id, "parts": [{"first_word": 0, "last_word": 15, "kind": "speech", "english": "Bad coverage"}]}])
+        bad = model_response([{"id": segment_id, "parts": [{"first_word": 0, "last_word": 15, "kind": "speech", "translation": "Bad coverage"}]}])
         good = model_response([{"id": segment_id, "parts": [
-            {"first_word": 0, "last_word": 1, "kind": "speech", "english": "Always remember"},
-            {"first_word": 2, "last_word": 7, "kind": "quran", "english": "Verse draft", "surah": 2, "ayah": 222},
-            {"first_word": 8, "last_word": 14, "kind": "speech", "english": "Remaining speech draft"},
+            {"first_word": 0, "last_word": 1, "kind": "speech", "translation": "Always remember"},
+            {"first_word": 2, "last_word": 7, "kind": "quran", "translation": "Verse draft", "surah": 2, "ayah": 222},
+            {"first_word": 8, "last_word": 14, "kind": "speech", "translation": "Remaining speech draft"},
         ]}])
         bad["model"] = server.OPENAI_MODEL
         post_json.side_effect = [bad, good]
@@ -56,11 +56,11 @@ class TranslationPartsTests(unittest.TestCase):
         segments = self.transcript()
         original_id, original_ar = segments[0]["id"], segments[0]["ar"]
         parts = [
-            {"first_word": 0, "last_word": 1, "english": "Always remember", "kind": "speech"},
-            {"first_word": 2, "last_word": 7, "english": "Verse draft", "kind": "quran", "surah": 2, "ayah": 222},
-            {"first_word": 8, "last_word": 9, "english": "and the Prophet's saying", "kind": "speech"},
-            {"first_word": 10, "last_word": 12, "english": "Hadith draft", "kind": "hadith", "hadith_query": "الطهور شطر الإيمان"},
-            {"first_word": 13, "last_word": 14, "english": "in our lives", "kind": "speech"},
+            {"first_word": 0, "last_word": 1, "translation": "Always remember", "kind": "speech"},
+            {"first_word": 2, "last_word": 7, "translation": "Verse draft", "kind": "quran", "surah": 2, "ayah": 222},
+            {"first_word": 8, "last_word": 9, "translation": "and the Prophet's saying", "kind": "speech"},
+            {"first_word": 10, "last_word": 12, "translation": "Hadith draft", "kind": "hadith", "hadith_query": "الطهور شطر الإيمان"},
+            {"first_word": 13, "last_word": 14, "translation": "in our lives", "kind": "speech"},
         ]
         post_json.return_value = model_response([{"id": original_id, "parts": parts}])
         server.translate_segments(segments)
@@ -77,10 +77,10 @@ class TranslationPartsTests(unittest.TestCase):
         with patch.object(server, "lookup_tafsir", return_value={}), patch.object(server, "get_json", side_effect=[{"text": "إن الله يحب التوابين ويحب المتطهرين"},
                                                            {"translation_text": "Reference verse translation"}, {}]):
             self.assertTrue(server.verify_quran(segments[1]))
-        server.attach_source(segments[3], "hadith", {"arabic": "الطهور شطر الإيمان", "english": "Reference hadith translation"})
-        self.assertEqual([segments[i]["en"] for i in (0, 2, 4)], ["Always remember", "and the Prophet's saying", "in our lives"])
-        self.assertEqual(segments[1]["en"], "Reference verse translation")
-        self.assertEqual(segments[3]["en"], "Reference hadith translation")
+        server.attach_source(segments[3], "hadith", {"arabic": "الطهور شطر الإيمان", "translation": "Reference hadith translation"})
+        self.assertEqual([segments[i]["translation"] for i in (0, 2, 4)], ["Always remember", "and the Prophet's saying", "in our lives"])
+        self.assertEqual(segments[1]["translation"], "Reference verse translation")
+        self.assertEqual(segments[3]["translation"], "Reference hadith translation")
         self.assertTrue(segments[1]["needs_review"] and segments[3]["needs_review"])
         prompt = post_json.call_args.args[1]["input"]
         sent = json.loads(prompt.split("Input: ", 1)[1])
@@ -107,7 +107,7 @@ class TranslationPartsTests(unittest.TestCase):
                 second["id"] = "second"
                 segments.append(second)
                 before = copy.deepcopy(segments)
-                good = {"first_word": 0, "last_word": 14, "english": "Full draft", "kind": "speech"}
+                good = {"first_word": 0, "last_word": 14, "translation": "Full draft", "kind": "speech"}
                 bad = {**good, "first_word": first, "last_word": last}
                 post_json.return_value = model_response([{"id": segments[0]["id"], "parts": [good]}, {"id": second["id"], "parts": [bad]}])
                 with self.assertRaises(RuntimeError):
@@ -116,7 +116,7 @@ class TranslationPartsTests(unittest.TestCase):
 
     def test_overlap_and_unknown_output_ids_are_rejected(self):
         segment = self.transcript()[0]
-        part = {"first_word": 0, "last_word": 7, "english": "Draft", "kind": "speech"}
+        part = {"first_word": 0, "last_word": 7, "translation": "Draft", "kind": "speech"}
         with self.assertRaises(RuntimeError):
             server.translation_parts(segment, {"parts": [part, {**part, "first_word": 7, "last_word": 14}]})
         for ids in (["unknown"], [segment["id"], segment["id"]], []):

@@ -42,7 +42,7 @@ class OpenAIIntegrationTests(unittest.TestCase):
                  for i, text in enumerate("السلام عليكم ورحمة الله وبركاته".split())]
         segments = server.words_to_segments(words)
         post.return_value = response({"items": [{"id": segments[0]["id"], "terms": [], "parts": [
-            {"first_word": 0, "last_word": 4, "english": "Peace be upon you, and Allah's mercy and blessings.",
+            {"first_word": 0, "last_word": 4, "translation": "Peace be upon you, and Allah's mercy and blessings.",
              "kind": "speech", "surah": None, "ayah": None, "hadith_query": None}]}]})
         server.translate_segments(segments)
         self.assertEqual((segments[0]["start"], segments[0]["end"]), (5, 6.4))
@@ -73,20 +73,20 @@ class OpenAIIntegrationTests(unittest.TestCase):
 
     @patch.object(server, "post_json")
     def test_partial_quote_only_selects_verbatim_reference(self, post):
-        source = {"arabic": "إن الله يحب التوابين ويحب المتطهرين", "english": "Allah loves those who repent and those who purify themselves.", "partial": True}
-        post.return_value = response({"english_excerpt": "those who purify themselves.", "confident": True})
+        source = {"arabic": "إن الله يحب التوابين ويحب المتطهرين", "translation": "Allah loves those who repent and those who purify themselves.", "partial": True}
+        post.return_value = response({"translation_excerpt": "those who purify themselves.", "confident": True})
         selected = server.prepare_quote_subtitles("ويحب المتطهرين", source)
         self.assertEqual(selected["alignment_status"], "matched")
-        post.return_value = response({"english_excerpt": "New invented scripture", "confident": True})
+        post.return_value = response({"translation_excerpt": "New invented scripture", "confident": True})
         self.assertEqual(server.prepare_quote_subtitles("ويحب المتطهرين", source)["alignment_status"], "needs_selection")
 
     @patch.object(server, "lookup_term", return_value={"arabic_term": "الوضوء", "definition": "تعريف", "url": "https://islamic-content.com/dictionary/test"})
     @patch.object(server, "post_json")
     def test_terminology_review_uses_openai(self, post, lookup):
-        segments = [{"id": "s", "ar": "الوضوء عبادة", "en": "Washing is worship", "detected_terms": ["الوضوء"]}]
-        post.return_value = response({"items": [{"id": "s", "english": "Ablution is worship."}]})
+        segments = [{"id": "s", "ar": "الوضوء عبادة", "translation": "Washing is worship", "detected_terms": ["الوضوء"]}]
+        post.return_value = response({"items": [{"id": "s", "translation": "Ablution is worship."}]})
         server.ground_terminology(segments, "fake-openai")
-        self.assertEqual(segments[0]["en"], "Ablution is worship.")
+        self.assertEqual(segments[0]["translation"], "Ablution is worship.")
         self.assertEqual(post.call_args.args[0], "https://api.openai.com/v1/responses")
 
 

@@ -1,113 +1,49 @@
 # JISR hackathon deployment
 
-Status: public demo deployed at https://jisr-3ue4.onrender.com/. Initial health and asset checks passed; a complete live upload-to-export workflow remains to be verified.
+Current configuration: **Free Render demo**, one Docker instance in Frankfurt, no persistent disk, FFmpeg limited to one thread. The existing host is [jisr-3ue4.onrender.com](https://jisr-3ue4.onrender.com/).
 
-## Selected plan: Free (October 5 update)
+The October 6 final read-only check returned HTTP 200 for `/api/health`, with FFmpeg and both provider keys configured. `/languages.json` returned **404**, so this host does not yet contain the current multilingual release. Configured-key flags do not establish live permissions, quotas or translation quality.
 
-The user selected free hosting. `render.yaml` now uses `plan: free`, has no
-persistent disk, and limits FFmpeg to one thread. Deploy the `main` branch using
-New → Blueprint, select `turki125/JISR`, and verify the dashboard shows Free
-and no disk before creation. Enter provider keys privately in Render.
+## Publish the current release
 
-Render sleeps after 15 minutes without traffic and takes about a minute to wake.
-Uploads, edits, SQLite projects, and exports are lost on sleep, restart, or
-redeployment. Download outputs during the active session; viewer links to
-temporary projects will not survive those events. Hosting is free within its
-included limits; ElevenLabs/OpenAI usage is billed separately. A short full workflow still needs verification on the Free instance.
+1. Push the current runtime source to the intended repository and branch. Keep `.env`, `data/`, `work/`, virtual environments and private editor links out of Git. For a clean runtime package, run `python scripts/package_demo.py` and extract `submission/deployment/jisr-hackathon-deploy.zip` into the deployment repository. The ZIP contains the active app, language module/catalog, fonts/licenses, operating documentation and an integrity manifest.
+2. For the existing Render service, select **Manual Deploy → Deploy latest commit**. `render.yaml` uses `autoDeployTrigger: "off"`; a Git push by itself does not update this configuration. Verify the selected branch/commit and wait for a successful build and deploy. Do not restart while someone is processing or exporting a video.
+3. For a new service, choose **New → Blueprint**, select the repository/branch containing `render.yaml`, and verify the dashboard shows **Free** and **no disk**. No paid hosting change is included in this configuration.
+4. Enter `OPENAI_API_KEY` and `ELEVENLABS_API_KEY` privately in Render's environment/secret fields. The model defaults to `gpt-6-luna`; use the account's enabled model. ElevenLabs requires **Speech to Text** access. Never add secrets to source or public issue reports.
+5. Copy the exact HTTPS root URL shown by Render. Run `python scripts/check_deployment.py https://YOUR-ACTUAL-HOST`. This is a read-only health/asset check: it includes the language catalog, language JavaScript and all four target-script fonts. It does not upload video or invoke paid AI processing.
+6. Complete the fresh-session workflow below before submitting the link. Record the deployed commit and observed results; do not substitute local or mocked test results for hosted processing evidence.
 
-The paid persistent-storage setup described below is an alternative only; it
-is no longer the configuration in `render.yaml` and is not authorized for this
-deployment. See https://render.com/docs/free for current free-tier limits.
+Docker installs FFmpeg and ships the same local subtitle fonts used by the preview. The restricted Docker context includes all local Python imports, including `languages.py`. The startup wrapper initializes the data directory, then drops root privileges. The image has not been built on the current Windows host because Docker is unavailable; the Render build must be checked.
 
-Preparation checks: 20 focused local tests passed, including a real FFmpeg MP4
-download with mocked external providers. The read-only local route/asset check
-and deployment-package checksums passed. Docker is not installed on the current
-Mac, so the Linux image build still needs verification on the selected host.
+## Storage and availability of the Free demo
 
-The judges need the full application: landing/onboarding, video upload, live
-transcription and translation, source review, editing, MP4/SRT export and sharing.
-The entry link is the deployed site's root `/`. `/?demo=1` is an illustrative
-editor preview; it does not process or export the illustrative video.
+Free instances can sleep after inactivity and use ephemeral storage. Uploaded videos, edits, SQLite projects, exports and language histories are lost when the instance restarts/redeploys or its ephemeral filesystem is replaced. Download outputs during the active session. A viewer link to a temporary project cannot be promised to remain available through these events.
 
-## Recommended host: Render
+Hosting plan limits are described in [Render's official Free documentation](https://render.com/docs/free). ElevenLabs/OpenAI requests are billed separately. Keep the live key permissions and quotas available during judging; the app does not offer unlimited processing.
 
-`render.yaml` provisions one Docker web service in Frankfurt with 1 CPU / 2 GB
-RAM and a 10 GB persistent disk. Paid compute stays awake without laptop access.
-At the checked [Render pricing](https://render.com/pricing), compute is $25/month
-and the disk is $2.50/month. AI requests, excess bandwidth and any other billable
-usage are additional. Review the actual dashboard estimate before creation.
-Do not select Free: it sleeps after inactivity and cannot attach persistent disks.
+Use one instance: this app uses SQLite, local files and in-process background jobs. Interrupted processing becomes retryable after restart, but only if its saved files still exist. There is no external queue or backup service.
 
-Docker installs FFmpeg and ships the same local subtitle fonts as the preview.
-The startup wrapper gives the newly mounted disk to the application user, then
-drops root privileges. Projects, videos and exports are saved under `/app/data`.
-Use one instance: this application uses SQLite and local background jobs.
-Manual deployments avoid restarting active judges' jobs after each source edit.
-Render supplies the HTTPS URL; a custom domain is optional.
+## Verify before submitting the public link
 
-## Publish
+- Open the root HTTPS URL in a fresh browser session. Confirm onboarding, language selection and mobile navigation lead to upload. `/?demo=1` is an illustrative editor, not a live processed result.
+- Confirm `/languages.json` lists `en`, `es`, `ur`, `hi`, `id`, `zh-Hans`, `tr`, and the selected target remains when the project is reopened.
+- With the account owner's authorization for the paid service requests, upload a short permitted Arabic clip containing speech, a verse and a Hadith. Check extraction, target-language meaning, source status, timing and review/edit saving. Keep unavailable published translations visibly distinct from drafts.
+- Resolve review items by listening and checking sources. Save a font/style change, prepare and download MP4/SRT/reference JSON, then play the MP4 and check audio, script shaping, wrapping, size and timing. SRT appearance depends on its player.
+- After actual review, open the read-only viewer link in a separate session. Never send a private editor recovery link to judges.
+- On this Free setup, do not use persistent-project survival across restart as a success criterion. Record that limitation. Test persistence after restart only if the team separately provisions persistent storage.
+- Test deletion only on a disposable verification project, and record observed behavior.
+- Fill the actual application URL, public repository URL, deployed revision and reviewed viewer URL in `submission/README.md`. Add the final presentation/demo video and retain the portal's submission confirmation.
 
-1. Sign in to Render and connect the GitHub account owning the deployment repo.
-2. Publish the current runtime source to a private Git repository. The clean
-   deployment package can be generated with `python3 scripts/package_demo.py`;
-   extract its files into the deployment repo. It includes a fresh `.gitignore`
-   and never copies `.env`, local projects, editor links or Git history.
-3. In Render, choose **New → Blueprint**, select that repo and the branch
-   containing `render.yaml`, and review the service and disk billing estimate.
-4. Enter `OPENAI_API_KEY` and `ELEVENLABS_API_KEY` using Render's secret fields.
-   They are requested via `sync: false` and are absent from source and the ZIP.
-   The selected OpenAI model is `gpt-6-luna`; use a model actually enabled for
-   the configured account. Enable ElevenLabs **Speech to Text** permission.
-   The earlier local test returned `missing_permissions` for this permission.
-5. Approve creation once the estimate and secrets are correct. Wait for a
-   successful build and deployment. Copy the exact HTTPS URL shown by Render;
-   the service name does not guarantee a particular available hostname.
-6. Run `python3 scripts/check_deployment.py https://YOUR-ACTUAL-HOST` and then
-   complete the live browser check below. The script is read-only and incurs
-   no AI processing requests. A passing health endpoint only proves keys are
-   configured; it does not prove permissions, billing or model access.
+## Alternative: an existing Linux server
 
-If using an existing Linux server instead, the original `compose.yaml` and
-`Caddyfile` remain available. Set `JISR_DOMAIN` and the AI keys privately in
-`.env`, then run `docker compose up -d --build`. Do not use the Render proxy
-mode for this path; Compose sets `JISR_TRUST_PROXY=1` for Caddy's `X-Real-IP`.
+`compose.yaml` and `Caddyfile` support a separately configured host with a persistent Docker volume and domain. Set `JISR_DOMAIN` and keys privately in `.env`, then run:
 
-## Verify before submitting the link
+```bash
+docker compose up -d --build
+```
 
-- Open the root HTTPS link in a fresh browser session with no saved local project.
-  Confirm onboarding and mobile navigation lead to upload.
-- Upload a short, permitted Arabic clip; run live automatic processing. Confirm
-  audio playback, transcript, English, citations and editable review steps.
-  Use short clips first to check performance on the selected server size.
-- Listen to the clip, resolve the actual review items, save a small font/style
-  change, prepare MP4 and click its download link. Play the downloaded file
-  and confirm subtitles, font, audio and timing. Download SRT and sources too.
-- Open its viewer link in a separate fresh session. Confirm it is read-only and
-  contains the reviewed result. Never submit the private editor recovery link.
-- With no processing or export jobs active, restart the service once. Confirm
-  the same project and original video remain on the mounted disk, and exports
-  can be prepared again. Temporary download links expire or disappear on restart.
-- Test removal of only the disposable verification project.
-- Record the actual application URL, optional reviewed viewer URL, release
-  revision and observed results in `submission/README.md` in the main workspace.
+Compose uses `JISR_TRUST_PROXY=1` for Caddy's `X-Real-IP`. Render uses its managed `X-Forwarded-For` edge. Enable proxy trust only behind the intended trusted proxy. Verify HTTPS and persistence on the actual host. This alternative does not change or upgrade the selected Free Render service.
 
-## Keep the demo available
+The app currently limits uploads to 250 MB, 10 uploads/hour per client, two processing jobs at once and one MP4 render at once. Do not promise zero downtime or unlimited capacity.
 
-Keep the paid service, disk and AI accounts funded through the judging period.
-Avoid deployments while a judge is processing a clip: disk-backed Render
-services have a short interruption on deployment, and in-process jobs do not
-survive a restart. Interrupted projects can be retried. Review disk usage and
-provider quotas in their dashboards, and enable the hosting account's failure
-notifications. Do not promise zero downtime or unlimited processing.
-
-The app currently permits 10 uploads/hour per client and two processing jobs
-at a time; one MP4 render runs at a time with bounded FFmpeg threads. Render
-proxy mode reads its managed `X-Forwarded-For` client address so judges do not
-share one proxy-wide upload limit. That trust mode must only be enabled behind
-Render's managed edge. The upload size remains 250 MB; persistent storage is
-finite and should be checked during the event.
-
-Primary hosting references: [Docker](https://render.com/docs/docker),
-[Blueprint specification](https://render.com/docs/blueprint-spec),
-[disks and restart constraints](https://render.com/docs/disks),
-[free-tier limitations](https://render.com/docs/free).
+Primary references: [Docker hosting](https://render.com/docs/docker), [Blueprint configuration](https://render.com/docs/blueprint-spec), [persistent disks](https://render.com/docs/disks), [Free limitations](https://render.com/docs/free).

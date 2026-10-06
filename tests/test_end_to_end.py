@@ -110,31 +110,31 @@ class EndToEndTests(unittest.TestCase):
             self.assertIsInstance(payload["input"], str)
             inputs = json.loads(payload["input"].split("Input: ", 1)[1])
             if isinstance(inputs, dict):
-                excerpt = VERSE_EXCERPT if inputs["full_english"] == VERSE_EN else HADITH_EXCERPT
-                result = {"english_excerpt": excerpt, "confident": True}
+                excerpt = VERSE_EXCERPT if inputs["full_translation"] == VERSE_EN else HADITH_EXCERPT
+                result = {"translation_excerpt": excerpt, "confident": True}
             elif "quality_items" in payload["text"]["format"]["schema"]["properties"]:
-                result = {"quality_items": [{"id": item["id"], "english": item["english"],
+                result = {"quality_items": [{"id": item["id"], "translation": item["translation"],
                           "confident": True, "issues": []} for item in inputs]}
             elif "dictionary" in inputs[0]:
                 self.assertEqual(len(inputs), 1)
-                self.assertEqual(inputs[0]["dictionary"][0]["english_term"], "Ablution")
-                result = {"items": [{"id": inputs[0]["id"], "english": "Ablution is worship."}]}
+                self.assertEqual(inputs[0]["dictionary"][0]["translation_term"], "Ablution")
+                result = {"items": [{"id": inputs[0]["id"], "translation": "Ablution is worship."}]}
             else:
                 self.assertEqual(len(inputs), 1)
                 self.assertEqual(inputs[0]["arabic"], TRANSCRIPT)
                 result = {"items": [{"id": inputs[0]["id"], "terms": ["الوضوء"], "parts": [
-                    {"first_word": 0, "last_word": 1, "kind": "speech", "english": "Ritual washing is worship."},
-                    {"first_word": 2, "last_word": 7, "kind": "quran", "english": "Verse machine draft", "surah": 2, "ayah": 222},
-                    {"first_word": 8, "last_word": 9, "kind": "speech", "english": "And the Prophet said"},
-                    {"first_word": 10, "last_word": 15, "kind": "hadith", "english": "Hadith machine draft", "hadith_query": HADITH},
-                    {"first_word": 16, "last_word": 17, "kind": "speech", "english": "So let us maintain it."},
+                    {"first_word": 0, "last_word": 1, "kind": "speech", "translation": "Ritual washing is worship."},
+                    {"first_word": 2, "last_word": 7, "kind": "quran", "translation": "Verse machine draft", "surah": 2, "ayah": 222},
+                    {"first_word": 8, "last_word": 9, "kind": "speech", "translation": "And the Prophet said"},
+                    {"first_word": 10, "last_word": 15, "kind": "hadith", "translation": "Hadith machine draft", "hadith_query": HADITH},
+                    {"first_word": 16, "last_word": 17, "kind": "speech", "translation": "So let us maintain it."},
                 ]}]}
             return ExternalResponse({"status": "completed", "output": [{"type": "message", "content": [{"type": "output_text", "text": json.dumps(result)}]}]})
         if url.startswith("https://islamic-content.com/api/search_words?"):
             self.assertEqual(request.get_header("X-requested-with"), "XMLHttpRequest")
             return ExternalResponse({"table_data": '<a href="/dictionary/word/10922">الوضوء</a>'})
         if url == "https://islamic-content.com/dictionary/word/10922":
-            return ExternalResponse('<div class="entry-wraper"><h1>الوضوء</h1><div class="entry-main-content"><p>تعريف عربي للاختبار.</p></div><a href="/dictionary/word/10922/en">English</a></div>')
+            return ExternalResponse('<div class="entry-wraper"><h1>الوضوء</h1><div class="entry-main-content"><p>تعريف عربي للاختبار.</p></div><a href="/dictionary/word/10922/en">translation</a></div>')
         if url == "https://islamic-content.com/dictionary/word/10922/en":
             return ExternalResponse('<div class="entry-wraper"><h1>Ablution (الوضوء)</h1><div class="entry-main-content"><p>A synthetic dictionary definition.</p></div></div>')
         if url == "https://api.quranpedia.net/v1/mushafs/1/2/222":
@@ -158,7 +158,7 @@ class EndToEndTests(unittest.TestCase):
             if query["language"] == ["ar"]:
                 return ExternalResponse({"id": "6263", "hadeeth": HADITH_AR, "narrator": "عثمان بن عفان",
                                          "grade": "صحيح", "attribution": "رواه مسلم", "explanation": "شرح للاختبار."})
-            return ExternalResponse({"id": "6263", "hadeeth": HADITH_EN, "explanation": "Synthetic English explanation."})
+            return ExternalResponse({"id": "6263", "hadeeth": HADITH_EN, "explanation": "Synthetic translation explanation."})
         raise AssertionError("Unexpected external request: " + url)
 
     def request(self, path, method="GET", body=None, token=None, content_type="application/json"):
@@ -202,14 +202,14 @@ class EndToEndTests(unittest.TestCase):
         gaps = [s for s in project["segments"] if s.get("audio_gap")]
         self.assertEqual([s["type"] for s in parts], ["speech", "quran", "speech", "hadith", "speech"])
         self.assertEqual(" ".join(s["ar"] for s in parts), TRANSCRIPT)
-        self.assertEqual(parts[0]["en"], "Ablution is worship.")
+        self.assertEqual(parts[0]["translation"], "Ablution is worship.")
         self.assertTrue(parts[0]["unclear_words"])
         self.assertEqual(parts[0]["terminology"][0]["status"], "bilingual")
-        self.assertEqual(parts[1]["en"], VERSE_EXCERPT)
-        self.assertEqual(parts[1]["source"]["english"], VERSE_EN)
+        self.assertEqual(parts[1]["translation"], VERSE_EXCERPT)
+        self.assertEqual(parts[1]["source"]["translation"], VERSE_EN)
         self.assertIn("Source reference.", parts[1]["source"]["explanation"])
-        self.assertEqual(parts[3]["en"], HADITH_EXCERPT)
-        self.assertEqual(parts[3]["source"]["english"], HADITH_EN)
+        self.assertEqual(parts[3]["translation"], HADITH_EXCERPT)
+        self.assertEqual(parts[3]["source"]["translation"], HADITH_EN)
         self.assertEqual(parts[3]["source"]["verification"]["provider"], "Dorar")
         self.assertEqual(parts[3]["source"]["translation_status"], "sourced")
         for quote in (parts[1], parts[3]):
@@ -246,8 +246,8 @@ class EndToEndTests(unittest.TestCase):
         _, raw = self.request(prefix + "/export/sources")
         references = json.loads(raw)
         self.assertEqual(len(references), 2)
-        self.assertEqual(references[0]["english"], VERSE_EN)
-        self.assertEqual(references[1]["english"], HADITH_EN)
+        self.assertEqual(references[0]["translation"], VERSE_EN)
+        self.assertEqual(references[1]["translation"], HADITH_EN)
         _, raw = self.request(share_path)
         shared = json.loads(raw)
         self.assertFalse(shared["editable"])
@@ -258,11 +258,11 @@ class EndToEndTests(unittest.TestCase):
         self.assertEqual(private.exception.code, 403)
         _, rendered = self.request(prefix + "/export/mp4", token=token)
         self.assertIn(b"ftyp", rendered[:32])
-        target = self.root / project_id / "translated.mp4"
+        target = self.root / project_id / "translated-en.mp4"
         self.assertTrue(server.has_video_stream(target))
         self.assertAlmostEqual(server.video_duration(target), 8, delta=.3)
         self.assertGreater(target.stat().st_size, 1000)
-        manifest_path = target.with_name("render-manifest.json")
+        manifest_path = target.with_name("render-manifest-en.json")
         manifest = json.loads(manifest_path.read_text())
         self.assertEqual(manifest["crf"], 18)
         self.assertEqual(manifest["audio"], "copy")
