@@ -417,3 +417,45 @@ body:not(.start-view) .demo-pill{font-size:15px;color:#d0daea}
 .translation[lang="hi"]{line-height:1.8}
 .translation[lang="zh-Hans"]{line-height:1.7;word-break:normal;line-break:strict}
 @media(max-width:700px){.journey-primary-actions{flex-wrap:wrap}.language-picker{min-width:130px}}
+
+/* Export: one prominent video action, clear preparation, and a real download link. */
+dialog.export-dialog{width:min(760px,calc(100% - 28px))}
+.export-dialog .modal-header{position:sticky;top:0;background:#1b273d;z-index:2}
+.export-dialog .modal-header h2{font-size:25px}
+.export-dialog .export-intro{font-size:18px;color:#d1dced;margin:0 0 18px}
+.export-dialog .export-grid{gap:16px}
+.export-dialog .export-option{padding:20px;border-radius:12px;line-height:1.7}
+.export-dialog .export-option b{font-size:20px;color:#edf0f7}
+.export-dialog .export-option>span:not(.export-format){display:block;font-size:16px;color:#c2cde0;margin-top:6px}
+.export-dialog .export-option[aria-pressed=true]{border-color:#edbd7e;box-shadow:0 0 0 1px #edbd7e}
+.export-dialog .export-video{background:linear-gradient(135deg,#433b30,#26354d);border-color:#c59c68}
+.export-dialog .export-format{display:inline-block;font:700 13px/1.5 Arial,sans-serif;letter-spacing:1px;border:1px solid #8e775b;padding:3px 9px;border-radius:5px;color:#f5c78b;margin-bottom:10px}
+.export-dialog .export-video strong{display:block;margin-top:16px;font-size:18px;color:#f5c78b}
+.export-secondary{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.export-section-title{font-size:18px;color:#dce5f4;margin:6px 0 0}
+.export-sharing{display:grid;gap:10px;border-top:1px solid #42516b;padding-top:16px}
+.export-extra{border:1px solid #42516b;border-radius:10px;padding:14px 16px}
+.export-extra summary{cursor:pointer;font-size:17px;color:#d5dfef}
+.export-extra .export-option{display:block;width:100%;margin-top:12px}
+.export-extra #deleteProject{border-color:#8d5d59}
+.export-extra #deleteProject b{color:#f0b8a9}
+.export-dialog .export-warnings{font-size:16px;border:1px solid #9a7e514d;background:#342f2b;color:#efcf9f;line-height:1.8}
+.export-warnings p{margin:4px 0}
+.export-dialog .export-status{position:relative;padding:24px;border-radius:12px;margin:0 0 18px;text-align:center}
+.export-status h3{font-size:23px;color:#f1d2a9;margin:12px 0 8px}
+.export-dialog .export-status p{font-size:17px;color:#d7e1f2;line-height:1.8}
+.export-state-icon{display:grid;place-items:center;width:46px;height:46px;border:2px solid #84b8a2;border-radius:50%;margin:auto;font-size:25px;color:#bde8d4}
+.export-status[data-state=working] .export-state-icon{border:3px solid #efb86f33;border-top-color:#efb86f;animation:export-spin 1s linear infinite}
+.export-status[data-state=error] .export-state-icon{border-color:#da9785;color:#f0b8a9}
+.export-phases{display:flex;justify-content:center;flex-wrap:wrap;gap:8px 16px;margin:18px 0;color:#bac8df;font-size:15px}
+.export-phases span[aria-current=step]{color:#f5c78b;font-weight:600}
+.export-activity{height:5px;border-radius:5px;background:#3c4b62;overflow:hidden;position:relative;margin:12px 0}
+.export-activity:after{content:'';position:absolute;inset-block:0;width:35%;background:#efb86f;animation:processing-sweep 1.7s ease-in-out infinite}
+.export-dialog .export-status small{font-size:15px;color:#becce1;line-height:1.8}
+.export-file-summary{display:flex;justify-content:space-between;gap:12px;background:#15203366;border-radius:8px;padding:12px;margin-top:14px;font-size:15px;color:#dce5f4}
+.export-file-summary span:first-child{overflow-wrap:anywhere;text-align:left}
+.export-file-summary span:last-child{white-space:nowrap}
+.export-dialog .export-download{font-size:20px;min-height:56px;justify-content:center;margin-top:16px}
+@keyframes export-spin{to{transform:rotate(360deg)}}
+@media(max-width:600px){.export-secondary{grid-template-columns:1fr}.export-dialog #modalBody{padding:18px}.export-dialog .export-option{padding:16px}.export-dialog .export-status{padding:18px}.export-dialog .export-download{font-size:18px}}
+@media(prefers-reduced-motion:reduce){.export-status[data-state=working] .export-state-icon,.export-activity:after{animation:none}.export-activity:after{left:32%}}

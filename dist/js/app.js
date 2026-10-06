@@ -163,7 +163,7 @@ function saveStyle(){
 }
 $('#fontSizeNumber').oninput=e=>{const size=Number(e.target.value);if(Number.isInteger(size)&&size>=10&&size<=42){style.size=size;saveStyle()}};
 $('#font').oninput=e=>{style.font=e.target.value;saveStyle()};$('#fontSize').oninput=e=>{style.size=+e.target.value;saveStyle()};$('#backdrop').onchange=e=>{style.backdrop=e.target.checked;saveStyle()};$('#bilingual').onchange=e=>{style.bilingual=e.target.checked;saveStyle()};$$('[data-color]').forEach(b=>b.onclick=()=>{style.color=b.dataset.color;saveStyle()});$('#fontSizeNumber').onchange=e=>{style.size=Math.min(42,Math.max(10,Math.round(Number(e.target.value)||18)));saveStyle()};$('#customColor').oninput=e=>{style.color=e.target.value;saveStyle()};$('#resetStyle').onclick=()=>{Object.assign(style,{font:'plex',size:18,color:'#ffffff',backdrop:true,bilingual:true,position:'bottom'});saveStyle();toast('أُعيد مظهر الترجمة الافتراضي')};
-function modal(title,body){video.pause();$('#modalTitle').textContent=title;$('#modalBody').innerHTML=body;$('#modal').showModal()}$('#closeModal').onclick=()=>$('#modal').close();
+function modal(title,body){$('#modal').classList.remove('export-dialog');video.pause();$('#modalTitle').textContent=title;$('#modalBody').innerHTML=body;$('#modal').showModal()}$('#closeModal').onclick=()=>$('#modal').close();
 const captionButton=document.createElement('button');captionButton.id='editSubtitleRef';captionButton.className='text-button';captionButton.textContent='تعديل سطر المصدر';captionButton.hidden=true;$('.player-panel .panel-heading').append(captionButton);
 captionButton.onclick=()=>editCaption(selected);
 function editCaption(i){
@@ -260,7 +260,15 @@ function reference(i){
   $('#jumpRef').onclick=()=>{$('#modal').close();seek(i);video.play().catch(()=>toast('اضغط تشغيل الفيديو للاستماع إلى المقطع'))};
 }
 $('#sourcesNav').onclick=()=>$('#referencePanel').scrollIntoView({behavior:'smooth'});$('#editorNav').onclick=()=>window.scrollTo({top:0,behavior:'smooth'});$('#help').onclick=()=>modal('عن جسر','<p>ارفع فيديو، ثم فرّغه عبر ElevenLabs وترجمه عبر خدمة الذكاء الاصطناعي. راجع الاقتباسات والمصادر وعدّل النص والتوقيت، ثم صدّر الفيديو والترجمة وقائمة المصادر.</p><p class="modal-note">لا يوجد تسجيل دخول؛ احفظ رابط التحرير في متصفحك.</p>');
-let activeExport=null;
+let activeExport=null,exportClock=null;
+$('#modal').addEventListener('close',()=>{clearInterval(exportClock);exportClock=null});
+function updateExportClock(){
+  const clock=$('#exportElapsed');
+  if(clock&&activeExport?.phase==='working')clock.textContent='الوقت المنقضي '+fmt((Date.now()-activeExport.started)/1000);
+}
+function exportFileSize(bytes){
+  return bytes>=1024*1024?(bytes/(1024*1024)).toFixed(1)+' MB':Math.max(1,Math.ceil(bytes/1024))+' KB';
+}
 const exportNames={srt:'ملف الترجمة',sources:'قائمة المصادر المؤكدة','sources-draft':'مسودة المصادر',mp4:'الفيديو'};
 function renderExportWarnings(warnings=project?.export_warnings||[]){
   const panel=$('#exportWarnings');if(!panel)return;
@@ -273,33 +281,58 @@ function renderExportWarnings(warnings=project?.export_warnings||[]){
 }
 function renderExportState(){
   syncWorkflow();
+  clearInterval(exportClock);exportClock=null;
   const panel=$('#exportStatus');
-  if(!panel||!activeExport||panel.dataset.project!==activeExport.id)return;
+  if(!panel||!activeExport||project?.id!==activeExport.id||panel.dataset.project!==activeExport.id)return;
   const run=activeExport,busy=run.phase==='working';
   renderExportWarnings(run.phase==='ready'?run.result.warnings:project.export_warnings);
   $('#exportGrid').setAttribute('aria-busy',String(busy));
   if($('#deleteProject'))$('#deleteProject').disabled=busy;
   [['srtExport','srt'],['sourcesExport','sources'],['draftSourcesExport','sources-draft'],['videoExport','mp4']].forEach(([id,kind])=>{
-    $('#'+id).disabled=busy||(!['sources','sources-draft'].includes(kind)&&!project.exportable);
+    const button=$('#'+id);
+    button.disabled=busy||(!['sources','sources-draft'].includes(kind)&&!project.exportable);
+    button.setAttribute('aria-pressed',String(run.kind===kind));
   });
   panel.hidden=false;panel.dataset.state=run.phase;panel.setAttribute('role',run.phase==='error'?'alert':'status');
   panel.replaceChildren();
+  const icon=document.createElement('span');icon.className='export-state-icon';icon.setAttribute('aria-hidden','true');
+  icon.textContent=busy?'':run.phase==='error'?'!':'✓';panel.append(icon);
+  const heading=document.createElement('h3');
+  heading.textContent=busy?`جارٍ تجهيز ${exportNames[run.kind]}…`:run.phase==='error'?'تعذر تجهيز الملف':run.downloadRequested?'الملف جاهز · تم طلب التنزيل':'ملفك جاهز للتنزيل';panel.append(heading);
   const message=document.createElement('p');
-  message.textContent=busy?`جارٍ تجهيز ${exportNames[run.kind]}… ${run.kind==='mp4'?'قد يستغرق ذلك بعض الوقت حسب طول الفيديو.':''}`:run.phase==='error'?run.error:`${exportNames[run.kind]} جاهز. اضغط على زر التنزيل لحفظ الملف.`;
-  panel.append(message);
-  if(run.phase==='ready'){
+  message.textContent=busy?(run.kind==='mp4'?'نُجهّز الفيديو بالترجمة المدمجة والصوت الأصلي. يمكنك متابعة التجهيز عند إعادة فتح هذه النافذة.':'نُجهّز الملف بالتعديلات المحفوظة. انتظر ظهور زر التنزيل.'):run.phase==='error'?run.error:run.downloadRequested?'تابع التنزيل في متصفحك. إذا لم يبدأ، اضغط زر التنزيل مرة أخرى.':'اضغط على الزر أدناه لحفظ الملف على جهازك.';panel.append(message);
+  const steps=document.createElement('div');steps.className='export-phases';steps.setAttribute('aria-label','مراحل التصدير');
+  ['اختيار الصيغة','تجهيز الملف','التنزيل'].forEach((label,i)=>{
+    const item=document.createElement('span');item.textContent=(i===0||i===1&&run.phase==='ready'?'✓ ':'')+label;
+    if(i===(busy||run.phase==='error'?1:2))item.setAttribute('aria-current','step');
+    steps.append(item);
+  });panel.append(steps);
+  if(busy){
+    const activity=document.createElement('div');activity.className='export-activity';activity.setAttribute('role','progressbar');activity.setAttribute('aria-label','تجهيز الملف قيد التنفيذ');panel.append(activity);
+    const clock=document.createElement('small');clock.id='exportElapsed';clock.setAttribute('aria-live','off');panel.append(clock);
+    updateExportClock();exportClock=setInterval(updateExportClock,1000);
+  }else if(run.phase==='ready'){
+    const file=document.createElement('div');file.className='export-file-summary';
+    const name=document.createElement('span');name.dir='ltr';name.textContent=run.result.filename;
+    const size=document.createElement('span');size.dir='ltr';size.textContent=exportFileSize(run.result.size);
+    file.append(name,size);panel.append(file);
     const link=document.createElement('a');
     link.className='button primary export-download';link.href=run.result.download_url;link.download=run.result.filename;
-    link.textContent=`تنزيل ${exportNames[run.kind]} · ${['sources','sources-draft'].includes(run.kind)?'JSON':run.kind.toUpperCase()}`;
+    link.textContent=`↓ تنزيل ${exportNames[run.kind]} · ${['sources','sources-draft'].includes(run.kind)?'JSON':run.kind.toUpperCase()}`;
     link.onclick=e=>{
       if(run.expires<=Date.now()){
-        e.preventDefault();run.phase='error';run.error='انتهت صلاحية رابط التنزيل؛ جهّز الملف مجدداً';renderExportState();
+        e.preventDefault();run.phase='error';run.error='انتهت صلاحية رابط التنزيل؛ جهّز الملف مجدداً';renderExportState();return;
       }
+      run.downloadRequested=true;
+      heading.textContent='الملف جاهز · تم طلب التنزيل';
+      message.textContent='تابع التنزيل في متصفحك. إذا لم يبدأ، اضغط زر التنزيل مرة أخرى.';
+      link.textContent='↓ تنزيل الملف مرة أخرى';
     };
     panel.append(link);
-    const note=document.createElement('small');
-    note.textContent='الرابط متاح لمدة ١٠ دقائق. يمكنك تجهيز الملف مجدداً عند الحاجة.';
-    panel.append(note);
+    const note=document.createElement('small');note.textContent='رابط التنزيل مؤقت. يمكنك تجهيز الملف مجدداً إذا انتهت صلاحيته.';panel.append(note);
+  }else{
+    const retry=document.createElement('button');retry.className='button primary';retry.textContent='إعادة المحاولة';
+    retry.onclick=()=>$('#'+({mp4:'videoExport',srt:'srtExport',sources:'sourcesExport','sources-draft':'draftSourcesExport'}[run.kind])).click();panel.append(retry);
   }
 }
 async function download(kind){
@@ -323,12 +356,25 @@ $('#export').onclick=()=>{
     $('#demoUploadForExport').onclick=()=>{$('#modal').close();$('#upload').click()};
     return;
   }
-  if(activeExport?.phase==='ready'&&(activeExport.id!==project.id||activeExport.result.project_updated!==project.updated||activeExport.settings!==JSON.stringify(style)||activeExport.expires<=Date.now()))activeExport=null;
-  modal('تصدير المشروع',`<p class="modal-note">اختر الملف لتجهيزه، ثم اضغط على التنزيل. رابط المشاهدة عام لمن يملكه.</p><section id="exportWarnings" class="modal-note" role="status" hidden></section><section id="exportStatus" class="export-status" data-project="${project.id}" role="status" aria-live="polite" hidden></section><div class="export-grid" id="exportGrid" aria-busy="false"><button class="export-option" id="srtExport"><b>ملف الترجمة · SRT</b><span>الترجمة مع التوقيت</span></button><button class="export-option" id="sourcesExport"><b>قائمة المصادر المؤكدة · JSON</b><span>المراجع المراجعة فقط؛ تكون فارغة قبل التأكيد</span></button><button class="export-option" id="draftSourcesExport"><b>مسودة المصادر · JSON</b><span>المراجع المقترحة وحالة مراجعتها؛ للمراجع فقط</span></button><button class="export-option" id="videoExport"><b>الفيديو المترجم · MP4</b><span>ترجمة مدمجة، مع الصوت الأصلي</span></button><button class="export-option" id="shareExport"><b>رابط المشاهدة</b></button></div>`);
+  if(activeExport&&(activeExport.id!==project.id||(activeExport.phase==='ready'&&(activeExport.result.project_updated!==project.updated||activeExport.settings!==JSON.stringify(style)||activeExport.expires<=Date.now()))))activeExport=null;
+  modal('تصدير وتنزيل',`<p class="export-intro">اختر ما تريد تنزيله. نُجهّز الملف أولاً، ثم يظهر زر حفظه على جهازك.</p>
+    <section id="exportStatus" class="export-status" data-project="${project.id}" role="status" aria-live="polite" hidden></section>
+    <section id="exportWarnings" class="modal-note export-warnings" role="status" hidden></section>
+    <div class="export-grid" id="exportGrid" aria-busy="false">
+      <button class="export-option export-video" id="videoExport"><span class="export-format">MP4</span><b>تنزيل الفيديو المترجم</b><span>الفيديو مع الترجمة المدمجة والصوت الأصلي، حسب المظهر الذي اخترته.</span><strong>تجهيز الفيديو ←</strong></button>
+      <h3 class="export-section-title">ملفات إضافية</h3>
+      <div class="export-secondary"><button class="export-option" id="srtExport"><span class="export-format">SRT</span><b>ملف الترجمة</b><span>نص الترجمة وتوقيتها للاستخدام في برامج المونتاج.</span></button><button class="export-option" id="sourcesExport"><span class="export-format">JSON</span><b>المصادر المؤكدة</b><span>المراجع التي أكّدت مراجعتها؛ تكون القائمة فارغة قبل التأكيد.</span></button></div>
+      <details class="export-extra"><summary>مسودة المصادر للمراجعة</summary><button class="export-option" id="draftSourcesExport"><b>تنزيل مسودة المصادر · JSON</b><span>المراجع المقترحة وحالة مراجعتها، بما فيها المراجع غير المؤكدة.</span></button></details>
+      <section class="export-sharing"><h3 class="export-section-title">مشاركة المشروع</h3><button class="export-option" id="shareExport"><b>نسخ رابط المشاهدة</b><span>${project.publishable?'رابط عام للمشاهدة، دون أدوات تحرير.':'أكمل مراجعة المقاطع والمصادر لتفعيل رابط المشاهدة.'}</span></button></section>
+      <details class="export-extra" id="projectExportTools"><summary>رابط التحرير وإدارة المشروع</summary><div id="exportProjectTools"></div></details>
+    </div>`);
+  $('#modal').classList.add('export-dialog');
+  renderExportWarnings();
+  [['srtExport','srt'],['sourcesExport','sources'],['draftSourcesExport','sources-draft'],['videoExport','mp4']].forEach(([id,kind])=>$('#'+id).disabled=!['sources','sources-draft'].includes(kind)&&!project.exportable);
   [['srtExport','srt'],['sourcesExport','sources'],['draftSourcesExport','sources-draft'],['videoExport','mp4']].forEach(([id,kind])=>$('#'+id).onclick=async()=>{
     if(activeExport?.phase==='working'&&activeExport.id===project.id)return;
-    const run={id:project.id,kind,phase:'working',settings:JSON.stringify(style)};
-    activeExport=run;renderExportState();
+    const run={id:project.id,kind,phase:'working',started:Date.now(),settings:JSON.stringify(style)};
+    activeExport=run;renderExportState();$('#exportStatus').scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth',block:'nearest'});
     try{run.result=await download(kind);run.expires=Date.now()+run.result.expires_in*1000-5000;run.phase='ready'}
     catch(e){run.phase='error';run.error=e.message||'تعذر تجهيز الملف؛ حاول مجدداً'}
     if(activeExport===run){
@@ -392,7 +438,7 @@ const originalRender=render;render=function(){originalRender();syncWorkflow();$$
 const originalExport=$('#export').onclick;
 $('#export').onclick=()=>{
   originalExport();if(!project)return;
-  $('#modalBody .export-grid').insertAdjacentHTML('beforeend','<button class="export-option" id="editLink"><b>رابط التحرير الخاص</b><span>احتفظ به لاستئناف المشروع دون حساب</span></button><button class="export-option" id="deleteProject"><b>حذف المشروع</b><span>يحذف الفيديو والملفات ورابط المشاهدة نهائياً</span></button>');
+  $('#exportProjectTools').insertAdjacentHTML('beforeend','<button class="export-option" id="editLink"><b>رابط التحرير الخاص</b><span>احتفظ به لاستئناف المشروع دون حساب</span></button><button class="export-option" id="deleteProject"><b>حذف المشروع</b><span>يحذف الفيديو والملفات ورابط المشاهدة نهائياً</span></button>');
   if(!project.publishable){
     $('#exportGrid').insertAdjacentHTML('beforebegin',`<button class="button secondary" id="reviewForExport" ${project.status==='processing'?'disabled':''}>${['uploaded','error'].includes(project.status)?'متابعة المعالجة':'الانتقال إلى المراجعة'}</button>`);
     ['srtExport','videoExport'].forEach(id=>$('#'+id).disabled=!project.exportable);
