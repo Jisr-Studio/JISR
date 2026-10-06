@@ -1,12 +1,14 @@
 # جسر · Jisr
 
-![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=flat&logo=html5&logoColor=white)
-![CSS3](https://img.shields.io/badge/CSS3-1572B6?style=flat&logo=css&logoColor=white)
-![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=flat&logo=javascript&logoColor=black)
-![Python](https://img.shields.io/badge/Python-3776AB?style=flat&logo=python&logoColor=white)
-![SQLite](https://img.shields.io/badge/SQLite-003B57?style=flat&logo=sqlite&logoColor=white)
-![FFmpeg](https://img.shields.io/badge/FFmpeg-007808?style=flat&logo=ffmpeg&logoColor=white)
-![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat&logo=docker&logoColor=white)
+<p align="center">
+  <img src="https://img.shields.io/badge/HTML5-E34F26?style=for-the-badge&amp;logo=html5&amp;logoColor=white" alt="HTML5">
+  <img src="https://img.shields.io/badge/CSS3-1572B6?style=for-the-badge&amp;logo=css&amp;logoColor=white" alt="CSS3">
+  <img src="https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&amp;logo=javascript&amp;logoColor=black" alt="JavaScript">
+  <img src="https://img.shields.io/badge/Python-3776AB?style=for-the-badge&amp;logo=python&amp;logoColor=white" alt="Python">
+  <img src="https://img.shields.io/badge/SQLite-003B57?style=for-the-badge&amp;logo=sqlite&amp;logoColor=white" alt="SQLite">
+  <img src="https://img.shields.io/badge/FFmpeg-007808?style=for-the-badge&amp;logo=ffmpeg&amp;logoColor=white" alt="FFmpeg">
+  <img src="https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&amp;logo=docker&amp;logoColor=white" alt="Docker">
+</p>
 
 **Smart studio for translating Arabic Islamic videos into English, with documented Quranic and Hadith citations.**  
 منصة ذكية لترجمة الفيديو الإسلامي وتوثيق الآيات القرآنية والأحاديث النبوية.
@@ -30,18 +32,21 @@ upload, review and native MP4 download.
 
 ![Jisr translation studio — desktop preview](docs/previews/studio-desktop.png)
 
-## Theme, colors, and logo
+## 🎨 Design system
 
 Jisr uses a dark navy theme with warm gold accents. Navy provides a consistent background for the video and editing workspace; gold highlights primary actions, the active workflow step, and selected controls. Light text and distinct panel borders keep content readable. The interface supports right-to-left Arabic alongside left-to-right English translations.
 
-| Color | Hex | Use |
-|---|---|---|
-| Deep navy | `#101725` | Main website background |
-| Slate navy | `#1A2436` | Project panels and layered surfaces |
-| Warm gold | `#EFB86F` | Primary actions, progress, and focus indicators |
-| Soft white | `#EDF0F7` | Main interface text |
-| Muted blue-gray | `#929CB1` | Supporting text |
-| Slate border | `#303B51` | Panel borders and separators |
+| Preview | Color | Hex | Purpose |
+|---|---|---|---|
+| ![Deep navy swatch](docs/design/colors/deep-navy.svg) | Deep navy | `#101725` | Main website background |
+| ![Slate navy swatch](docs/design/colors/slate-navy.svg) | Slate navy | `#1A2436` | Project panels and layered surfaces |
+| ![Warm gold swatch](docs/design/colors/warm-gold.svg) | Warm gold | `#EFB86F` | Primary actions, progress, and focus indicators |
+| ![Soft white swatch](docs/design/colors/soft-white.svg) | Soft white | `#EDF0F7` | Main interface text |
+| ![Muted blue-gray swatch](docs/design/colors/muted-blue-gray.svg) | Muted blue-gray | `#929CB1` | Supporting text |
+| ![Slate border swatch](docs/design/colors/slate-border.svg) | Slate border | `#303B51` | Panel borders and separators |
+| ![Logo navy swatch](docs/design/colors/logo-navy.svg) | Logo navy | `#202C46` | Rounded logo tile |
+| ![Logo ivory swatch](docs/design/colors/logo-ivory.svg) | Logo ivory | `#F5F3ED` | Arch and upper horizontal stroke |
+| ![Logo gold swatch](docs/design/colors/logo-gold.svg) | Logo gold | `#EEB66B` | Lower horizontal stroke |
 
 <img src="dist/favicon.svg" alt="Jisr arch logo" width="64" height="64">
 
@@ -99,29 +104,63 @@ Subtitle transitions hold the current cue until the next starts when the gap is 
 
 Subtitle images are cached in the browser and the next cue is preloaded. Temporary load failures are retried once; old responses cannot replace the current cue or appear in a timing gap. Saving edits preserves playback position, and appearance saves are serialized before export. The review filter uses the same criteria as public sharing, including unconfirmed references and unresolved partial quotations. JSON citations contain only confirmed, aligned references.
 
-## Project structure
+## 🧱 Project structure
 
 ```text
-server.py               Standard-library Python HTTP API, AI pipeline, storage, and exports
-pipeline_quality.py     Meaning checks, reading warnings, and connected Hadith retrieval
-subtitle_png.py         Standard-library PNG alpha bounds for fitting subtitle images
-dist/                   Active RTL frontend; no build step
-  index.html            App shell
-  js/                   Editor, studio, subtitle preview, and citation helpers
-  css/                  Editor and responsive styles
-  demo.mp4              Silent illustrative demo video
-tests/                  Python tests and JavaScript citation-link/text checks
-scripts/                Public-source checks and saved citation-link repairs
-docs/                   API contract, source policy, implementation notes, and previews
-.vscode/                Run, debug, and test configuration
-.env.example            Configuration template; contains no credentials
-Dockerfile              Linux image with FFmpeg
-render.yaml             Free Render demo configuration; temporary storage and idle sleep
-compose.yaml            App, Caddy HTTPS proxy, and persistent data volume
-Caddyfile               Reverse-proxy configuration
-data/                   Generated media and SQLite database; Git-ignored
-archive/prototype/      Preserved early frontend and FastAPI prototype
+JISR/
+├── README.md                    # Overview, design system, setup, and verification
+├── server.py                    # HTTP API, AI pipeline, SQLite storage, and exports
+├── pipeline_quality.py          # Meaning checks, reading warnings, Hadith grouping
+├── subtitle_png.py              # PNG alpha bounds for fitting subtitle images
+├── dist/                        # Active frontend; served directly without a build step
+│   ├── index.html               # Arabic RTL landing page and studio shell
+│   ├── favicon.svg              # Jisr arch logo
+│   ├── demo.mp4                 # Silent illustrative interface example
+│   ├── source-caption-labels.json # Shared English chapter names and caption labels
+│   ├── css/
+│   │   ├── style.css            # Base layout and controls
+│   │   ├── studio.css           # Dark editor theme and processing panel
+│   │   ├── landing.css          # Landing-page presentation
+│   │   ├── onboarding.css       # Animated introduction and tour scenes
+│   │   ├── readability.css      # Typography, responsive layout, workflow animation
+│   │   └── fonts.css            # Bundled font declarations
+│   ├── js/
+│   │   ├── app.js               # Project state, API calls, editing, review, exports
+│   │   ├── studio.js            # Workspace tools, timeline, processing details
+│   │   ├── onboarding.js        # Manual tour navigation and animation controls
+│   │   ├── citation-text.js     # Source text, captions, review eligibility
+│   │   ├── citation-links.js    # Citation-link presentation
+│   │   ├── subtitle-preview.js  # Subtitle image loading, cache, and cue timing
+│   │   └── splash.js            # Optional introductory splash implementation
+│   └── fonts/                   # Arabic fonts and their license notices
+├── tests/                       # Python integration/regression and JavaScript checks
+├── scripts/
+│   ├── check_deployment.py      # Hosted application and asset smoke checks
+│   ├── check_sources.py         # Public source-service checks
+│   ├── refresh_source_links.py  # Repair saved citation links
+│   └── package_demo.py          # Build a runtime-only deployment package
+├── docs/
+│   ├── design/colors/           # README color-preview assets
+│   ├── previews/                # Interface screenshots
+│   ├── hackathon/               # Organizer guide, template, and source package
+│   ├── team-preparation/        # Presentation, video, evaluation, and task drafts
+│   └── *.md                     # Contracts, source policy, deployment, verification
+├── submission/                  # Submission working folders and release materials
+├── .vscode/                     # Editor, run, debug, and test configuration
+├── .env.example                 # Configuration template without credentials
+├── Dockerfile                   # Deployment image with FFmpeg
+├── docker-entrypoint.py         # Container startup
+├── render.yaml                  # Free Render demo configuration
+├── compose.yaml                 # App, Caddy proxy, and persistent data volume
+├── Caddyfile                    # Reverse-proxy configuration
+├── data/                        # Generated media and SQLite database; Git-ignored
+└── archive/prototype/           # Preserved early frontend and FastAPI prototype
 ```
+
+- **Frontend:** HTML, CSS, and vanilla JavaScript handle the landing experience, video preview, review controls, and editing tools.
+- **Backend:** `server.py` coordinates transcription, translation, source retrieval, storage, and exports.
+- **Quality and rendering:** `pipeline_quality.py` checks cue meaning/readability; FFmpeg renders the subtitle images and final video, with `subtitle_png.py` supporting image fitting.
+- **Verification and delivery:** `tests/`, `scripts/`, and `docs/` cover reproducible checks, deployment preparation, and documented limitations.
 
 The active backend is `server.py`; the archived FastAPI prototype is not the running application. See the [code map](docs/code-map.md) and [API/data contract](docs/data-contract.md).
 
