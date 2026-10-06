@@ -3,7 +3,21 @@
   const controls=[];
   let opened=null;
   function close(focus=false){if(!opened)return;const c=opened;c.menu.hidden=true;c.button.setAttribute('aria-expanded','false');opened=null;if(focus)c.button.focus()}
-  function position(c){const r=c.button.getBoundingClientRect();c.menu.style.width=Math.min(Math.max(r.width,220),innerWidth-24)+'px';c.menu.style.left=Math.max(12,Math.min(r.left,innerWidth-parseFloat(c.menu.style.width)-12))+'px';const height=Math.min(320,innerHeight-24);c.menu.style.maxHeight=height+'px';c.menu.style.top=(innerHeight-r.bottom>=Math.min(c.menu.scrollHeight,height)+8?r.bottom+8:Math.max(12,r.top-Math.min(c.menu.scrollHeight,height)-8))+'px'}
+  function position(c){
+    const r=c.button.getBoundingClientRect(),margin=12,gap=8;
+    const width=Math.min(Math.max(r.width,220),innerWidth-margin*2);
+    c.menu.style.width=width+'px';
+    c.menu.style.left=Math.max(margin,Math.min(r.left,innerWidth-width-margin))+'px';
+    c.menu.style.maxHeight='none';
+    const naturalHeight=c.menu.scrollHeight+2;
+    const below=innerHeight-r.bottom-gap-margin,above=r.top-gap-margin;
+    let height=Math.min(naturalHeight,innerHeight-margin*2),top;
+    if(below>=naturalHeight)top=r.bottom+gap;
+    else if(above>=naturalHeight)top=r.top-gap-naturalHeight;
+    else top=Math.max(margin,Math.min(r.bottom+gap,innerHeight-margin-height));
+    c.menu.style.maxHeight=height+'px';
+    c.menu.style.top=top+'px';
+  }
   function open(c,index){if(c.select.disabled)return;close();opened=c;c.menu.hidden=false;c.button.setAttribute('aria-expanded','true');position(c);const options=[...c.menu.children];(options[index??Math.max(0,c.select.selectedIndex)]).focus()}
   document.querySelectorAll('[data-upload-language],#projectLanguageChoice').forEach((select,n)=>{
     const label=select.closest('.language-picker');

@@ -486,3 +486,6 @@ dialog.export-dialog{width:min(760px,calc(100% - 28px))}
 .language-menu-option[aria-selected=true]{background:#efb86f14;color:#efb86f}
 .language-menu-option[aria-selected=true]:after{content:'✓';float:left}
 @media(max-width:700px){.project-heading .actions .language-control{flex-basis:100%}.language-trigger{gap:8px}.language-trigger-label{font-size:13px}}
+
+.language-menu{box-sizing:border-box;scrollbar-width:thin}
+.language-menu-option{line-height:1.5}
