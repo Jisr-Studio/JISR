@@ -22,7 +22,7 @@ Built for the [AI Challenge for Serving Islamic Content](https://islamicaich.org
 
 A **1 minute 58 second** demonstration of Jisr’s idea and workflow.
 
-**[Watch or download the demo video · MP4](https://github.com/turki125/JISR/raw/refs/heads/main/docs/demo/jisr-demo-final.mp4)**
+**[Watch the demo video · MP4](https://github.com/user-attachments/assets/a2569ffe-c324-4445-b2de-aac9bffb91df)**
 
 ## The problem
 
