@@ -50,14 +50,14 @@ For detailed behavior, see the [review guide](docs/review-guide.md), [language a
 
 **Discover the idea → Upload → Transcribe and translate → Review sources → Export.**
 
-The first five screens introduce the workflow through animated, illustrative scenes. The final two show the interactive example editor, where creators can explore the tools before uploading their own video. These screenshots use the English demonstration; uploaded projects use the selected target language. The silent example video and its sample text are separate demonstration assets.
+The first five screens introduce the workflow through animated, illustrative scenes. The next two show the interactive example editor, where creators can explore the tools before uploading their own video. These screenshots use the English demonstration; uploaded projects use the selected target language. The silent example video and its sample text are separate demonstration assets. Additional screenshots show the appearance controls, source panel, and export menu. The export examples include an unreviewed project to show its warnings and preparation feedback; they are not evidence of approved content.
 
 ### 1. Introduction — share Arabic content across languages
 
 The landing page introduces Jisr's purpose: helping Arabic Islamic video content reach audiences in the selected language with visible quotation sources. Its arch motif uses an English example. Visitors choose **لغة الترجمة**, then select **ابدأ بفيديوك** to upload; the five tour scenes advance every eight seconds, with a pause control and support for reduced motion. Upload begins only when the visitor chooses the start button.
 
 <p align="center">
-  <img src="docs/previews/walkthrough/01-introduction.jpeg" alt="Jisr introduction with the Arabic-to-English bridge illustration" width="1000">
+  <img src="docs/previews/walkthrough/01-introduction.png" alt="Jisr introduction with the Arabic-to-English bridge illustration" width="1000">
 </p>
 <p align="center"><sub>Arabic-first landing page · Animated brand illustration · Direct upload action</sub></p>
 
@@ -66,7 +66,7 @@ The landing page introduces Jisr's purpose: helping Arabic Islamic video content
 The upload scene explains the starting point: choose a video and create a workspace without registering an account. It introduces the advertised MP4, MOV, and WebM formats and the 250 MB upload limit. The file card and progress line in this tour are explanatory animation; uploading begins when the visitor chooses a real file.
 
 <p align="center">
-  <img src="docs/previews/walkthrough/02-upload.jpeg" alt="Upload introduction showing a video file card, upload area, and supported formats" width="1000">
+  <img src="docs/previews/walkthrough/02-upload.png" alt="Upload introduction showing a video file card, upload area, and supported formats" width="1000">
 </p>
 <p align="center"><sub>Choose a video · No account required · One connected workspace</sub></p>
 
@@ -84,7 +84,7 @@ The translation scene shows how speech becomes Arabic text and an English draft 
 The review scene connects a spoken Quran excerpt to its reference and corresponding English translation. Creators compare the wording, inspect the source, and confirm the result themselves. Its sample confirmation is interactive within the tour and does not approve a real project. The current editor places **راجعت هذا المقطع** directly on each segment card.
 
 <p align="center">
-  <img src="docs/previews/walkthrough/04-source-review.jpeg" alt="Source-review introduction linking a Quran excerpt to its reference and translation" width="1000">
+  <img src="docs/previews/walkthrough/04-source-review.png" alt="Source-review introduction linking a Quran excerpt to its reference and translation" width="1000">
 </p>
 <p align="center"><sub>Quotation → Reference → Corresponding translation → Human confirmation</sub></p>
 
@@ -93,7 +93,7 @@ The review scene connects a spoken Quran excerpt to its reference and correspond
 The export scene introduces the finished video and subtitle-file outputs. Real projects support MP4 with embedded subtitles, timed SRT, and JSON reference lists. Private drafts retain review warnings; the public viewing link requires the review confirmations. Published source translations and machine drafts remain distinguishable throughout the workflow.
 
 <p align="center">
-  <img src="docs/previews/walkthrough/05-export.jpeg" alt="Export introduction with a subtitled video preview and MP4 and SRT output cards" width="1000">
+  <img src="docs/previews/walkthrough/05-export.png" alt="Export introduction with a subtitled video preview and MP4 and SRT output cards" width="1000">
 </p>
 <p align="center"><sub>Subtitled MP4 · Timed SRT · Reference JSON · Viewing link after review</sub></p>
 
@@ -106,6 +106,21 @@ The export menu makes **MP4 video** the primary choice, with **SRT subtitles** a
 3. **Download the ready file.** The panel shows the filename and file size, followed by a clear download button. After clicking, the user is directed to the browser’s Downloads to follow the transfer; the button remains available to download again.
 
 Failed preparation offers a retry, and an expired download link asks the user to prepare the file again. Animations respect reduced-motion preferences. Project edit-link and deletion controls are grouped in a separate expandable section to keep the download choices easy to scan.
+
+<details>
+<summary>View the export menu and rendering feedback</summary>
+
+<p align="center">
+  <img src="docs/previews/walkthrough/10-export-menu.png" alt="Export menu showing draft-review warnings, the main MP4 action, and SRT and JSON options" width="760">
+</p>
+<p align="center"><sub>MP4 as the primary action · Review warnings · Additional output formats</sub></p>
+
+<p align="center">
+  <img src="docs/previews/walkthrough/11-export-preparation.png" alt="MP4 preparation with an animated activity indicator, export phases, elapsed time, and review warnings" width="760">
+</p>
+<p align="center"><sub>Preparation status · Elapsed time · Review warnings remain visible</sub></p>
+
+</details>
 
 ### 6. The studio — preview, edit, and review together
 
@@ -122,6 +137,24 @@ The detailed view shows the numbered cue timeline and the **المراجعة**, 
   <img src="docs/previews/walkthrough/07-studio-detail.png" alt="Studio detail showing Arabic and English cues, source labels, playback controls, timeline, and review tools" width="1000">
 </p>
 <p align="center"><sub>Linked cues and playback · Source labels · Review, source, and appearance tools</sub></p>
+
+### 7. Subtitle appearance
+
+Adjust the Arabic quotation font, subtitle size, text color, backdrop, and whether Arabic quotations accompany the translation. The target-language font is selected automatically for script coverage. Real-project preview and MP4 use the same rendered subtitle images.
+
+<p align="center">
+  <img src="docs/previews/walkthrough/08-appearance.png" alt="Subtitle appearance panel with Arabic font selection, size, color swatches, backdrop, and bilingual controls" width="760">
+</p>
+<p align="center"><sub>Font and size · Text color · Backdrop · Arabic quotation visibility</sub></p>
+
+### 8. Sources and quotations
+
+The source panel gathers Quran and Hadith references beside their cue times. Open a card to inspect its details and compare the quotation with the source. The screenshot uses the illustrative demo references; actual projects display the references retrieved for their own content.
+
+<p align="center">
+  <img src="docs/previews/walkthrough/09-sources.png" alt="Source panel showing timed Quran and Hadith example cards and reference-detail actions" width="760">
+</p>
+<p align="center"><sub>Timed quotation cards · Reference identity · Source details</sub></p>
 
 ## 🎨 Design system
 
