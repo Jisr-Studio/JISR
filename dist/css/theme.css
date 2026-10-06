@@ -75,3 +75,18 @@ html[data-theme=light] .arch-stroke,html[data-theme=light] .arch-bar{stroke:#dfb
 html[data-theme=light] .journey-rail button:before{background:#7889a1}
 html[data-theme=light] .workflow .step:not(.done):not(.current) b{background:#4c5b72;color:#c4cede;border-color:#7a899f}
 html[data-theme=light] :is(.export-activity,.workflow-activity){background:#627187}
+/* Separate page, containers, and selected content with distinct slate depths. */
+html[data-theme=light]{--bg:#293446;--line:#526078}
+html[data-theme=light] body{background:#293446!important;background-image:radial-gradient(ellipse at 85% 0%,#3c4a6066,transparent 55%)!important}
+html[data-theme=light] .topbar{background:#232e3ff5!important;border-color:#46556d!important}
+html[data-theme=light] .project-heading{background:#344258!important;border-color:#526178!important;box-shadow:0 6px 18px #10172520}
+html[data-theme=light] :is(.panel,.transcript-panel,.reference-panel,.appearance-panel,.sources-panel,.review-tools,.tool-panel){background:#35445a!important;border-color:#526178!important;box-shadow:0 8px 24px #10172520}
+html[data-theme=light] .player-panel{background:#2e3b50!important}
+html[data-theme=light] :is(.segment,.segment-review-button){background:#303e53!important;border-color:#4d5e78!important}
+html[data-theme=light] .segment.current{background:#455771!important;border-inline-end-color:#efb86f!important}
+html[data-theme=light] :is(.reference-card,.settings,.review-summary,.stage-panel){background:#2d3a4f!important;border-color:#526178!important}
+html[data-theme=light] :is(.studio-tabs,.review-meter,.modal-note,.appearance-panel .modal-note){background:#29374b!important;border-color:#526178!important}
+html[data-theme=light] :is(.button.secondary,.icon-button,.edit,.count,.segment-time,.filters button,.timeline-cue,.clip-timeline button,.language-trigger){background:#3d4e66!important;border-color:#60718a!important}
+html[data-theme=light] :is(.language-menu,dialog,.modal-header){background:#303e53!important;border-color:#60718a!important}
+html[data-theme=light] :is(.export-status,.export-option,.export-extra,.export-file-summary){background:#3a4b63!important;border-color:#60718a!important}
+html[data-theme=light] .segment-review-button[aria-pressed=true]{background:#35584b!important;border-color:#789c8d!important}
