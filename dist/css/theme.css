@@ -1,53 +1,53 @@
 /* Theme affects the application chrome, never the uploaded media or export style. */
 #themeToggle{display:inline-grid!important;place-items:center;flex:none;width:36px;height:36px;font:22px/1 Arial,sans-serif}
-html[data-theme=light]{--ink:#1c2b40;--muted:#52637a;--teal:#98601b;--line:#d4dce6;--bg:#f7f8fb;color-scheme:light}
-html[data-theme=light] body{background:#f7f8fb!important;background-image:radial-gradient(ellipse at 85% 0%,#efe6d766,transparent 55%)!important;color:#1c2b40}
-html[data-theme=light] :is(.topbar,.landing,.onboarding,.tour-faq){background:transparent!important;border-color:#d4dce6!important}
-html[data-theme=light] .topbar{background:#ffffffed!important}
+html[data-theme=light]{--ink:#1c2b40;--muted:#52637a;--teal:#98601b;--line:#b8c5d6;--bg:#dce3ed;color-scheme:light}
+html[data-theme=light] body{background:#dce3ed!important;background-image:radial-gradient(ellipse at 85% 0%,#c9d4e566,transparent 55%)!important;color:#1c2b40}
+html[data-theme=light] :is(.topbar,.landing,.onboarding,.tour-faq){background:transparent!important;border-color:#b8c5d6!important}
+html[data-theme=light] .topbar{background:#d5ddea!important}
 html[data-theme=light] :is(.brand,.brand small,.journey-title,.studio-intro p,.section-heading h2,.journey-copy p,.journey-counter,.panel-heading h2,.reference-card h3,.review-summary b,.appearance-panel h2,.sources-panel h2,.modal-header h2){color:#1c2b40!important}
 html[data-theme=light] :is(.topbar nav button,.demo-pill,.journey-copy>p,.scene-caption-note,.scene-corner,.journey-back,.journey-demo,.journey-rail button,.journey-counter span,.eyebrow,.project-heading p,.step,.workflow-note,.panel-heading p,.preview-note,.review-message,.source-disclaimer,.review-summary p,.reference-intro,.ref-time,.page-footer,.modal-note,.settings label,.review-meter,.processing-meta,.processing-time){color:#52637a!important}
 html[data-theme=light] :is(a,.text-button,.landing-start,.journey-label,.journey-eyebrow,.journey-feature,.direction-arrow,.journey-rail button[aria-selected=true],.topbar nav .nav-active){color:#98601b!important}
-html[data-theme=light] :is(.project-heading,.transcript-panel,.preview-panel,.reference-panel,.appearance-panel,.sources-panel,.review-panel,.review-summary,.settings,.reference-card,.stage-panel,.source-list,dialog,.modal-header,.tour-faq article){background:#fff!important;border-color:#d4dce6!important;color:#1c2b40}
+html[data-theme=light] :is(.project-heading,.transcript-panel,.preview-panel,.reference-panel,.appearance-panel,.sources-panel,.review-panel,.review-summary,.settings,.reference-card,.stage-panel,.source-list,dialog,.modal-header,.tour-faq article){background:#e3e9f1!important;border-color:#b8c5d6!important;color:#1c2b40}
 html[data-theme=light] :is(.segment,.segment-body,.segment .ar,.segment p.en,.segment .translation){color:#1c2b40!important}
-html[data-theme=light] .segment{background:#fff!important;border-color:#d4dce6!important}
-html[data-theme=light] .segment.current{background:#eef2f8!important;border-inline-end-color:#c38b42!important}
-html[data-theme=light] :is(.button.secondary,.icon-button,.edit,.count,.segment-time,.filters button,.tools-tabs,.settings-tabs,.demo-pill,.timeline-cue,.clip-timeline button){background:#edf1f6!important;color:#34465f!important;border-color:#cad4e1!important}
+html[data-theme=light] .segment{background:#e3e9f1!important;border-color:#b8c5d6!important}
+html[data-theme=light] .segment.current{background:#ccd8e9!important;border-inline-end-color:#c38b42!important}
+html[data-theme=light] :is(.button.secondary,.icon-button,.edit,.count,.segment-time,.filters button,.tools-tabs,.settings-tabs,.demo-pill,.timeline-cue,.clip-timeline button){background:#cbd6e5!important;color:#34465f!important;border-color:#cad4e1!important}
 html[data-theme=light] :is(.button.primary,.export-download){background:#efb86f!important;color:#1c2b40!important;border-color:#d79d54!important}
-html[data-theme=light] :is(input:not([type=range]):not([type=color]):not([type=checkbox]),select,textarea){background:#f6f8fb!important;color:#1c2b40!important;border-color:#b8c6d8!important}
-html[data-theme=light] :is(.language-trigger,.language-menu){background:#fff!important;color:#1c2b40!important;border-color:#bac7d8!important}
+html[data-theme=light] :is(input:not([type=range]):not([type=color]):not([type=checkbox]),select,textarea){background:#d8e1ed!important;color:#1c2b40!important;border-color:#b8c6d8!important}
+html[data-theme=light] :is(.language-trigger,.language-menu){background:#e3e9f1!important;color:#1c2b40!important;border-color:#bac7d8!important}
 html[data-theme=light] :is(.language-trigger-label,.language-trigger-arrow){color:#52637a!important}
 html[data-theme=light] .language-menu-option{color:#1c2b40}
-html[data-theme=light] :is(.language-menu-option:hover,.language-menu-option:focus-visible){background:#edf1f6}
-html[data-theme=light] .language-menu-option[aria-selected=true]{background:#fff1dc;color:#865218}
-html[data-theme=light] .segment-review-button{background:#f8fafc;color:#41536d;border-color:#a9b8cb}
-html[data-theme=light] .segment-review-button[aria-pressed=true]{background:#e8f4ed;color:#28614c;border-color:#76a78e}
-html[data-theme=light] :is(.tag,.tag.review,.export-warnings){background:#fff1dc!important;color:#805019!important;border-color:#dec096!important}
-html[data-theme=light] :is(.tag.quran,.review-source){background:#f0ebf8!important;color:#624781!important;border-color:#cec0df!important}
+html[data-theme=light] :is(.language-menu-option:hover,.language-menu-option:focus-visible){background:#cbd6e5}
+html[data-theme=light] .language-menu-option[aria-selected=true]{background:#e5d5ba;color:#865218}
+html[data-theme=light] .segment-review-button{background:#dde5ef;color:#41536d;border-color:#a9b8cb}
+html[data-theme=light] .segment-review-button[aria-pressed=true]{background:#d2e4db;color:#28614c;border-color:#76a78e}
+html[data-theme=light] :is(.tag,.tag.review,.export-warnings){background:#e5d5ba!important;color:#805019!important;border-color:#dec096!important}
+html[data-theme=light] :is(.tag.quran,.review-source){background:#dad4e6!important;color:#624781!important;border-color:#cec0df!important}
 html[data-theme=light] :is(.tag.hadith,.authentic){background:#e6f1ec!important;color:#28614c!important}
-html[data-theme=light] :is(.motion-scene,.journey-art){background:radial-gradient(ellipse at 50% 40%,#f4eadb,#f5f7fb 70%)!important;border-color:#d4dce6!important}
-html[data-theme=light] :is(.language-card,.upload-file,.upload-drop,.translation-board,.review-excerpt,.export-player,.export-file){background:#fff!important;color:#1c2b40!important;border-color:#b9c7d8!important;box-shadow:0 12px 30px #23334b0d}
+html[data-theme=light] :is(.motion-scene,.journey-art){background:radial-gradient(ellipse at 50% 40%,#d9d3c8,#d5deeb 70%)!important;border-color:#b8c5d6!important}
+html[data-theme=light] :is(.language-card,.upload-file,.upload-drop,.translation-board,.review-excerpt,.export-player,.export-file){background:#e3e9f1!important;color:#1c2b40!important;border-color:#b9c7d8!important;box-shadow:0 12px 30px #23334b0d}
 html[data-theme=light] :is(.language-card strong,.language-card small,.bridge-core,.upload-file strong,.upload-file small,.upload-drop strong,.upload-drop small,.translation-line p,.translation-line small,.motion-window-heading,.word-timings,.review-source h3,.review-source>p,.review-source>small,.review-excerpt p,.review-feedback,.source-heading,.export-file strong,.export-file small,.export-player-top,.export-player-track,.upload-formats span,.translation-badge,.orbit-note,.share-link){color:#34465f!important}
-html[data-theme=light] :is(.translation-badge,.orbit-note,.share-link,.confirm-example){background:#fff3e0!important;color:#865218!important;border-color:#dec096!important}
-html[data-theme=light] :is(.word-timings,.audio-wave,.export-player-top,.export-player-track){background:#eef2f7!important;border-color:#d4dce6!important}
-html[data-theme=light] :is(.export-status,.export-option,.export-extra,.export-file-summary){background:#f3f6fa!important;color:#1c2b40!important;border-color:#c4cfde!important}
-html[data-theme=light] .export-video{background:linear-gradient(135deg,#fff2dc,#f3f6fa)!important;border-color:#c38b42!important}
+html[data-theme=light] :is(.translation-badge,.orbit-note,.share-link,.confirm-example){background:#e4d7c3!important;color:#865218!important;border-color:#dec096!important}
+html[data-theme=light] :is(.word-timings,.audio-wave,.export-player-top,.export-player-track){background:#cdd8e6!important;border-color:#b8c5d6!important}
+html[data-theme=light] :is(.export-status,.export-option,.export-extra,.export-file-summary){background:#d5dfec!important;color:#1c2b40!important;border-color:#c4cfde!important}
+html[data-theme=light] .export-video{background:linear-gradient(135deg,#e6d7bd,#d5dfec)!important;border-color:#c38b42!important}
 html[data-theme=light] :is(.export-option b,.export-status h3,.export-section-title){color:#1c2b40!important}
 html[data-theme=light] :is(.export-option>span:not(.export-format),.export-status p,.export-status small,.export-extra summary,.export-phases,.export-file-summary){color:#52637a!important}
 html[data-theme=light] :is(.export-format,.export-video strong,.export-phases span[aria-current=step]){color:#865218!important}
-html[data-theme=light] .export-status[data-state=ready]{background:#eaf5ef!important}
+html[data-theme=light] .export-status[data-state=ready]{background:#d2e4db!important}
 html[data-theme=light] .export-state-icon{color:#28614c;border-color:#76a78e}
-html[data-theme=light] .export-sharing{border-color:#d4dce6}
+html[data-theme=light] .export-sharing{border-color:#b8c5d6}
 html[data-theme=light] .journey-rail button:before{background:#c9d3e1}
 html[data-theme=light] .workflow .step:not(.done):not(.current) b{background:#e1e7f0;color:#52637a;border-color:#bac7d8}
 html[data-theme=light] :is(.export-activity,.workflow-activity){background:#d8e1ed}
 html[data-theme=light] #toast{background:#1c2b40;color:#fff}
 @media(max-width:600px){#themeToggle{width:32px;height:32px}.top-end{gap:8px}}
-html[data-theme=light] :is(.panel,.review-tools,.tool-panel){background:#fff!important;border-color:#d4dce6!important;color:#1c2b40!important}
+html[data-theme=light] :is(.panel,.review-tools,.tool-panel){background:#e3e9f1!important;border-color:#b8c5d6!important;color:#1c2b40!important}
 html[data-theme=light] :is(.panel-heading h2,.review-tools h2,.settings summary,.setting-row label,.size-label,.reset,.reference-card p,.reference-card footer,.source-list dd,.source-list dt){color:#34465f!important}
-html[data-theme=light] .studio-tabs{background:#edf1f6!important;border-color:#d4dce6!important}
+html[data-theme=light] .studio-tabs{background:#cbd6e5!important;border-color:#b8c5d6!important}
 html[data-theme=light] .studio-tabs button{color:#52637a!important}
-html[data-theme=light] .studio-tabs button[aria-selected=true]{background:#fff!important;color:#98601b!important}
-html[data-theme=light] :is(.review-meter,.modal-note,.appearance-panel .modal-note){background:#eef2f7!important;border-color:#d4dce6!important;color:#52637a!important}
+html[data-theme=light] .studio-tabs button[aria-selected=true]{background:#e3e9f1!important;color:#98601b!important}
+html[data-theme=light] :is(.review-meter,.modal-note,.appearance-panel .modal-note){background:#cdd8e6!important;border-color:#b8c5d6!important;color:#52637a!important}
 html[data-theme=light] :is(.scene-caption-note,.journey-utility #motionToggle){color:#52637a!important}
 html[data-theme=light] .arch-stroke{stroke:#a57839!important}
 html[data-theme=light] .arch-bar{stroke:#a57839!important}

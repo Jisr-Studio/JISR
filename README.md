@@ -163,7 +163,7 @@ The source panel gathers Quran and Hadith references beside their cue times. Ope
 
 ## 🎨 Design system
 
-Jisr offers a dark navy theme and a white theme, both with warm gold accents. The header theme switch remembers the visitor’s choice. Navy provides a consistent background for the video and editing workspace; gold highlights primary actions, the active workflow step, and selected controls. Light text and distinct panel borders keep content readable. The interface supports RTL Arabic/Urdu and LTR text in the other target languages, with bundled script fonts.
+Jisr offers a dark navy theme and a softer blue-gray light theme, both with warm gold accents. The header theme switch remembers the visitor’s choice. Navy provides a consistent background for the video and editing workspace; gold highlights primary actions, the active workflow step, and selected controls. Light text and distinct panel borders keep content readable. The interface supports RTL Arabic/Urdu and LTR text in the other target languages, with bundled script fonts.
 
 | Preview | Color | Hex | Purpose |
 |---|---|---|---|
