@@ -11,6 +11,13 @@
   let current = 0;
   let paused = motion.matches;
   let touchStart = null;
+  let autoTimer = null;
+  let interacting = false;
+  function scheduleAdvance() {
+    clearTimeout(autoTimer);
+    if (paused || motion.matches || document.hidden || interacting || document.querySelector('#landing').hidden || !document.querySelector('#questions').hidden) return;
+    autoTimer = setTimeout(() => showStep((current + 1) % slides.length, false, true), 8000);
+  }
   function updateMotion() {
     tour.classList.toggle('motion-paused', paused || document.hidden || document.querySelector('#landing').hidden);
     tour.classList.toggle('motion-reduced', motion.matches);
@@ -19,6 +26,7 @@
     toggle.disabled = motion.matches;
     replay.disabled = motion.matches;
     if (motion.matches) toggle.innerHTML = '<span aria-hidden="true">◇</span> حركة مخففة';
+    scheduleAdvance();
   }
 
   function resetReview() {
@@ -36,7 +44,7 @@
     if (current === 3) resetReview();
   }
 
-  function showStep(index, focus = true) {
+  function showStep(index, focus = true, automatic = false) {
     if (index < 0 || index >= slides.length) return;
     const previous = current;
     current = index;
@@ -55,10 +63,16 @@
     if (current === 3) resetReview();
     if (previous === current) restartScene();
     if (focus) slides[current].querySelector('.journey-title').focus({preventScroll: true});
-    if (tour.getBoundingClientRect().top < 0) {
+    if (!automatic && tour.getBoundingClientRect().top < 0) {
       tour.scrollIntoView({behavior: motion.matches ? 'instant' : 'smooth', block: 'start'});
     }
+    scheduleAdvance();
   }
+
+  tour.addEventListener('pointerenter', () => { interacting = true; scheduleAdvance(); });
+  tour.addEventListener('pointerleave', () => { interacting = tour.contains(document.activeElement); scheduleAdvance(); });
+  tour.addEventListener('focusin', () => { interacting = true; scheduleAdvance(); });
+  tour.addEventListener('focusout', () => { setTimeout(() => { interacting = tour.matches(':hover') || tour.contains(document.activeElement); scheduleAdvance(); }, 0); });
 
   next.onclick = () => {
     document.querySelector('#fileInput').click();
@@ -77,7 +91,7 @@
     };
   });
   toggle.onclick = () => { paused = !paused; updateMotion(); };
-  replay.onclick = restartScene;
+  replay.onclick = () => { restartScene(); scheduleAdvance(); };
   motion.addEventListener('change', () => { paused = motion.matches; updateMotion(); });
   document.addEventListener('visibilitychange', updateMotion);
   new MutationObserver(updateMotion).observe(document.querySelector('#landing'), {attributes: true, attributeFilter: ['hidden']});
