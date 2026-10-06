@@ -12,11 +12,13 @@
   let paused = motion.matches;
   let touchStart = null;
   let autoTimer = null;
-  let interacting = false;
   function scheduleAdvance() {
     clearTimeout(autoTimer);
-    if (paused || motion.matches || document.hidden || interacting || document.querySelector('#landing').hidden || !document.querySelector('#questions').hidden) return;
-    autoTimer = setTimeout(() => showStep((current + 1) % slides.length, false, true), 8000);
+    if (paused || motion.matches || document.hidden || document.querySelector('#landing').hidden || !document.querySelector('#questions').hidden) return;
+    autoTimer = setTimeout(() => {
+      if (tour.querySelector('.language-trigger[aria-expanded="true"]')) { scheduleAdvance(); return; }
+      showStep((current + 1) % slides.length, false, true);
+    }, 8000);
   }
   function updateMotion() {
     tour.classList.toggle('motion-paused', paused || document.hidden || document.querySelector('#landing').hidden);
@@ -68,11 +70,6 @@
     }
     scheduleAdvance();
   }
-
-  tour.addEventListener('pointerenter', () => { interacting = true; scheduleAdvance(); });
-  tour.addEventListener('pointerleave', () => { interacting = tour.contains(document.activeElement); scheduleAdvance(); });
-  tour.addEventListener('focusin', () => { interacting = true; scheduleAdvance(); });
-  tour.addEventListener('focusout', () => { setTimeout(() => { interacting = tour.matches(':hover') || tour.contains(document.activeElement); scheduleAdvance(); }, 0); });
 
   next.onclick = () => {
     document.querySelector('#fileInput').click();

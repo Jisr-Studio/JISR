@@ -50,7 +50,7 @@ The first five screens introduce the workflow through animated, illustrative sce
 
 ### 1. Introduction — a bridge from Arabic to English
 
-The landing page introduces Jisr's purpose: helping Arabic Islamic video content reach audiences in the selected language with visible quotation sources. Its arch motif uses an English example. Visitors choose **لغة الترجمة**, then select **ابدأ بفيديوك** to upload; the five tour scenes advance every eight seconds, with pauses during interaction and support for reduced motion. Upload begins only when the visitor chooses the start button.
+The landing page introduces Jisr's purpose: helping Arabic Islamic video content reach audiences in the selected language with visible quotation sources. Its arch motif uses an English example. Visitors choose **لغة الترجمة**, then select **ابدأ بفيديوك** to upload; the five tour scenes advance every eight seconds, with a pause control and support for reduced motion. Upload begins only when the visitor chooses the start button.
 
 <p align="center">
   <img src="docs/previews/walkthrough/01-introduction.jpeg" alt="Jisr introduction with the Arabic-to-English bridge illustration" width="1000">
