@@ -1,4 +1,4 @@
-# Jisr · جسر
+# JISR · جسر
 
 <p align="center">
   <img src="https://img.shields.io/badge/HTML5-E34F26?style=for-the-badge&amp;logo=html5&amp;logoColor=white" alt="HTML5">
