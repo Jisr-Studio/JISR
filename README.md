@@ -93,6 +93,16 @@ The export scene introduces the finished video and subtitle-file outputs. Real p
 </p>
 <p align="center"><sub>Subtitled MP4 · Timed SRT · Reference JSON · Viewing link after review</sub></p>
 
+#### Export menu and download feedback
+
+The export menu makes **MP4 video** the primary choice, with **SRT subtitles** and **confirmed reference JSON** as separate options. Draft references sit in an expandable section, while public sharing has its own review requirements.
+
+1. **Choose an output.** MP4 uses the selected subtitle appearance and preserves the original audio.
+2. **Follow preparation.** An animated status panel shows that rendering is underway and displays elapsed time. It does not invent a completion percentage, and export choices are disabled while preparation runs.
+3. **Download the ready file.** The panel shows the filename and file size, followed by a clear download button. After clicking, the user is directed to the browser’s Downloads to follow the transfer; the button remains available to download again.
+
+Failed preparation offers a retry, and an expired download link asks the user to prepare the file again. Animations respect reduced-motion preferences. Project edit-link and deletion controls are grouped in a separate expandable section to keep the download choices easy to scan.
+
 ### 6. The studio — preview, edit, and review together
 
 The studio brings the project title, workflow stages, video preview, and segment list into one view. Arabic text and English translations appear together; filters help creators find Quran, Hadith, and segments needing review. Selecting a segment seeks to its position in the video, making it easier to compare the subtitle with what was spoken.
