@@ -51,3 +51,27 @@ html[data-theme=light] :is(.review-meter,.modal-note,.appearance-panel .modal-no
 html[data-theme=light] :is(.scene-caption-note,.journey-utility #motionToggle){color:#52637a!important}
 html[data-theme=light] .arch-stroke{stroke:#a57839!important}
 html[data-theme=light] .arch-bar{stroke:#a57839!important}
+
+/* Dim slate alternative: lower luminance across page, panels and controls. */
+html[data-theme=light]{--ink:#e1e7ef;--muted:#b8c4d4;--line:#526178;--bg:#354154;--teal:#dfb77e;color-scheme:dark}
+html[data-theme=light] body{background:#354154!important;background-image:radial-gradient(ellipse at 85% 0%,#48566b66,transparent 55%)!important;color:#e1e7ef}
+html[data-theme=light] .topbar{background:#354154f2!important;border-color:#526178!important}
+html[data-theme=light] :is(.panel,.project-heading,.transcript-panel,.preview-panel,.reference-panel,.appearance-panel,.sources-panel,.review-panel,.review-tools,.tool-panel,.review-summary,.settings,.reference-card,.stage-panel,.source-list,dialog,.modal-header,.tour-faq article,.language-trigger,.language-menu,.language-card,.upload-file,.upload-drop,.translation-board,.review-excerpt,.export-player,.export-file){background:#414f63!important;border-color:#627187!important;color:#e1e7ef!important}
+html[data-theme=light] :is(.brand,.brand small,.journey-title,.studio-intro p,.section-heading h2,.journey-copy p,.journey-counter,.panel-heading h2,.reference-card h3,.review-summary b,.appearance-panel h2,.sources-panel h2,.modal-header h2,.segment,.segment-body,.segment .ar,.segment p.en,.segment .translation,.language-menu-option,.language-trigger-value,.export-option b,.export-status h3,.export-section-title,.review-tools h2,.settings summary,.setting-row label,.size-label,.reference-card p,.source-list dd,.source-list dt){color:#e1e7ef!important}
+html[data-theme=light] :is(.topbar nav button,.demo-pill,.scene-caption-note,.scene-corner,.journey-back,.journey-demo,.journey-rail button,.journey-counter span,.eyebrow,.project-heading p,.step,.workflow-note,.panel-heading p,.preview-note,.review-message,.source-disclaimer,.review-summary p,.reference-intro,.ref-time,.page-footer,.modal-note,.settings label,.review-meter,.processing-meta,.processing-time,.language-trigger-label,.language-trigger-arrow,.export-option>span:not(.export-format),.export-status p,.export-status small,.export-extra summary,.export-phases,.export-file-summary,.reference-card footer,.reset,.language-card strong,.language-card small,.upload-file strong,.upload-file small,.upload-drop strong,.upload-drop small,.translation-line p,.translation-line small,.motion-window-heading,.word-timings,.review-source h3,.review-source>p,.review-source>small,.review-excerpt p,.review-feedback,.source-heading,.export-file strong,.export-file small,.export-player-top,.export-player-track,.upload-formats span){color:#bdc9d9!important}
+html[data-theme=light] :is(a,.text-button,.landing-start,.journey-label,.journey-eyebrow,.journey-feature,.direction-arrow,.journey-rail button[aria-selected=true],.topbar nav .nav-active,.export-format,.export-video strong,.export-phases span[aria-current=step]){color:#dfb77e!important}
+html[data-theme=light] .segment{background:#414f63!important;border-color:#627187!important}
+html[data-theme=light] .segment.current{background:#4c5d75!important}
+html[data-theme=light] :is(.button.secondary,.icon-button,.edit,.count,.segment-time,.filters button,.tools-tabs,.settings-tabs,.demo-pill,.timeline-cue,.clip-timeline button,.studio-tabs,.word-timings,.audio-wave,.export-player-top,.export-player-track,.review-meter,.modal-note,.appearance-panel .modal-note,.export-status,.export-option,.export-extra,.export-file-summary){background:#46566d!important;color:#d2dce9!important;border-color:#627187!important}
+html[data-theme=light] :is(input:not([type=range]):not([type=color]):not([type=checkbox]),select,textarea){background:#38465b!important;color:#e1e7ef!important;border-color:#728199!important}
+html[data-theme=light] :is(.language-menu-option:hover,.language-menu-option:focus-visible,.studio-tabs button[aria-selected=true]){background:#52647e!important;color:#e1e7ef!important}
+html[data-theme=light] :is(.language-menu-option[aria-selected=true],.tag,.tag.review,.export-warnings,.translation-badge,.orbit-note,.share-link,.confirm-example){background:#594f40!important;color:#edc995!important;border-color:#927750!important}
+html[data-theme=light] :is(.tag.quran,.review-source){background:#524c66!important;color:#d9c6eb!important;border-color:#807294!important}
+html[data-theme=light] :is(.tag.hadith,.authentic,.segment-review-button[aria-pressed=true],.export-status[data-state=ready]){background:#3a5b50!important;color:#cee6d9!important;border-color:#789c8d!important}
+html[data-theme=light] .segment-review-button{background:#414f63;color:#d2dce9;border-color:#8190a5}
+html[data-theme=light] .export-video{background:linear-gradient(135deg,#5a5144,#46566d)!important;border-color:#bd975f!important}
+html[data-theme=light] :is(.motion-scene,.journey-art){background:radial-gradient(ellipse at 50% 40%,#55574f,#3e4c61 70%)!important;border-color:#627187!important}
+html[data-theme=light] .arch-stroke,html[data-theme=light] .arch-bar{stroke:#dfb77e!important}
+html[data-theme=light] .journey-rail button:before{background:#7889a1}
+html[data-theme=light] .workflow .step:not(.done):not(.current) b{background:#4c5b72;color:#c4cede;border-color:#7a899f}
+html[data-theme=light] :is(.export-activity,.workflow-activity){background:#627187}
