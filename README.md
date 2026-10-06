@@ -1,5 +1,13 @@
 # جسر · Jisr
 
+![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=flat&logo=html5&logoColor=white)
+![CSS3](https://img.shields.io/badge/CSS3-1572B6?style=flat&logo=css&logoColor=white)
+![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=flat&logo=javascript&logoColor=black)
+![Python](https://img.shields.io/badge/Python-3776AB?style=flat&logo=python&logoColor=white)
+![SQLite](https://img.shields.io/badge/SQLite-003B57?style=flat&logo=sqlite&logoColor=white)
+![FFmpeg](https://img.shields.io/badge/FFmpeg-007808?style=flat&logo=ffmpeg&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat&logo=docker&logoColor=white)
+
 **Smart studio for translating Arabic Islamic videos into English, with documented Quranic and Hadith citations.**  
 منصة ذكية لترجمة الفيديو الإسلامي وتوثيق الآيات القرآنية والأحاديث النبوية.
 
@@ -21,6 +29,27 @@ Python tests and desktop/mobile browser checks for onboarding, appearance,
 upload, review and native MP4 download.
 
 ![Jisr translation studio — desktop preview](docs/previews/studio-desktop.png)
+
+## Theme, colors, and logo
+
+Jisr uses a dark navy theme with warm gold accents. Navy provides a consistent background for the video and editing workspace; gold highlights primary actions, the active workflow step, and selected controls. Light text and distinct panel borders keep content readable. The interface supports right-to-left Arabic alongside left-to-right English translations.
+
+| Color | Hex | Use |
+|---|---|---|
+| Deep navy | `#101725` | Main website background |
+| Slate navy | `#1A2436` | Project panels and layered surfaces |
+| Warm gold | `#EFB86F` | Primary actions, progress, and focus indicators |
+| Soft white | `#EDF0F7` | Main interface text |
+| Muted blue-gray | `#929CB1` | Supporting text |
+| Slate border | `#303B51` | Panel borders and separators |
+
+<img src="dist/favicon.svg" alt="Jisr arch logo" width="64" height="64">
+
+The logo is an arch-shaped mark with two horizontal strokes, reflecting Jisr's name, **جسر** (bridge), and its connection between Arabic content and English-speaking audiences. Its rounded navy tile uses `#202C46`, the arch uses ivory `#F5F3ED`, and the lower stroke uses gold `#EEB66B`. The same mark appears in the header and browser favicon.
+
+**Typography:** IBM Plex Sans Arabic for interface text and controls; Amiri for expressive Arabic headings. Motion illustrates the workflow and responds to processing activity, with reduced-motion support.
+
+**Technology:** the frontend uses HTML, CSS, and vanilla JavaScript; the backend uses Python's standard-library HTTP server and SQLite. FFmpeg handles media and subtitle rendering, and Docker packages the application for deployment.
 
 ## The problem
 
