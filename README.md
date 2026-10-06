@@ -10,37 +10,41 @@
   <img src="https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&amp;logo=docker&amp;logoColor=white" alt="Docker">
 </p>
 
-**Smart studio for translating Arabic Islamic videos into seven target languages, with documented Quranic and Hadith citations.**  
-منصة ذكية لترجمة الفيديو الإسلامي وتوثيق الآيات القرآنية والأحاديث النبوية.
+**An Arabic-first studio for translating Islamic videos into seven languages, with traceable Quran and Hadith references.**
 
-> Built for the [AI Challenge for Serving Islamic Content](https://islamicaich.org/), October 2026.  
-> Jisr is an AI-assisted tool. Private SRT/MP4 drafts can be exported with a review warning. Every matched Quranic or Hadith citation requires human confirmation before sharing through a public viewing link.
+منصة لترجمة الفيديو الإسلامي، ومراجعة النصوص، وتوثيق الاقتباسات في مساحة عمل واحدة.
 
-**Current status:** The local application integrates **ElevenLabs Scribe v2** for transcription and **OpenAI GPT-6 Luna** for translation, quotation detection, terminology review, independent meaning checks, and source-excerpt alignment. Six real Arabic videos were processed and exported locally with the actual providers. Expert content review and deployment verification of the current release remain necessary before launch. See the [October 5 verification](docs/verification-2026-10-05.md).
+**[Try the live demo](https://jisr-3ue4.onrender.com/) · [Explore the workflow](#how-it-works) · [Run locally](#run-locally)**
 
-The [October 6 product check](docs/verification-2026-10-06.md) verified fresh
-local processing, eight current-renderer MP4 exports, browser downloads and a
-fresh MP4/SRT workflow on the existing Render host. Automatic Hadith matching
-now rejects punctuation-only attribution values. The hosted version is older
-than the local release; publish the current fixes before demonstrating its
-latest subtitle appearance. Fast cues and unsourced Hadith English remain
-explicit human-review tasks.
+Built for the [AI Challenge for Serving Islamic Content](https://islamicaich.org/), October 2026.
 
-The [October 4 verification](docs/verification-2026-10-04.md) records 111 passing
-Python tests and desktop/mobile browser checks for onboarding, appearance,
-upload, review and native MP4 download.
+## The problem
 
-## Translation languages
+Sharing an Arabic Islamic video with a wider audience involves more than translating its words. Creators must transcribe speech, time subtitles, preserve religious terminology, check quoted verses and Hadith, and prepare the final video. Moving between separate tools makes the text, timing, and references harder to review together.
 
-Choose **لغة الترجمة** beside the upload control before selecting a video. No upload language is selected by default; choosing one is required: English (`en`), Spanish (`es`), Urdu (`ur`, RTL), Hindi (`hi`), Indonesian (`id`), Simplified Chinese (`zh-Hans`) or Turkish (`tr`). The saved project keeps its language when reopened. The editor remains Arabic.
+Jisr brings these tasks into one Arabic workspace for content creators and editors. Viewers receive translated subtitles; editors retain control of the wording and its sources.
 
-To change a processed project, choose a different project language and click **إعادة الترجمة**, then confirm. This reuses the Arabic transcription and word timestamps, preserves the Arabic reference identity, saves the previous edits in a private language history, and clears translation approval/selections/custom source captions. It does not call ElevenLabs again. The configured translation provider handles speech, terminology, meaning review and exact source-excerpt alignment in the selected language.
+## What makes Jisr useful
 
-Published Quran/Hadith translations are fetched in that language; absent or failed source responses show **لا تتوفر ترجمة موثقة بهذه اللغة**. A speech draft never becomes a sourced translation or silently falls back to English. Matching Arabic and human acceptance remain separate from translation availability. An editor can review an explicitly labelled alternative; this does not turn it into a published source translation.
+- **References beside the quotation:** inspect matched Arabic source text and available published translations without leaving the editor.
+- **Clear translation provenance:** published source translations, machine drafts, and editor alternatives remain distinguishable. Missing translations are identified explicitly.
+- **Human review before public sharing:** edit text and timing, inspect uncertain segments, and confirm the required checks before creating a public viewing link.
+- **Seven target languages:** English, Spanish, Urdu, Hindi, Indonesian, Simplified Chinese, and Turkish, with script-specific fonts and RTL support for Urdu.
+- **A connected editing and export workflow:** synchronize segment selection with playback, customize subtitles, and download MP4, SRT, or reference JSON.
 
-[Language/source coverage](docs/languages.md) documents verified provider codes, selected Quran books, per-record availability, Chinese script mapping and font licenses. The seven-language source catalog/sample check used free public APIs; AI tests use mocks. No paid multilingual model trial has been performed.
+Jisr assists translation and source review. It does not independently approve religious content or guarantee translation accuracy.
 
-Preview and MP4 use the same shaped subtitle images, script fonts, fitted size and timing. SRT carries Unicode and timing; its appearance depends on the subtitle player. Language is included in quality hashes, source caches, preview images, MP4 manifests and download filenames. Legacy projects migrate to English with their texts, manual changes and reviews retained.
+## How it works
+
+1. **Choose a language and upload.** Language selection is required before choosing a video. No account is needed; a private edit link lets the creator return to the project.
+2. **Transcribe and translate.** ElevenLabs Scribe v2 supplies Arabic word timestamps. OpenAI GPT-6 Luna drafts translations and assists with quotation detection, terminology, and meaning checks.
+3. **Retrieve references.** Quranpedia, Dorar, and HadeethEnc provide source text and available published translations; Al-Jamhara supports terminology review.
+4. **Review and edit.** Compare speech, text, timing, and source details. Confirm each segment and resolve the required citation checks.
+5. **Export and share.** Download subtitled MP4, timed SRT, or confirmed references as JSON. Private drafts retain warnings; public viewing links require completed review.
+
+Changing a processed project's language requires explicit confirmation. Retranslation reuses the Arabic transcription and timestamps, retains the Arabic reference identity, archives previous edits privately, and resets translation approvals and language-specific selections.
+
+For detailed behavior, see the [review guide](docs/review-guide.md), [language and source coverage](docs/languages.md), and [export rendering guide](docs/export-rendering.md).
 
 ## 🖥️ Interface walkthrough
 
@@ -48,7 +52,7 @@ Preview and MP4 use the same shaped subtitle images, script fonts, fitted size a
 
 The first five screens introduce the workflow through animated, illustrative scenes. The final two show the interactive example editor, where creators can explore the tools before uploading their own video. These screenshots use the English demonstration; uploaded projects use the selected target language. The silent example video and its sample text are separate demonstration assets.
 
-### 1. Introduction — a bridge from Arabic to English
+### 1. Introduction — share Arabic content across languages
 
 The landing page introduces Jisr's purpose: helping Arabic Islamic video content reach audiences in the selected language with visible quotation sources. Its arch motif uses an English example. Visitors choose **لغة الترجمة**, then select **ابدأ بفيديوك** to upload; the five tour scenes advance every eight seconds, with a pause control and support for reduced motion. Upload begins only when the visitor chooses the start button.
 
@@ -98,14 +102,14 @@ The export scene introduces the finished video and subtitle-file outputs. Real p
 The export menu makes **MP4 video** the primary choice, with **SRT subtitles** and **confirmed reference JSON** as separate options. Draft references sit in an expandable section, while public sharing has its own review requirements.
 
 1. **Choose an output.** MP4 uses the selected subtitle appearance and preserves the original audio.
-2. **Follow preparation.** An animated status panel shows that rendering is underway and displays elapsed time. It does not invent a completion percentage, and export choices are disabled while preparation runs.
+2. **Follow preparation.** An animated status panel shows that rendering is underway and displays elapsed time. Export choices are disabled while preparation runs.
 3. **Download the ready file.** The panel shows the filename and file size, followed by a clear download button. After clicking, the user is directed to the browser’s Downloads to follow the transfer; the button remains available to download again.
 
 Failed preparation offers a retry, and an expired download link asks the user to prepare the file again. Animations respect reduced-motion preferences. Project edit-link and deletion controls are grouped in a separate expandable section to keep the download choices easy to scan.
 
 ### 6. The studio — preview, edit, and review together
 
-The studio brings the project title, workflow stages, video preview, and segment list into one view. Arabic text and English translations appear together; filters help creators find Quran, Hadith, and segments needing review. Selecting a segment seeks to its position in the video, making it easier to compare the subtitle with what was spoken.
+The studio brings the project title, workflow stages, video preview, and segment list into one view. The English example shows Arabic text beside its translation; filters help creators find Quran, Hadith, and segments needing review. Selecting a segment seeks to its position in the video, making it easier to compare the subtitle with what was spoken.
 
 <p align="center">
   <img src="docs/previews/walkthrough/06-studio-overview.png" alt="Jisr studio overview with project controls, workflow stages, transcript filters, and video preview" width="1000">
@@ -137,59 +141,11 @@ Jisr uses a dark navy theme with warm gold accents. Navy provides a consistent b
 
 <img src="dist/favicon.svg" alt="Jisr arch logo" width="64" height="64">
 
-The logo is an arch-shaped mark with two horizontal strokes, reflecting Jisr's name, **جسر** (bridge), and its connection between Arabic content and English-speaking audiences. Its rounded navy tile uses `#202C46`, the arch uses ivory `#F5F3ED`, and the lower stroke uses gold `#EEB66B`. The same mark appears in the header and browser favicon.
+The logo is an arch-shaped mark with two horizontal strokes, reflecting Jisr's name, **جسر** (bridge), and its connection between Arabic content and audiences across languages. Its rounded navy tile uses `#202C46`, the arch uses ivory `#F5F3ED`, and the lower stroke uses gold `#EEB66B`. The same mark appears in the header and browser favicon.
 
 **Typography:** IBM Plex Sans Arabic for interface text and controls; Amiri for expressive Arabic headings. Motion illustrates the workflow and responds to processing activity, with reduced-motion support.
 
 **Technology:** the frontend uses HTML, CSS, and vanilla JavaScript; the backend uses Python's standard-library HTTP server and SQLite. FFmpeg handles media and subtitle rendering, and Docker packages the application for deployment.
-
-## The problem
-
-Islamic organizations produce valuable Arabic videos, but reaching viewers in other languages requires transcription, subtitle timing, translation, and manual verification of every quoted verse or Hadith. Transcription errors can slip through, quotations can be translated as ordinary speech, and viewers may receive no traceable sources.
-
-## How it works
-
-1. **Upload** an Arabic video with a selected target language, or open the English interactive example.
-2. **Transcribe** with Scribe v2 word timestamps. Suspected audio gaps and uncertain speech are flagged for correction.
-3. **Translate** ordinary speech into the selected language with GPT-6 Luna. Word-range validation preserves the transcript and timing; a separate bounded check looks for meaning borrowed from neighboring cues, repetition, ambiguous transcription, and religious terminology errors. Al-Jamhara definitions guide translation of detected Islamic terms. Both automatic translation and its check remain drafts until human review.
-4. **Verify Quran quotations** against Quranpedia's Hafs text and attach the selected language's published meanings translation. The model does not generate canonical verse translations.
-5. **Verify Hadith quotations** against Dorar and search HadeethEnc for a matching translation. Connected quotation parts are retrieved together and keep one source identity. Short search anchors recover records missed by full queries. A unique complete match can be attached automatically; competing narrations appear for comparison. Explanation availability is separate from translation availability. Unverified target-language translations remain labelled drafts, independently of Arabic reference verification.
-
-Hadith retrieval prioritizes matching the spoken wording over filling metadata: a record with an unspecified narrator stays explicitly incomplete rather than being replaced by a different narration. Conditional wording and pronouns are checked separately from general fuzzy similarity. Long quotations also follow subtitle length limits; existing Arabic/target-language sentence clauses can be split locally when their counts agree, preserving every timed word and remaining unconfirmed. Otherwise, word-range translation repartitions them before group retrieval. Human edits and approvals are preserved.
-6. **Review** source Arabic and target-language text, timing, narrator, grading, attribution, and subtitle appearance. The editor displays matched Quran/Hadith wording from the reference and keeps the original transcript available for comparison. Saving that wording unchanged preserves the reference; changing quotation text invalidates the link and requires verification again.
-7. **Export** a subtitled MP4 or SRT draft with warnings, a JSON list of confirmed citations, or a separate private draft-source inventory with review states and suggestions. The confirmed list is empty before citations are accepted. Public read-only video links require every segment to be reviewed. Exporting a draft does not confirm its text or sources.
-
-For partial quotations, citation details retain the full source while subtitles use the corresponding Arabic and target-language excerpt. The model can select an exact substring from that language's published translation; it cannot invent a canonical translation or reuse an English span for another language. Uncertain published-text alignment requires manual selection before confirmation and public sharing. A private draft never substitutes an unresolved partial quotation with the full reference. Missing published translations use the explicitly labelled alternative policy described above.
-
-Source, translation, explanation, and search links are displayed separately. A Dorar direct link is used only when the published record matches the full text and attribution metadata. If no unique record can be resolved, the interface explicitly labels the search fallback.
-
-## Reviewing citations and subtitle source lines
-
-- **Canonical Arabic:** literal Quran/Hadith quotations use the matched source excerpt in the segment list, edit dialog, source cards, and Arabic video preview. When it differs from speech recognition, expand **التفريغ الأصلي** in the edit dialog to compare the original transcript. Partial quotations use their selected excerpt; unresolved excerpts are not replaced by the full reference.
-- **Human confirmation:** all unreviewed segments, including ordinary speech, appear in the review filter. A successful machine check never sets human approval. Check wording, meaning, translation, and attribution before selecting **راجعت هذا المقطع**. Unmatched citations remain flagged, with a message distinguishing no match, service unavailability, and an invalid response.
-- **Meaning and reading warnings:** ambiguous extraction, duplicated meaning and correction warnings appear beside the affected cue. Language-specific character/second heuristics flag fast text or a display shorter than one second; Chinese counts characters rather than space-separated words. They do not stretch word timings or shorten canonical source translations. Listen and edit these cues before confirming; metrics remain available after confirmation.
-- **Retry saved projects:** when the backend reports remaining automatic checks or source work, **إعادة فحص المعنى والمصادر** is available even for a ready project. It reuses saved transcription and completed checks; reviewed text, human translations and custom source captions are protected.
-- **Connected Hadith source selection:** use **قارن واربط** to compare complete Arabic/target-language records, narrator, grade and attribution. For a connected quotation, **تطبيق المرجع على أجزاء الاقتباس المتصل** applies the selected record to the group together. Different wording requires the explicit paraphrase option. Group updates protect reviewed text, human translations and custom source captions.
-- **Audience labels:** automatic Quran captions identify a translation of Quranic meanings and its translator in the target language. Missing published translations, machine drafts and editor alternatives have separate localized labels in preview and exports. Custom or hidden captions remain the editor's responsibility.
-- **Hadith paraphrases:** editors can explicitly link a related Hadith as **نقل بالمعنى**. By default this preserves the speaker's wording and its translation. In the edit dialog, **استخدام نص المرجع وترجمته في الفيديو** switches to the corresponding source Arabic excerpt and an exact substring selected from the published target-language translation. Original speech and timings remain intact; the source line identifies source wording and a related narration in the target language. Switching modes clears approval; partial published source wording requires a selected translated excerpt. This editor operation makes no AI requests.
-- **Suggested Hadith sources:** if Dorar cannot match a quotation literally, a bounded HadeethEnc search uses short Arabic anchors. Complete records are checked again; abbreviated wording and recognition differences appear under **مصدر محتمل · قارن واربط**, showing source Arabic, available target-language translation, narrator, grading, and attribution. These suggestions are not verified literal quotations. Selecting **ربط كنقل بالمعنى** preserves spoken text and leaves human review pending.
-- **Readable cues:** the translator aims for short connected clauses. Per-language character limits are configured in `dist/languages.json`; Chinese uses a 70-character limit. Overlong translation parts, or parts over 8 seconds with more than 12 Arabic words, allow one repair attempt. Original word timestamps remain authoritative. Retrying an older project can repair oversized unreviewed speech or Hadith without retranscribing or changing reviewed quotations; failed repair preserves existing translations. Religious quotations retain their separate source-matching rules and cannot be shortened by dropping source words.
-- **Editable source caption:** select a Quran/Hadith segment, then click **تعديل سطر المصدر** above the video preview, or edit **سطر المصدر أسفل الترجمة** in the segment dialog. Save a custom single-line caption of up to 200 characters, leave it empty to hide the line, or choose **استعادة السطر الأصلي** to restore the automatic label.
-
-Source-caption changes persist after reloading and appear in the preview, MP4, and SRT exports. They preserve the canonical reference, its URL, and existing review decisions; the JSON sources list retains the original source metadata. Replacing or removing a reference clears its custom caption. The shared viewer is read-only.
-
-Automatic video source captions and warnings use the project language. English retains the bundled chapter names and reference labels; other languages use localized Quran/verse labels with numeric locations and the selected translator. Translated Hadith grading uses the requested-language record when available, otherwise a localized “see source for grading” notice. Arabic reference metadata remains available to the editor. Custom viewer captions can be edited, hidden or reset; changing project language clears them to prevent a stale English line.
-
-
-### Preview and MP4 appearance
-
-Real projects use the same server-rendered transparent subtitle image in the browser and MP4, including font, colour, background, line wrapping, Arabic shaping, and source caption. Size 10–42 is measured on a 480-pixel logical video width and scales with the video. Long cues shrink to occupy approximately the lower half of the frame in both views. New uploads default to size 24 for portrait, 22 for square, and 18 for landscape; saved editor settings stay unchanged. Uploaded video keeps its original colours in the preview. The illustrative demo still uses browser text.
-
-MP4 exports use H.264 CRF 18 and preserve normal square-pixel video dimensions. Anamorphic or rotated footage is normalized to its displayed aspect ratio; odd dimensions are rounded up to an even encoding canvas. Compatible audio is copied; other codecs are converted to AAC. Export quality cannot restore detail already absent from the original video. SRT contains text and timestamps; its appearance is controlled by the receiving player. See [export verification](docs/export-rendering.md).
-
-Subtitle transitions hold the current cue until the next starts when the gap is at most 0.5 seconds, consistently in preview, SRT and MP4. Longer silences and the final cue clear normally. Original transcript and source timings remain unchanged. Empty preview text no longer leaves background bars, and the next preview PNG is decoded while warming its cache.
-
-Subtitle images are cached in the browser and the next cue is preloaded. Temporary load failures are retried once; old responses cannot replace the current cue or appear in a timing gap. Saving edits preserves playback position, and appearance saves are serialized before export. The review filter uses the same criteria as public sharing, including unconfirmed references and unresolved partial quotations. JSON citations contain only confirmed, aligned references.
 
 ## 🧱 Project structure
 
@@ -213,9 +169,11 @@ JISR/
 │   │   ├── readability.css      # Typography, responsive layout, workflow animation
 │   │   └── fonts.css            # Bundled font declarations
 │   ├── js/
+│   │   ├── languages.js         # Language catalog, direction, and font policy
+│   │   ├── language-picker.js   # Themed, keyboard-accessible language menus
 │   │   ├── app.js               # Project state, API calls, editing, review, exports
 │   │   ├── studio.js            # Workspace tools, timeline, processing details
-│   │   ├── onboarding.js        # Manual tour navigation and animation controls
+│   │   ├── onboarding.js        # Automatic tour, navigation, and motion controls
 │   │   ├── citation-text.js     # Source text, captions, review eligibility
 │   │   ├── citation-links.js    # Citation-link presentation
 │   │   ├── subtitle-preview.js  # Subtitle image loading, cache, and cue timing
@@ -227,6 +185,7 @@ JISR/
 │   ├── check_deployment.py      # Hosted application and asset smoke checks
 │   ├── check_sources.py         # Public source-service checks
 │   ├── refresh_source_links.py  # Repair saved citation links
+│   ├── package_source.py        # Package source, tests, and documentation
 │   └── package_demo.py          # Build a runtime-only deployment package
 ├── docs/
 │   ├── design/colors/           # README color-preview assets
@@ -307,84 +266,57 @@ Religious explanations are retrieved from their sources, not generated by the mo
 
 See the [source policy](docs/source-policy.md) for the mapping to the challenge's scientific package and remaining source-integration limits, including QuranEnc prioritisation. Third-party services and content have their own licenses and terms. This repository does not bundle religious datasets, model weights, or API credentials; the demo content is illustrative.
 
-## Verification and maintenance
+## Validation
 
-Run the local tests:
+Recorded provider runs cover real Arabic-video transcription, translation, and export. Automated multilingual checks cover upload, language persistence, retranslation, review, sharing, Unicode SRT, script fonts, and actual FFmpeg rendering. Browser checks also cover editing and native downloads.
+
+| Evidence | What it establishes |
+|---|---|
+| [Provider verification](docs/verification-2026-10-05.md) | Six real Arabic videos processed and exported with the configured providers |
+| [Processing and export verification](docs/verification-2026-10-06.md) | Additional processing, MP4/SRT exports, and browser downloads |
+| [Multilingual verification](docs/verification-multilingual-2026-10-06.md) | Seven-language workflow and rendering checks using mocked AI/source responses and actual local FFmpeg |
+| [Browser verification](docs/verification-2026-10-04.md) | Earlier desktop/mobile onboarding, editing, appearance, and download checks |
+
+These reports describe the versions and environments tested. They do not establish native-language religious review, whole-corpus source coverage, or the current state of the live deployment.
+
+See the [maintenance guide](docs/maintenance.md) for public-source checks and saved-project link repairs.
+
+Run the local checks:
 
 ```bash
 python -m unittest discover -s tests -v
-# Optional JavaScript checks; require Node.js
 node tests/test_citation_links.js
 node tests/test_citation_text.js
 node tests/test_subtitle_preview.js
 node tests/test_languages.js
 ```
 
-The current multilingual checks use mocked AI/source transports and actual local FFmpeg. They cover language selection and reopening, legacy migration without loss of edits, explicit retranslation without ASR, preservation of Arabic reference identity and word timing, source availability/failure, language-specific excerpt selection and Chinese reading limits. Each of the seven languages goes through upload, manual review, SRT download, sharing, PNG preview and MP4 export; tests decode the MP4 and compare the exported cue PNG bytes with the preview. Additional checks exercise translated terminology/meaning/alignment prompts and repair retries, font glyph coverage/shaping, stale edits and cache/download invalidation. Existing quotation, export, access and deployment regression tests remain. [The multilingual verification report](docs/verification-multilingual-2026-10-06.md) records the final test results.
+## Privacy and limitations
 
-Citation checks also cover displaying source wording while preserving the original transcript, retaining the reference when saving unchanged displayed Arabic, and keeping partial quotations and paraphrases distinct. Caption tests cover saving, hiding, resetting, input validation, editor access, source replacement, and subtitle output without changing source metadata. The caption workflow was also checked in the browser for saving, persistence after reload, hiding, and restoration.
+- **Human judgment remains essential.** Uncertain speech, fast subtitles, source matching, and machine translation require review. Paid multilingual translation accuracy has not yet been evaluated across all seven languages by native-language religious reviewers.
+- **Published translations vary by record.** A supported language does not guarantee a translation for every reference. Unavailable translations are labelled; machine or editor alternatives are not presented as published source text.
+- **Processing uses external services.** Uploaded media is sent to ElevenLabs; transcript and translation context is sent to OpenAI. Responses requests use `store: false`, and each provider's data policies still apply. Source lookups send relevant quotation or terminology queries.
+- **Edit links are private credentials.** There are no accounts or backup system. Keep edit links and API keys private. The public viewer provides read-only access.
+- **The free demo has temporary storage.** Projects and viewing links may be lost on service sleep, restart, or redeployment. A separately configured deployment can use persistent storage. On persistent storage, project data remains until the editor deletes it; there is no automatic project expiry.
+- **Media and hosting limits apply.** Uploads are limited to 250 MB. Free hosting may need time to wake up, and automatic processing incurs provider charges. SRT appearance depends on the receiving player; MP4 embeds the rendered subtitles.
 
-Optional checks against public citation services:
+`.env`, generated media, project databases, logs, and Python caches are excluded from Git. Only `.env.example` is intended for publication.
 
-```bash
-python scripts/check_sources.py --output docs/source-check.json
-```
+## Deployment
 
-This command makes network requests to public sources without sending user videos or invoking paid AI services. The [saved sample report](docs/source-check.json) records successful checks on October 2, 2026; it does not establish corpus-wide matching accuracy.
+The [live demo](https://jisr-3ue4.onrender.com/) uses Render. `render.yaml` enables deployment on commits for Blueprint-managed services. Existing services must also have **Auto-Deploy → On Commit** enabled in the Render dashboard; otherwise deploy the latest commit manually.
 
-To repair source links in saved projects:
-
-```bash
-python scripts/refresh_source_links.py          # Preview only
-python scripts/refresh_source_links.py --apply  # Save resolved links
-```
-
-Link repairs preserve transcript text, translations, grades, and review decisions, and do not retranscribe or retranslate videos.
-
-## Privacy and storage
-
-There are **no accounts and no backup system**. Uploaded videos, projects, edits, and exports remain on the server until the editor deletes the project; there is no automatic expiry. Sharing uses a read-only link, while editing requires a separate private link.
-
-Automatic processing sends uploaded media to ElevenLabs and transcript/translation context to OpenAI. OpenAI Responses requests use `store: false`; each provider's own data policies still apply. Public source lookups send relevant quotation or term queries to their services.
-
-Keep API keys and editor links private. `.env`, `data/`, generated logs, and Python caches are excluded by `.gitignore`; only `.env.example` belongs in the repository. Do not force-add private project files when pushing.
-
-## Deployment and remaining work
-
-For the hackathon's public demo, use the [deployment guide](docs/deployment.md).
-`render.yaml` prepares a **Free Render demo**, with HTTPS and temporary storage;
-projects and viewer links do not survive a service sleep/restart/redeployment.
-The existing public host is running an older release: the October 6 final read-only
-check returned healthy configuration but `/languages.json` returned 404. Push alone
-does not deploy this configuration (`autoDeployTrigger: "off"`); deploy the latest
-commit manually and run the host checks before sending that link to judges.
-Generate a clean
-runtime-only deployment ZIP with `python3 scripts/package_demo.py`; API keys and
-local projects are excluded. Provider processing still uses the configured paid APIs.
-
-For a clean full source repository (including tests and documentation), run
-`python scripts/package_source.py` and extract
-`submission/deployment/jisr-final-source.zip` into the intended repository.
-The blank `.env.example` is included; local credentials and projects are excluded.
-
-For a Linux host with a configured domain, set `JISR_DOMAIN` and the API keys in `.env`, then run:
+A GitHub push does not itself confirm successful deployment. Verify the live release before demonstrating it:
 
 ```bash
-docker compose up -d --build
+python scripts/check_deployment.py https://jisr-3ue4.onrender.com/
 ```
 
-Compose supplies persistent storage and Caddy HTTPS for a separately configured Linux host. The current multilingual release has not yet been verified end to end on the public host.
+The check verifies health and required frontend assets without uploading media or invoking paid AI. A complete live processing/review/export check is still needed to validate the deployed workflow.
 
-The [live example receipt](docs/live-example.md) is an earlier historical check, including a permission failure. Later English-provider checks are recorded in the October 5/6 reports above. They do not establish paid multilingual model accuracy or the state of the latest hosted release.
-
-Before public launch, complete human review of representative Arabic videos, verify live transcription and translation together, and check HTTPS, access links, persistent storage, source retrieval, export, and deletion on the intended host. Citation matching, uncertain speech detection, and machine translation still require editor judgment. The [implementation audit](docs/implementation-status.md) records the outstanding launch checks.
+See the [deployment guide](docs/deployment.md) for hosting, persistent storage, and clean source/runtime packaging, and the [implementation status](docs/implementation-status.md) for remaining launch checks.
 
 ## Team
 
 - **Turki:** frontend, UI/UX, integration, and export.
 - **Anas:** AI engineering, translation, and API integration.
-
-
-Arabic diacritic backdrop fix (October 6): the shared libass renderer uses one padded translucent event box instead of per-run boxes. Combining marks and fallback glyphs no longer create small stepped backdrop edges. The same PNG feeds preview and MP4; disabling the backdrop remains supported. Six font/size cases passed, and an I5 export decoded fully with preview/export cue bytes equal. The current multilingual renderer is `shared-png-v10-multilingual`; language and rendering policy invalidate older raster and MP4 caches.
-
-See [the final delivery check](docs/final-delivery-check-2026-10-06.md) for the verified files, final test results, publication status and submission materials still absent from this workspace.

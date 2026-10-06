@@ -1,6 +1,6 @@
 # Translation languages and source coverage
 
-The editor remains Arabic. Each project has exactly one target language. English is the default for uploads and legacy projects.
+The editor remains Arabic. Each project has exactly one target language. New uploads require an explicit language choice in the interface. Legacy projects without a language migrate to English.
 
 | Project code | Language | Direction | Quranpedia language ID / code | Translation book | HadeethEnc code |
 |---|---|---|---|---|---|

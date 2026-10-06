@@ -49,3 +49,17 @@ The final I3 export was regenerated with `shared-png-v3` at 1024×576 (8,343,354
 ## Multilingual renderer
 
 `shared-png-v10-multilingual` includes language and the shared language/caption policy in PNG/MP4 cache identities. Bundled target fonts are Noto Sans (Latin), Noto Nastaliq Urdu, Noto Sans Devanagari and Noto Sans CJK SC, with Latin/Plex fallbacks. Arabic and target translations have separate font runs but use one shared RGBA image for preview and MP4. Urdu lines get an explicit RTL marker, including source lines beginning with Latin publisher names. Chinese wraps by characters, including viewer captions. MP4 and manifests use language-specific paths; old download tickets are invalidated by project revisions. SRT contains Unicode and timing, with RTL markers for Urdu; it cannot enforce font or size in another player. See [language coverage](languages.md).
+
+## Preview and MP4 appearance
+
+Real projects use the same server-rendered transparent subtitle image in the browser and MP4, including font, colour, background, line wrapping, Arabic shaping, and source caption. Size 10–42 is measured on a 480-pixel logical video width and scales with the video. Long cues shrink to occupy approximately the lower half of the frame in both views. New uploads default to size 24 for portrait, 22 for square, and 18 for landscape; saved editor settings stay unchanged. Uploaded video keeps its original colours in the preview. The illustrative demo still uses browser text.
+
+MP4 exports use H.264 CRF 18 and preserve normal square-pixel video dimensions. Anamorphic or rotated footage is normalized to its displayed aspect ratio; odd dimensions are rounded up to an even encoding canvas. Compatible audio is copied; other codecs are converted to AAC. Export quality cannot restore detail already absent from the original video. SRT contains text and timestamps; its appearance is controlled by the receiving player.
+
+Subtitle transitions hold the current cue until the next starts when the gap is at most 0.5 seconds, consistently in preview, SRT and MP4. Longer silences and the final cue clear normally. Original transcript and source timings remain unchanged. Empty preview text no longer leaves background bars, and the next preview PNG is decoded while warming its cache.
+
+Subtitle images are cached in the browser and the next cue is preloaded. Temporary load failures are retried once; old responses cannot replace the current cue or appear in a timing gap. Saving edits preserves playback position, and appearance saves are serialized before export. The review filter uses the same criteria as public sharing, including unconfirmed references and unresolved partial quotations. JSON citations contain only confirmed, aligned references.
+
+## Arabic diacritics and subtitle backdrops
+
+Arabic diacritic backdrop fix (October 6): the shared libass renderer uses one padded translucent event box instead of per-run boxes. Combining marks and fallback glyphs no longer create small stepped backdrop edges. The same PNG feeds preview and MP4; disabling the backdrop remains supported. Six font/size cases passed, and an I5 export decoded fully with preview/export cue bytes equal. The current multilingual renderer is `shared-png-v10-multilingual`; language and rendering policy invalidate older raster and MP4 caches.
