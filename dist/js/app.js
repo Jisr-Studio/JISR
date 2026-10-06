@@ -22,8 +22,9 @@ function updateSubtitleImage(s){
   const next=subtitlePreviewEntry(upcoming);
   if(next)previewWarmTimer=setTimeout(()=>subtitlePreview.warm(next),delay);
 }
-let project=null, token='', segments=[], filter='all', showArabic=true, selected=0, readOnly=false, poll=null, toastTimer;
+let project=null, token='', segments=[], filter='all', showArabic=true, selected=0, readOnly=false, poll=null, toastTimer, workflowUploading=false;
 const style={font:'plex',size:18,color:'#ffffff',backdrop:true,bilingual:true,position:'bottom'};
+const pendingReviews=new Set();
 const demo=[
  {id:'d1',start:0,end:8,type:'speech',ar:'الطهارة ليست مجرد نظافة للجسد، بل استعداد للوقوف بين يدي الله.',en:'Purification is more than physical cleanliness. It prepares us to stand before Allah.'},
  {id:'d2',start:8,end:16,type:'quran',ar:'إِنَّ اللَّهَ يُحِبُّ التَّوَّابِينَ وَيُحِبُّ الْمُتَطَهِّرِينَ',en:'Indeed, Allah loves those who are constantly repentant and loves those who purify themselves.',source:{surah:2,ayah:222,title:'سورة البقرة · الآية ٢٢٢',url:'https://quranpedia.net/embed?surah=2&ayah=222',arabic:'إِنَّ اللَّهَ يُحِبُّ التَّوَّابِينَ وَيُحِبُّ الْمُتَطَهِّرِينَ',english:'Indeed, Allah loves those who are constantly repentant and loves those who purify themselves.',translator:'مثال توضيحي'}},
@@ -49,8 +50,26 @@ function status(){$('#projectTitle').textContent=project?.title||'الطهارة
 function sourceLabel(s){let r=s.source;if(!r)return '';if(r.quotation_mode==='paraphrase')return 'نقل بالمعنى · مرجع مرتبط · '+(r.attribution||r.title||'حديث');return s.type==='quran'?r.title||'آية قرآنية':(r.attribution||r.title||'حديث')+' · '+(r.grade||'الحكم غير مذكور')+(s.needs_review?' · بانتظار المراجعة':'')}
 function render(){let counts={all:segments.length,quran:segments.filter(x=>x.type==='quran').length,hadith:segments.filter(x=>x.type==='hadith').length,review:segments.filter(JisrCitationText.reviewPending).length};$$('[data-filter]').forEach(b=>{b.querySelector('span').textContent=counts[b.dataset.filter]});$('.transcript-panel .count').textContent=segments.length+' مقاطع';$('#reviewCount').textContent=counts.review;$('#reviewSummary').textContent=counts.review?counts.review+' مقطع يحتاج انتباهك':'لا توجد مقاطع تنتظر المراجعة';$('.topbar nav .count').textContent=counts.quran+counts.hadith;
 let list=segments.map((s,i)=>({s,i})).filter(({s})=>filter==='all'||(filter==='review'?JisrCitationText.reviewPending(s):s.type===filter));
-$('#segments').innerHTML=list.map(({s,i})=>`<div class="segment ${i===selected?'current':''}"><button class="segment-time" data-seek="${i}">${fmt(s.start)}<br><span>${fmt(s.end)}</span></button><div class="segment-body">${s.type==='quran'?'<span class="tag quran">قرآن كريم</span>':s.type==='hadith'?'<span class="tag hadith">حديث نبوي</span>':''}${JisrCitationText.reviewPending(s)?'<span class="tag review">يحتاج مراجعة</span>':''}${showArabic?`<p class="ar">${esc(JisrCitationText.presentation(s).arabic)}</p>${JisrCitationText.presentation(s).fromSource?'<span class="tag">نص المصدر</span>':''}`:''}<p class="en" dir="ltr">${esc(s.en||'الترجمة تحتاج مراجعة')}</p>${s.citation_lookup?`<p class="modal-note" role="status">${esc(s.citation_lookup.message||"تعذر ربط المصدر؛ يحتاج إلى مراجعة")}</p>`:""}${s.source?`<button class="text-button" data-ref="${i}">${esc(sourceLabel(s))} · عرض المصدر</button>`:''}</div>${readOnly?'':`<button class="edit" data-edit="${i}" aria-label="تعديل المقطع">✎</button>`}</div>`).join('')||'<p style="padding:20px;color:#75828d">لا توجد مقاطع في هذا العرض.</p>';
-$$('[data-seek]').forEach(b=>b.onclick=()=>seek(+b.dataset.seek));$$('[data-edit]').forEach(b=>b.onclick=()=>edit(+b.dataset.edit));$$('[data-ref]').forEach(b=>b.onclick=()=>reference(+b.dataset.ref));renderCitationSuggestions();renderSources();updateSubtitle()}
+$('#segments').innerHTML=list.map(({s,i})=>`<div class="segment ${i===selected?'current':''}"><button class="segment-time" data-seek="${i}">${fmt(s.start)}<br><span>${fmt(s.end)}</span></button><div class="segment-body">${s.type==='quran'?'<span class="tag quran">قرآن كريم</span>':s.type==='hadith'?'<span class="tag hadith">حديث نبوي</span>':''}${JisrCitationText.reviewPending(s)?'<span class="tag review">يحتاج مراجعة</span>':''}${showArabic?`<p class="ar">${esc(JisrCitationText.presentation(s).arabic)}</p>${JisrCitationText.presentation(s).fromSource?'<span class="tag">نص المصدر</span>':''}`:''}<p class="en" dir="ltr">${esc(s.en||'الترجمة تحتاج مراجعة')}</p>${s.citation_lookup?`<p class="modal-note" role="status">${esc(s.citation_lookup.message||"تعذر ربط المصدر؛ يحتاج إلى مراجعة")}</p>`:""}${s.source?`<button class="text-button" data-ref="${i}">${esc(sourceLabel(s))} · عرض المصدر</button>`:''}</div>${readOnly?'':`<button class="edit" data-edit="${i}" aria-label="تعديل المقطع">✎</button><div class="segment-review-footer"><button type="button" class="segment-review-button" data-review="${i}" aria-pressed="${s.reviewed===true}" ${pendingReviews.has(s.id)||project?.status==='processing'||!s.en?.trim()?'disabled':''}><span aria-hidden="true">${s.reviewed===true?'✓':'□'}</span> ${pendingReviews.has(s.id)?'جارٍ حفظ المراجعة…':'راجعت هذا المقطع'}</button></div>`}</div>`).join('')||'<p style="padding:20px;color:#75828d">لا توجد مقاطع في هذا العرض.</p>';
+$$('[data-seek]').forEach(b=>b.onclick=()=>seek(+b.dataset.seek));$$('[data-edit]').forEach(b=>b.onclick=()=>edit(+b.dataset.edit));$$('[data-ref]').forEach(b=>b.onclick=()=>reference(+b.dataset.ref));$$('[data-review]').forEach(b=>b.onclick=()=>toggleSegmentReview(+b.dataset.review));renderCitationSuggestions();renderSources();updateSubtitle()}
+async function toggleSegmentReview(index){
+  const segment=segments[index];
+  if(readOnly||!segment||pendingReviews.has(segment.id)||project?.status==='processing')return;
+  if(!segment.en?.trim())return toast('أضف الترجمة قبل تأكيد المراجعة');
+  const reviewed=segment.reviewed!==true,projectId=project?.id;
+  pendingReviews.add(segment.id);render();
+  try{
+    if(projectId){
+      const updated=await api(`/api/projects/${projectId}/segments/${segment.id}`,{method:'POST',body:JSON.stringify({reviewed})});
+      if(project?.id===projectId)setProject(updated);
+    }else{
+      segment.reviewed=reviewed;segment.needs_review=!reviewed;
+      if(reviewed)segment.unclear_words=[];
+    }
+    if(project?.id===projectId)toast(reviewed?'تم تأكيد مراجعة المقطع':'أُعيد المقطع للمراجعة');
+  }catch(error){toast(error.message)}
+  finally{pendingReviews.delete(segment.id);render()}
+}
 function renderCitationSuggestions(){
   if(readOnly)return;
   $$('[data-edit]').forEach(button=>{
@@ -154,7 +173,7 @@ function editCaption(i){
   $('#saveCaption').onclick=()=>saveCaption($('#editCaption').value.trim());
   $('#resetCaption').onclick=()=>saveCaption(null);
 }
-$('#upload').onclick=()=>$('#fileInput').click();$('#fileInput').onchange=async e=>{let f=e.target.files[0];if(!f)return;if(!/\.(mp4|mov|webm|mkv|m4v)$/i.test(f.name))return toast('اختر ملف فيديو مدعوماً');if(f.size>250*1024*1024)return toast('الحد الأقصى 250 ميغابايت');let body=new FormData();body.append('video',f);toast('جارٍ رفع الفيديو...');try{let p=await api('/api/projects',{method:'POST',body});token=p.edit_token;localStorage.setItem('jisr-edit',JSON.stringify({id:p.id,token}));history.replaceState(null,'','/?project='+p.id);setProject(p);toast('تم رفع الفيديو');processDialog()}catch(err){toast(err.message)}e.target.value=''};
+$('#upload').onclick=()=>$('#fileInput').click();$('#fileInput').onchange=async e=>{let f=e.target.files[0];if(!f)return;if(!/\.(mp4|mov|webm|mkv|m4v)$/i.test(f.name))return toast('اختر ملف فيديو مدعوماً');if(f.size>250*1024*1024)return toast('الحد الأقصى 250 ميغابايت');let body=new FormData();body.append('video',f);toast('جارٍ رفع الفيديو...');workflowUploading=true;syncWorkflow();try{let p=await api('/api/projects',{method:'POST',body});token=p.edit_token;localStorage.setItem('jisr-edit',JSON.stringify({id:p.id,token}));history.replaceState(null,'','/?project='+p.id);setProject(p);toast('تم رفع الفيديو');processDialog()}catch(err){toast(err.message)}finally{workflowUploading=false;status()}e.target.value=''};
 function processDialog(){modal('معالجة الفيديو',`<p>المقطع: <b>${esc(project.title)}</b></p><p>التفريغ: ElevenLabs Scribe v2. الترجمة والتصنيف: خدمة الذكاء الاصطناعي المضبوطة على الخادم. مطابقة الآيات: Quranpedia. الحديث المحتمل ينتظر التوثيق بمصدر محدد.</p><div class="modal-actions"><button class="button primary" id="runProcess">بدء المعالجة الآلية</button><button class="button secondary" id="manualProcess">إدخال نص وتوقيت يدوياً</button></div><p class="modal-note">المفاتيح تُضبط على الخادم، ولا تُكتب داخل المتصفح.</p>`);$('#runProcess').onclick=async()=>{try{await api('/api/projects/'+project.id+'/process',{method:'POST',body:'{}'});$('#modal').close();setProject({...project,status:'processing',stage:'بدأت المعالجة'});toast('بدأت المعالجة')}catch(e){toast(e.message)}};$('#manualProcess').onclick=manualDialog}
 function manualDialog(){modal('إدخال مقاطع يدوياً','<p>كل سطر: البداية|النهاية|العربية|الإنجليزية. الوقت بالثواني. هذا المسار لتجربة التحرير والتصدير قبل إضافة المفاتيح.</p><textarea id="manualText" dir="ltr" style="min-height:160px" placeholder="0|5|بسم الله|In the name of Allah"></textarea><div class="modal-actions"><button class="button primary" id="saveManual">حفظ المقاطع</button></div>');$('#saveManual').onclick=async()=>{try{let entries=$('#manualText').value.trim().split(/\r?\n/).filter(Boolean).map(line=>{let [start,end,ar,en]=line.split('|');return {start:+start,end:+end,ar:ar||'',en:en||''}});let p=await api('/api/projects/'+project.id+'/manual',{method:'POST',body:JSON.stringify({segments:entries})});setProject(p);$('#modal').close();toast('تم حفظ المقاطع')}catch(e){toast(e.message)}}}
 function edit(i){
@@ -171,7 +190,6 @@ function edit(i){
     <label for="editEn">الترجمة الإنجليزية</label><textarea id="editEn" dir="ltr">${esc(s.en)}</textarea>
     ${s.source?`<label for="editSourceCaption">سطر المصدر أسفل الترجمة</label><input id="editSourceCaption" type="text" maxlength="200" value="${esc(JisrCitationText.sourceCaption(s))}"><button class="text-button" id="resetSourceCaption">استعادة السطر الأصلي</button><p class="modal-note">يمكن تعديل السطر أو تركه فارغًا لإخفائه. بيانات المرجع ورابطه محفوظة.</p>`:''}
     ${partial?`<label for="sourceEnglish">${s.source.translation_status==='machine_draft'?'مسودة الترجمة الآلية المرتبطة بالمطابقة':'ترجمة المصدر الكاملة للاقتباس الجزئي'}</label><textarea id="sourceEnglish" dir="ltr" readonly>${esc(s.source.english)}</textarea><p class="modal-note">${s.source.translation_status==='machine_draft'?'لم تُسترجع ترجمة منشورة لهذا الحديث. اختيار جزء من هذه المسودة لا يجعلها ترجمة من المصدر؛ قارن مرجعًا مترجمًا أو راجع المعنى قبل النشر.':'حدد بالمؤشر الجزء الإنجليزي المقابل للكلام المسموع، ثم اضغط استخدام التحديد.'}</p><button class="button secondary" id="useSourceSpan">استخدام التحديد للترجمة</button>`:''}
-    <label><input id="reviewed" type="checkbox" ${s.reviewed?'checked':''}> راجعت هذا المقطع</label>
     ${s.source?'<label><input id="rejectSource" type="checkbox"> رفض المطابقة وإزالة المرجع</label>':''}
     ${project?`<label for="surahId">سورة / آية من Quranpedia</label><div class="modal-actions"><input id="surahId" type="number" min="1" max="114" placeholder="رقم السورة"><input id="ayahId" type="number" min="1" placeholder="رقم الآية"><button class="button secondary" id="verifyQuran">توثيق الآية</button></div><label><input id="hadithParaphrase" type="checkbox" ${s.source?.quotation_mode==='paraphrase'?'checked':''}> نقل بالمعنى: أربط مرجعاً ذا صلة وأحتفظ بكلام المتحدث (ليس اقتباساً حرفياً)</label><label for="hadithId">معرّف الحديث في HadeethEnc</label><div class="modal-actions"><input id="hadithId" inputmode="numeric" placeholder="معرّف الحديث"><button class="button secondary" id="verifyHadith">توثيق الحديث</button></div>`:''}
     <div class="modal-actions"><button class="button primary" id="saveEdit">حفظ التعديلات</button><button class="button secondary" id="cancelEdit">إلغاء</button></div><p class="modal-note">تعديل اقتباس موثّق يلغي المرجع إلى أن يُعاد التحقق منه. اختيار جزء حرفي من المصدر يحافظ على التوثيق.</p>`);
@@ -186,11 +204,12 @@ function edit(i){
     const actualStart=start+field.value.slice(start,end).indexOf(excerpt);
     selectedSpan={start:Array.from(field.value.slice(0,actualStart)).length,end:Array.from(field.value.slice(0,actualStart+excerpt.length)).length};
     $('#editEn').value=excerpt;
-    $('#reviewed').checked=false;
     toast('تم اختيار جزء من ترجمة المصدر؛ راجعه قبل التأكيد');
   };
   $('#saveEdit').onclick=async()=>{
-    const changes={start:+$('#editStart').value,end:+$('#editEnd').value,ar:JisrCitationText.transcriptForSave(s,$('#editAr').value),en:$('#editEn').value.trim(),reviewed:$('#reviewed').checked,reject_source:!!$('#rejectSource')?.checked};
+    const changes={start:+$('#editStart').value,end:+$('#editEnd').value,ar:JisrCitationText.transcriptForSave(s,$('#editAr').value),en:$('#editEn').value.trim(),reject_source:!!$('#rejectSource')?.checked};
+    const contentChanged=changes.ar!==s.ar||changes.en!==s.en||changes.start!==s.start||changes.end!==s.end||changes.reject_source||!!selectedSpan;
+    changes.reviewed=contentChanged?false:s.reviewed===true;
     if(s.source&&(resetCaption||$('#editSourceCaption').value.trim()!==JisrCitationText.sourceCaption(s)))changes.source_caption=resetCaption?null:$('#editSourceCaption').value.trim();
     if(selectedSpan)changes.source_english_span=selectedSpan;
     if(!changes.ar||!changes.en)return toast('أدخل العربية والإنجليزية');
@@ -238,6 +257,7 @@ function renderExportWarnings(warnings=project?.export_warnings||[]){
   if($('#shareExport'))$('#shareExport').disabled=!project.publishable;
 }
 function renderExportState(){
+  syncWorkflow();
   const panel=$('#exportStatus');
   if(!panel||!activeExport||panel.dataset.project!==activeExport.id)return;
   const run=activeExport,busy=run.phase==='working';
@@ -306,8 +326,54 @@ $('#export').onclick=()=>{
 };
 async function boot(){try{const labels=await fetch('/source-caption-labels.json');if(labels.ok)JisrCitationText.configureCaptionLabels(await labels.json())}catch{}let share=location.pathname.match(/^\/view\/([0-9a-f]{32})$/);if(share){readOnly=true;try{setProject(await api('/api/share/'+share[1]))}catch(e){toast(e.message)}return}const query=new URLSearchParams(location.search),wanted=query.get('project');let saved=null;try{saved=JSON.parse(localStorage.getItem('jisr-edit')||'null')}catch{}if(saved&&!query.has('demo')&&(wanted===saved.id||query.get('studio')==='1')){token=saved.token;try{setProject(await api('/api/projects/'+saved.id));return}catch{localStorage.removeItem('jisr-edit');token=''}}status();render();applyStyle()}
 const processButton=document.createElement('button');processButton.className='button secondary';processButton.textContent='متابعة المعالجة';processButton.onclick=()=>processDialog();$('#upload').after(processButton);
-const originalStatus=status;status=function(){originalStatus();processButton.style.display=project&&!readOnly&&['uploaded','error'].includes(project.status)?'':'none';$('.eyebrow').innerHTML=project?'مساحة العمل <span>/</span> مشروع مرفوع':'مساحة العمل <span>/</span> مشروع تجريبي';$('.page-footer').lastElementChild.textContent=project?'تحرير دون تسجيل دخول':'نموذج واجهة توضيحي';video.setAttribute('aria-label',project?'فيديو المشروع':'فيديو تجريبي صامت');const steps=$$('.workflow .step'),active=project&&['uploaded','processing','error'].includes(project.status)?1:2;const progress=readOnly?3:active;$('.workflow').style.setProperty('--workflow-progress',String(progress/3));const indicator=$('#workflowProgress');indicator.setAttribute('aria-valuenow',String(progress));indicator.setAttribute('aria-valuetext',steps[progress].querySelector('span').textContent);steps.forEach((step,i)=>{step.classList.toggle('done',readOnly||i<active);step.classList.toggle('current',!readOnly&&i===active);step.querySelector('b').textContent=readOnly||i<active?'✓':String(i+1)})};
-const originalRender=render;render=function(){originalRender();$$('#segments .segment').forEach(el=>{const i=+el.querySelector('[data-seek]').dataset.seek,s=segments[i];if(s?.review_issues?.length)el.querySelector('.segment-body').insertAdjacentHTML('beforeend',`<ul class="review-message">${s.review_issues.map(issue=>`<li>${esc(issue.message)}</li>`).join('')}</ul>`);if(s?.source?.translation_status==='machine_draft')el.querySelector('.segment-body').insertAdjacentHTML('beforeend','<p class="review-message">ترجمة الحديث الإنجليزية مسودة آلية؛ لم تُسترجع من مصدر ترجمة موثق.</p>');if(s?.unclear_words?.length&&!s.reviewed)el.querySelector('.segment-body').insertAdjacentHTML('beforeend',`<div class="review-message">△ كلمات غير واضحة: ${s.unclear_words.map(w=>esc(w.text)+' ('+fmt(w.start)+')').join('، ')}</div>`);})};
+function syncWorkflow(){
+  const bar=$('.workflow'),steps=$$('.workflow .step');
+  const exporting=project&&activeExport?.id===project.id?activeExport:null;
+  let current=2,state='idle',progress=2/3,note='مثال توضيحي · جرّب التحرير والمصادر';
+  if(readOnly){current=3;progress=1;state='complete';note='اكتملت المراجعة · رابط مشاهدة';}
+  else if(workflowUploading){current=0;progress=0;state='busy';note='جارٍ رفع الفيديو… انتظر اكتمال الرفع';}
+  else if(project){
+    if(project.status==='uploaded'){current=1;progress=1/3;note='تم رفع الفيديو · ابدأ المعالجة الآلية أو أدخل النص يدوياً';}
+    else if(project.status==='processing'){
+      current=1;state='busy';
+      const stage=project.stage||'';
+      progress=stage.includes('مطابقة')||stage.includes('المراجع')?0.6:stage.includes('ترجم')||stage.includes('المعنى')?0.48:1/3;
+      note=stage||'جارٍ تحليل الفيديو';
+    }else if(project.status==='error'){current=1;progress=1/3;state='error';note='توقفت المعالجة · يمكنك إعادة المحاولة';}
+    else{
+      const remaining=segments.filter(JisrCitationText.reviewPending).length;
+      note=remaining?`${remaining} مقطع يحتاج مراجعة · يمكنك تصدير مسودة`:'المعالجة مكتملة · راجع النتيجة أو صدّر المشروع';
+    }
+    if(exporting&&project.status!=='processing'&&project.status!=='error'){
+      current=3;progress=1;
+      state=exporting.phase==='working'?'busy':exporting.phase==='error'?'error':'complete';
+      note=exporting.phase==='working'?`جارٍ تجهيز ${exportNames[exporting.kind]}…`:exporting.phase==='error'?'تعذر التصدير · حاول مجدداً':`${exportNames[exporting.kind]} جاهز للتنزيل`;
+    }
+  }
+  bar.dataset.state=state;
+  bar.dataset.current=String(current);
+  bar.style.setProperty('--workflow-progress',String(progress));
+  bar.setAttribute('aria-busy',String(state==='busy'));
+  const indicator=$('#workflowProgress');
+  indicator.setAttribute('aria-valuenow',String(current));
+  indicator.setAttribute('aria-valuetext',note);
+  const label=$('.workflow-note');
+  if(label.textContent!==note)label.textContent=note;
+  steps.forEach((step,i)=>{
+    const done=i<current||(state==='complete'&&i===current);
+    step.classList.toggle('done',done);
+    step.classList.toggle('current',i===current&&state!=='complete');
+    if(i===current)step.setAttribute('aria-current','step');else step.removeAttribute('aria-current');
+    const value=done?'✓':String(i+1);
+    if(step.querySelector('b').textContent!==value)step.querySelector('b').textContent=value;
+  });
+}
+const originalStatus=status;status=function(){originalStatus();processButton.style.display=project&&!readOnly&&['uploaded','error'].includes(project.status)?'':'none';$('.eyebrow').innerHTML=project?'مساحة العمل <span>/</span> مشروع مرفوع':'مساحة العمل <span>/</span> مشروع تجريبي';$('.page-footer').lastElementChild.textContent=project?'تحرير دون تسجيل دخول':'نموذج واجهة توضيحي';video.setAttribute('aria-label',project?'فيديو المشروع':'فيديو تجريبي صامت');syncWorkflow()};
+const workflowActivity=document.createElement('span');workflowActivity.className='workflow-activity';workflowActivity.setAttribute('aria-hidden','true');$('.workflow').append(workflowActivity);
+video.addEventListener('play',()=>{$('.workflow').dataset.playing='true'});
+video.addEventListener('pause',()=>{$('.workflow').dataset.playing='false'});
+
+const originalRender=render;render=function(){originalRender();syncWorkflow();$$('#segments .segment').forEach(el=>{const i=+el.querySelector('[data-seek]').dataset.seek,s=segments[i];if(s?.review_issues?.length)el.querySelector('.segment-body').insertAdjacentHTML('beforeend',`<ul class="review-message">${s.review_issues.map(issue=>`<li>${esc(issue.message)}</li>`).join('')}</ul>`);if(s?.source?.translation_status==='machine_draft')el.querySelector('.segment-body').insertAdjacentHTML('beforeend','<p class="review-message">ترجمة الحديث الإنجليزية مسودة آلية؛ لم تُسترجع من مصدر ترجمة موثق.</p>');if(s?.unclear_words?.length&&!s.reviewed)el.querySelector('.segment-body').insertAdjacentHTML('beforeend',`<div class="review-message">△ كلمات غير واضحة: ${s.unclear_words.map(w=>esc(w.text)+' ('+fmt(w.start)+')').join('، ')}</div>`);})};
 const originalExport=$('#export').onclick;
 $('#export').onclick=()=>{
   originalExport();if(!project)return;

@@ -11,23 +11,6 @@
   let current = 0;
   let paused = motion.matches;
   let touchStart = null;
-  let autoTimer = null;
-
-  function scheduleAuto() {
-    clearTimeout(autoTimer);
-    if (paused || motion.matches || document.hidden || document.querySelector('#landing').hidden || !document.querySelector('#questions').hidden) return;
-    autoTimer = setTimeout(() => {
-      showStep((current + 1) % slides.length, false);
-      scheduleAuto();
-    }, 4000);
-  }
-
-  function resetAuto() {
-    scheduleAuto();
-  }
-  tour.addEventListener('pointerdown', resetAuto);
-  tour.addEventListener('keydown', resetAuto);
-
   function updateMotion() {
     tour.classList.toggle('motion-paused', paused || document.hidden || document.querySelector('#landing').hidden);
     tour.classList.toggle('motion-reduced', motion.matches);
@@ -36,7 +19,6 @@
     toggle.disabled = motion.matches;
     replay.disabled = motion.matches;
     if (motion.matches) toggle.innerHTML = '<span aria-hidden="true">◇</span> حركة مخففة';
-    scheduleAuto();
   }
 
   function resetReview() {
@@ -76,7 +58,6 @@
     if (tour.getBoundingClientRect().top < 0) {
       tour.scrollIntoView({behavior: motion.matches ? 'instant' : 'smooth', block: 'start'});
     }
-    scheduleAuto();
   }
 
   next.onclick = () => {

@@ -366,3 +366,44 @@ body:not(.start-view) .demo-pill{font-size:15px;color:#d0daea}
 @media(max-width:760px){
  .page-footer{font-size:16px;flex-wrap:wrap;gap:8px;padding-top:18px;padding-bottom:20px}
 }
+
+/* Ambient movement at rest; stronger activity follows actual upload/process/export states. */
+.workflow .step.current b{position:relative;animation:workflow-breathe 3s ease-in-out infinite}
+.workflow .step.current b:after{content:'';position:absolute;inset:-7px;border:1px solid #efb86f70;border-radius:50%;animation:workflow-ripple 3s ease-out infinite;pointer-events:none}
+.workflow-activity{position:absolute;top:28px;inset-inline:12.5%;height:4px;overflow:hidden;border-radius:10px;pointer-events:none;z-index:-1}
+.workflow-activity:after{content:'';position:absolute;inset-block:0;width:22%;background:linear-gradient(90deg,transparent,#ffe0a8,transparent);opacity:.45;animation:workflow-flow 5s ease-in-out infinite}
+.workflow[data-state=busy] .workflow-activity:after{opacity:1;animation-duration:1.5s}
+.workflow[data-state=busy] .step.current b{animation-duration:1.3s}
+.workflow[data-state=busy] .step.current b:after{animation-duration:1.3s}
+.workflow[data-state=busy] .workflow-note:before{content:'';display:inline-block;width:8px;height:8px;border-radius:50%;background:#efb86f;margin-inline-end:9px;animation:workflow-breathe 1.3s ease-in-out infinite}
+.workflow[data-state=error] .step.current{color:#f0b8a9}
+.workflow[data-state=error] .step.current b{background:#d38b77;animation:none}
+.workflow[data-state=error] .step.current b:after,.workflow[data-state=error] .workflow-activity,.workflow[data-state=complete] .workflow-activity{display:none}
+.workflow[data-playing=true][data-state=idle] .workflow-activity:after{animation-duration:2.5s}
+@keyframes workflow-breathe{0%,100%{box-shadow:0 0 0 4px #efb86f12}50%{box-shadow:0 0 0 7px #efb86f30}}
+@keyframes workflow-ripple{0%{transform:scale(.85);opacity:.65}100%{transform:scale(1.45);opacity:0}}
+@keyframes workflow-flow{0%{right:-24%}100%{right:102%}}
+@media(max-width:760px){.workflow-activity{top:26px}}
+@media(prefers-reduced-motion:reduce){.workflow .step.current b,.workflow .step.current b:after,.workflow-activity:after,.workflow[data-state=busy] .workflow-note:before{animation:none}.workflow .step.current b:after{opacity:.35}.workflow-activity:after{right:35%;opacity:.4}}
+
+/* Processing details must remain readable alongside the main workflow. */
+#studioMain .stage-panel{padding:24px 28px}
+#studioMain .stage-panel>b{display:block;font-size:24px;line-height:1.6;color:#f5c78b}
+#studioMain .stage-panel>p{font-size:20px;line-height:1.8;color:#e0e7f2;margin-top:10px;overflow-wrap:anywhere}
+#studioMain .processing-meta{font-size:17px;line-height:1.8;color:#c7d3e6;margin-top:18px;gap:12px 24px}
+#studioMain .processing-time{font-size:19px;font-weight:600;color:#eef2f9}
+@media(max-width:760px){
+ #studioMain .stage-panel{padding:20px}
+ #studioMain .stage-panel>b{font-size:22px}
+ #studioMain .stage-panel>p{font-size:18px}
+ #studioMain .processing-meta{font-size:16px;flex-direction:column;gap:8px}
+ #studioMain .processing-time{font-size:18px}
+}
+
+/* Review confirmation lives directly on each segment, beside the content. */
+.segment-review-footer{grid-column:1/-1;border-top:1px solid #43516b;padding-top:14px;margin-top:4px;display:flex;justify-content:flex-start}
+.segment-review-button{display:inline-flex;align-items:center;gap:12px;min-height:46px;padding:9px 16px;border:1px solid #8e7152;border-radius:8px;background:#eab16a0c;color:#f5c78b;font:inherit;font-size:18px;line-height:1.6;cursor:pointer}
+.segment-review-button>span{display:grid;place-items:center;width:24px;height:24px;border:1px solid currentColor;border-radius:5px;font-size:20px}
+.segment-review-button[aria-pressed=true]{color:#c2ebd7;background:#25473d;border-color:#648f7d}
+.segment-review-button:disabled{opacity:.55;cursor:default}
+@media(max-width:760px){.segment-review-button{font-size:17px;min-height:46px}}
