@@ -14,9 +14,15 @@
 
 منصة لترجمة الفيديو الإسلامي، ومراجعة النصوص، وتوثيق الاقتباسات في مساحة عمل واحدة.
 
-**[Try the live demo](https://jisr-3ue4.onrender.com/) · [Explore the workflow](#how-it-works) · [Run locally](#run-locally)**
+**[Watch the demo video](#demo-video) · [Try the live demo](https://jisr-3ue4.onrender.com/) · [Explore the workflow](#how-it-works) · [Run locally](#run-locally)**
 
 Built for the [AI Challenge for Serving Islamic Content](https://islamicaich.org/), October 2026.
+
+## Demo video
+
+A **1 minute 58 second** demonstration of Jisr’s idea and workflow.
+
+**[Watch or download the demo video · MP4](https://github.com/turki125/JISR/raw/refs/heads/main/docs/demo/jisr-demo-final.mp4)**
 
 ## The problem
 
