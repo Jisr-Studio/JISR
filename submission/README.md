@@ -1,6 +1,6 @@
 # Jisr submission workspace
 
-Preparation started October 3, 2026. The current source release passed the [October 6 final delivery check](../docs/final-delivery-check-2026-10-06.md). Final presentation/video artifacts and the final deployed revision have not been supplied in this folder.
+Preparation started October 3, 2026. The current source release passed the [October 6 final delivery check](../docs/final-delivery-check-2026-10-06.md). The team submits the final presentation and explanation video externally; they are intentionally outside the code package. The final pushed/deployed revision must be recorded by the team.
 
 Start with [the team preparation pack](../docs/team-preparation/README.md). Follow its task board and official requirement list.
 
@@ -28,15 +28,11 @@ Final links to fill:
 - Release revision:
 - Submission confirmation and Riyadh timestamp:
 
-Public deployment final read-only check on October 6, 2026: health returned 200,
-with FFmpeg and both provider keys configured. `/languages.json` returned 404;
-the public host still runs an older release. After the final push, manually deploy
-the latest commit and verify the current full workflow. Free hosting has temporary
-storage; saved projects and viewer links do not survive a service sleep/restart/redeployment.
+Public read-only inspection on October 6 returned health 200 and the seven-language catalog. The hosted frontend lacks the portable-preview fix from this delivery. Public `main` was `0ee83846f504a63f7a1b1cdb44aa21980abf8fb3` at inspection; this is not a claim that the final audited package was pushed or deployed. After the team's release, deploy and verify the actual new revision and full workflow. Free hosting has temporary storage.
 
 Clean source package: `deployment/jisr-final-source.zip`, generated with
 `python scripts/package_source.py`. Extract its contents into the repository;
 it excludes secrets and private user projects. The runtime-only ZIP is generated
-with `python scripts/package_demo.py`. Both contain file-hash manifests.
+with `python scripts/package_demo.py`. Both contain file-hash manifests. The source ZIP is the committee code deliverable; the runtime ZIP omits tests and editor settings.
 
 Keep raw licensed/private media and private permission evidence outside public publication when release is not permitted. Do not add API keys or private project edit links. Review the exact files before making the submission repository public.

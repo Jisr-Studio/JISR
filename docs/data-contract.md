@@ -147,7 +147,7 @@ Before starting, the previous segment JSON is archived privately under `translat
 | POST | `/api/projects/ID/hadith/SEGMENT_ID` | `{"hadith_id":"123","paraphrase":false,"apply_to_group":false}`; unreviewed |
 | POST | `/api/projects/ID/style` | Font/size/color/backdrop/bilingual/position |
 | POST | `/api/projects/ID/title` | `{"title":"..."}` |
-| GET | `/api/projects/ID/video` | Original Arabic video, single byte range supported |
+| GET | `/api/projects/ID/video` | Compatible H.264/yuv420p + AAC-LC browser preview (original when already compatible); single byte range supported. Original retained for processing/export |
 | GET | `/api/projects/ID/subtitle/SEGMENT_ID` | Shared RGBA subtitle PNG, optional style query overrides; editor or reviewed project |
 | POST | `/api/projects/ID/export/KIND` | `{}` prepares `srt`, `mp4`, `sources`, `sources-draft`; expiring ticket |
 | GET | `/api/projects/ID/export/{srt,sources,mp4}` | Legacy direct exports, same project language/review policy |
@@ -169,3 +169,7 @@ Viewer labels in `languages.json` identify Quranic meaning translation, related 
 Confirmed `sources` is a JSON array of reference objects with spoken start/end; language, translator, publication status and URLs stay with each entry. A reviewed alternative does not change an unavailable source into a published translation. `sources-draft` contains `status: "draft"`, `target_language`, a localized `notice`, and `citations` with segment timing/review/source/candidate/lookup/suggestions. Private snapshots, edit tokens and uploaded video filenames are never exposed in these inventories.
 
 See [language/source coverage](languages.md) and [multilingual verification](verification-multilingual-2026-10-06.md) for actual source limits and test evidence. AI alignment/review is assistance, not scholarly approval.
+
+## Playback compatibility
+
+`video_url` includes a playback-version query to invalidate old browser caches. The endpoint probes the actual container/codecs, caches a completed compatible MP4 for incompatible uploads, and supports single byte ranges. Conversion is atomic; failed partial files are removed and can be retried. Playback cache identity includes the original filename, size and nanosecond modification time. Target language does not affect this untranslated Arabic preview. Subtitle PNGs and rendered video remain language-aware. The uploaded original is never overwritten.

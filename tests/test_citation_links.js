@@ -9,6 +9,9 @@ const full=links({url:'https://hadeethenc.com/ar/browse/hadith/1',translation_st
 assert.deepEqual(full.map(x=>x.role),['source','translation','verification']);
 const quran=links({url:'https://quranpedia.net/embed?surah=2&ayah=222',explanation_url:'https://dorar.net/tafseer/2/38',explanation_status:'available'},'quran');
 assert.deepEqual(quran.map(x=>x.role),['source','explanation']);
+const quranTranslation=links({url:'https://quranpedia.net/embed?surah=2&ayah=222',translation_status:'sourced',translation_url:'https://api.quranpedia.net/v1/translation/1947/2/222'},'quran').find(x=>x.role==='translation');
+assert.equal(quranTranslation.label,'قراءة ترجمة معاني الآية من المصدر');
+assert.ok(!quranTranslation.label.includes('الحديث'));
 const unavailable=links({url:'https://quranpedia.net/embed?surah=2&ayah=222',explanation_url:'https://dorar.net/tafseer/2',explanation_status:'unavailable'},'quran');
 assert.equal(unavailable[1].label,'تصفح تفاسير السورة');
 assert.deepEqual(links({url:'javascript:alert(1)',explanation_url:'https://user:pass@example.com/',explanation_status:'available'},'hadith'),[]);

@@ -2,7 +2,7 @@
 
 Current configuration: **Free Render demo**, one Docker instance in Frankfurt, no persistent disk, FFmpeg limited to one thread. The existing host is [jisr-3ue4.onrender.com](https://jisr-3ue4.onrender.com/).
 
-The October 6 final read-only check returned HTTP 200 for `/api/health`, with FFmpeg and both provider keys configured. `/languages.json` returned **404**, so this host does not yet contain the current multilingual release. Configured-key flags do not establish live permissions, quotas or translation quality.
+The current read-only check on October 6 returned HTTP 200 for `/api/health`, with FFmpeg and both provider keys configured. `/languages.json` returned the seven supported languages. The hosted `/js/app.js` does not contain the portable-preview loading/retry fix included in this delivery. Thus multilingual availability is observed, but this package's final revision is not yet verified as deployed. Configured-key flags do not establish permissions, quotas or translation quality.
 
 ## Publish the current release
 
@@ -32,7 +32,7 @@ Use one instance: this app uses SQLite, local files and in-process background jo
 - After actual review, open the read-only viewer link in a separate session. Never send a private editor recovery link to judges.
 - On this Free setup, do not use persistent-project survival across restart as a success criterion. Record that limitation. Test persistence after restart only if the team separately provisions persistent storage.
 - Test deletion only on a disposable verification project, and record observed behavior.
-- Fill the actual application URL, public repository URL, deployed revision and reviewed viewer URL in `submission/README.md`. Add the final presentation/demo video and retain the portal's submission confirmation.
+- Fill the actual application URL, public repository URL, deployed revision and reviewed viewer URL in `submission/README.md`. Submit the final presentation/demo video externally and retain the portal's submission confirmation.
 
 ## Alternative: an existing Linux server
 

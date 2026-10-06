@@ -18,7 +18,8 @@
     }
     const explanationAtSource = source.explanation_status === 'available' && (!source.explanation_url || safeUrl(source.explanation_url) === safeUrl(source.url));
     add(source.url || source.search_url, isSearch(source) ? 'البحث في المصدر' : kind === 'quran' ? (explanationAtSource ? 'قراءة مصدر الآية وتفسيرها' : 'قراءة مصدر الآية') : (explanationAtSource ? 'قراءة مصدر الحديث وشرحه' : 'قراءة مصدر الحديث'), 'source');
-    if (source.translation_status === 'sourced') add(source.translation_url, 'قراءة ترجمة الحديث من المصدر', 'translation');
+    if (source.translation_status === 'sourced') add(source.translation_url,
+      kind === 'quran' ? 'قراءة ترجمة معاني الآية من المصدر' : 'قراءة ترجمة الحديث من المصدر', 'translation');
     if (source.verification) add(source.verification.url || source.verification.search_url,
       isSearch(source.verification) ? 'البحث عن التخريج في الدرر السنية' : 'قراءة التخريج في الدرر السنية', 'verification');
     add(source.origins_url || source.verification?.origins_url, 'قراءة أصول الحديث', 'origins');

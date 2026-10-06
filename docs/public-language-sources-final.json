@@ -1,0 +1,84 @@
+{
+  "checked_at": "2026-10-06T19:00:51.764906+00:00",
+  "verse": "1:1",
+  "hadith_id": "65004",
+  "checks": {
+    "en": {
+      "quran_status": "sourced",
+      "quran_language": "en",
+      "quran_book": 1947,
+      "quran_translator": "Saheeh International",
+      "quran_url": "https://api.quranpedia.net/v1/translation/1947/1/1",
+      "hadith_status": "sourced",
+      "hadith_language": "en",
+      "hadith_url": "https://hadeethenc.com/en/browse/hadith/65004",
+      "translator_status": "not_specified"
+    },
+    "es": {
+      "quran_status": "sourced",
+      "quran_language": "es",
+      "quran_book": 1950,
+      "quran_translator": "Muhammad Isa Garc\u00eda",
+      "quran_url": "https://api.quranpedia.net/v1/translation/1950/1/1",
+      "hadith_status": "sourced",
+      "hadith_language": "es",
+      "hadith_url": "https://hadeethenc.com/es/browse/hadith/65004",
+      "translator_status": "not_specified"
+    },
+    "ur": {
+      "quran_status": "sourced",
+      "quran_language": "ur",
+      "quran_book": 1966,
+      "quran_translator": "\u0645\u062d\u0645\u062f \u0627\u0628\u0631\u0627\u06c1\u06cc\u0645 \u062c\u0648\u0646\u0627\u06af\u0691\u06be\u06cc",
+      "quran_url": "https://api.quranpedia.net/v1/translation/1966/1/1",
+      "hadith_status": "sourced",
+      "hadith_language": "ur",
+      "hadith_url": "https://hadeethenc.com/ur/browse/hadith/65004",
+      "translator_status": "not_specified"
+    },
+    "hi": {
+      "quran_status": "sourced",
+      "quran_language": "hi",
+      "quran_book": 1986,
+      "quran_translator": "\u0905\u091c\u093c\u0940\u091c\u093c\u0941\u0932 \u0939\u0915\u093c \u0909\u092e\u0930\u0940",
+      "quran_url": "https://api.quranpedia.net/v1/translation/1986/1/1",
+      "hadith_status": "sourced",
+      "hadith_language": "hi",
+      "hadith_url": "https://hadeethenc.com/hi/browse/hadith/65004",
+      "translator_status": "not_specified"
+    },
+    "id": {
+      "quran_status": "sourced",
+      "quran_language": "id",
+      "quran_book": 1961,
+      "quran_translator": "Indonesian Ministry of Religious Affairs translation committee",
+      "quran_url": "https://api.quranpedia.net/v1/translation/1961/1/1",
+      "hadith_status": "sourced",
+      "hadith_language": "id",
+      "hadith_url": "https://hadeethenc.com/id/browse/hadith/65004",
+      "translator_status": "not_specified"
+    },
+    "zh-Hans": {
+      "quran_status": "sourced",
+      "quran_language": "zh-Hans",
+      "quran_book": 1974,
+      "quran_translator": "\u7a46\u7f55\u9ed8\u5fb7\u00b7\u9a6c\u575a",
+      "quran_url": "https://api.quranpedia.net/v1/translation/1974/1/1",
+      "hadith_status": "sourced",
+      "hadith_language": "zh-Hans",
+      "hadith_url": "https://hadeethenc.com/zh/browse/hadith/65004",
+      "translator_status": "not_specified"
+    },
+    "tr": {
+      "quran_status": "sourced",
+      "quran_language": "tr",
+      "quran_book": 1959,
+      "quran_translator": "King Fahd Complex translation team",
+      "quran_url": "https://api.quranpedia.net/v1/translation/1959/1/1",
+      "hadith_status": "sourced",
+      "hadith_language": "tr",
+      "hadith_url": "https://hadeethenc.com/tr/browse/hadith/65004",
+      "translator_status": "not_specified"
+    }
+  }
+}

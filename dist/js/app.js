@@ -2,6 +2,16 @@ const $=q=>document.querySelector(q), $$=q=>[...document.querySelectorAll(q)];
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=n=>`${String(Math.floor((+n||0)/60)).padStart(2,'0')}:${String(Math.floor((+n||0)%60)).padStart(2,'0')}`;
 const video=$('#video');
+const playbackStatus=document.createElement('div');playbackStatus.className='playback-status';playbackStatus.hidden=true;playbackStatus.setAttribute('role','status');
+const playbackMessage=document.createElement('span'),playbackRetry=document.createElement('button');playbackRetry.type='button';playbackRetry.className='button secondary';playbackRetry.textContent='إعادة تحميل الفيديو';playbackRetry.hidden=true;
+playbackStatus.append(playbackMessage,playbackRetry);$('#videoStage').append(playbackStatus);
+video.preload='auto';
+video.addEventListener('loadstart',()=>{playbackMessage.textContent='جارٍ تحميل وتجهيز معاينة الفيديو…';playbackRetry.hidden=true;playbackStatus.hidden=false});
+video.addEventListener('loadeddata',()=>{playbackStatus.hidden=true});
+video.addEventListener('canplay',()=>{playbackStatus.hidden=true});
+video.addEventListener('error',()=>{playbackMessage.textContent='تعذر تشغيل معاينة الفيديو. أعد التحميل؛ وإذا استمرت المشكلة، جرّب نسخة MP4 بترميز H.264.';playbackRetry.hidden=false;playbackStatus.hidden=false});
+playbackRetry.onclick=()=>video.load();
+
 const subtitleImage=document.createElement('img');subtitleImage.id='subtitleImage';subtitleImage.className='subtitle-image';subtitleImage.alt='';subtitleImage.hidden=true;$('#subtitle').append(subtitleImage);
 const subtitlePreview=JisrSubtitlePreview.create({image:subtitleImage,container:$('#subtitle'),onError:message=>toast(message)});
 let previewAppearance='',previewKey='',previewWarmTimer;
@@ -209,8 +219,13 @@ function edit(i){
     ${partial?`<label for="sourceTranslation">${s.source.translation_status==='machine_draft'?'مسودة الترجمة الآلية المرتبطة بالمطابقة':'ترجمة المصدر الكاملة للاقتباس الجزئي'}</label><textarea id="sourceTranslation" class="translation" lang="${targetLanguage()}" dir="${targetInfo().direction}" readonly>${esc(s.source.translation)}</textarea><p class="modal-note">${s.source.translation_status==='machine_draft'?'لم تُسترجع ترجمة منشورة لهذا الحديث. اختيار جزء من هذه المسودة لا يجعلها ترجمة من المصدر؛ قارن مرجعًا مترجمًا أو راجع المعنى قبل النشر.':'حدد بالمؤشر جزء الترجمة المقابل للكلام المسموع، ثم اضغط استخدام التحديد.'}</p><button class="button secondary" id="useSourceSpan">استخدام التحديد للترجمة</button>`:''}
     ${s.source?'<label><input id="rejectSource" type="checkbox"> رفض المطابقة وإزالة المرجع</label>':''}
     ${project?`<label for="surahId">سورة / آية من Quranpedia</label><div class="modal-actions"><input id="surahId" type="number" min="1" max="114" placeholder="رقم السورة"><input id="ayahId" type="number" min="1" placeholder="رقم الآية"><button class="button secondary" id="verifyQuran">توثيق الآية</button></div><label><input id="hadithParaphrase" type="checkbox" ${s.source?.quotation_mode==='paraphrase'?'checked':''}> نقل بالمعنى: أربط مرجعاً ذا صلة وأحتفظ بكلام المتحدث (ليس اقتباساً حرفياً)</label><label for="hadithId">معرّف الحديث في HadeethEnc</label><div class="modal-actions"><input id="hadithId" inputmode="numeric" placeholder="معرّف الحديث"><button class="button secondary" id="verifyHadith">توثيق الحديث</button></div>`:''}
+    ${project&&s.audio_gap?'<p class="modal-note">استمع أولاً: اكتب الكلام وترجمته إن وجد. إذا كان صوتاً غير كلامي، يمكنك تجاهل تنبيه التفريغ.</p><button class="button secondary" id="dismissGap">تجاهل التنبيه: الصوت ليس كلاماً</button>':''}
     <div class="modal-actions"><button class="button primary" id="saveEdit">حفظ التعديلات</button><button class="button secondary" id="cancelEdit">إلغاء</button></div><p class="modal-note">تعديل اقتباس موثّق يلغي المرجع إلى أن يُعاد التحقق منه. اختيار جزء حرفي من المصدر يحافظ على التوثيق.</p>`);
   $('#cancelEdit').onclick=()=>$('#modal').close();
+  if($('#dismissGap'))$('#dismissGap').onclick=async()=>{
+    if(!confirm('هل استمعت وتأكدت أن الصوت ليس كلاماً يحتاج تفريغاً؟'))return;
+    try{setProject(await api(`/api/projects/${project.id}/segments/${s.id}`,{method:'POST',body:JSON.stringify({dismiss_gap:true})}));$('#modal').close();toast('تم تجاهل التنبيه بعد تأكيدك')}catch(e){toast(e.message)}
+  };
   let resetCaption=false;
   if(s.source){$('#resetSourceCaption').onclick=()=>{$('#editSourceCaption').value=JisrCitationText.sourceCaption(s,true);resetCaption=true};$('#editSourceCaption').oninput=()=>{resetCaption=false}}
   $('#editTranslation').oninput=()=>{selectedSpan=null};
@@ -418,6 +433,10 @@ function syncWorkflow(){
       current=3;progress=1;
       state=exporting.phase==='working'?'busy':exporting.phase==='error'?'error':'complete';
       note=exporting.phase==='working'?`جارٍ تجهيز ${exportNames[exporting.kind]}…`:exporting.phase==='error'?'تعذر التصدير · حاول مجدداً':`${exportNames[exporting.kind]} جاهز للتنزيل`;
+      if(exporting.phase==='ready'&&!project.publishable){
+        current=2;progress=2/3;state='idle';
+        note=`مسودة ${exportNames[exporting.kind]} جاهزة للتنزيل · المراجعة لم تكتمل`;
+      }
     }
   }
   bar.dataset.state=state;
@@ -430,7 +449,7 @@ function syncWorkflow(){
   const label=$('.workflow-note');
   if(label.textContent!==note)label.textContent=note;
   steps.forEach((step,i)=>{
-    const done=i<current||(state==='complete'&&i===current);
+    const done=(i<current||(state==='complete'&&i===current))&&!(i===2&&project&&!project.publishable&&!readOnly);
     step.classList.toggle('done',done);
     step.classList.toggle('current',i===current&&state!=='complete');
     if(i===current)step.setAttribute('aria-current','step');else step.removeAttribute('aria-current');

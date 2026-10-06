@@ -79,13 +79,15 @@ DOWNLOAD_TICKETS = {}
 DOWNLOAD_TTL = 600
 SUBTITLE_RENDER_VERSION = "shared-png-v10-multilingual"
 SUBTITLE_GAP_HOLD_SECONDS = 0.5
+PLAYBACK_VERSION = "h264-aac-v1"
+PLAYBACK_LOCK = threading.Lock()
 PREVIEW_LOCK = threading.Lock()
 MEDIA_INFO_CACHE = {}
 TAFSIR_INDEX = {}
 DORAR_LINK_CACHE = {}
 TERM_CACHE = {}
 TERMINOLOGY_GUIDE = (
-    "Source: AI Challenge scientific package, page 8 (sample glossary). "
+    "Source: AI Challenge scientific package, page 7 (sample glossary). "
     "Islam: Islam, understood in its religious context. Tawhid: Tawhid / Oneness of God; preserve the term and explain when needed, not merely numerical oneness. "
     "Ibadah: Worship, including inward, verbal, and practical acts, not only rituals. Nubuwwah: Prophethood. Wahy: Revelation, not personal inspiration. "
     "Sharia: Sharia / Islamic law and guidance, not only punishments. Hadith: Hadith; attribution and grading come only from sources. "
@@ -173,7 +175,7 @@ def project_json(row, editable=False):
                 if segment.get("type") in ("quran", "hadith"):
                     segment["type"] = "speech"
     result["style"] = json.loads(row["style"])
-    result["video_url"] = f"/api/projects/{row['id']}/video"
+    result["video_url"] = f"/api/projects/{row['id']}/video?playback={PLAYBACK_VERSION}"
     result["share_url"] = f"/view/{row['share_token']}"
     result["editable"] = editable
     return result
@@ -2399,6 +2401,53 @@ def media_info(path):
     return MEDIA_INFO_CACHE[key]
 
 
+def playback_video(row):
+    """Keep originals for processing/export; serve a portable browser preview."""
+    original = DATA / row["id"] / row["filename"]
+    if not FFMPEG:
+        return original
+    stat = original.stat()
+    signature = hashlib.sha256(json.dumps([
+        "playback-" + PLAYBACK_VERSION, row["filename"], stat.st_size, stat.st_mtime_ns,
+    ]).encode()).hexdigest()[:24]
+    output = original.parent / ("playback-" + signature + ".mp4")
+    # Range requests and concurrent players must reuse one complete file.
+    with PLAYBACK_LOCK:
+        if output.is_file() and output.stat().st_size:
+            return output
+        probe = subprocess.run([FFMPEG, "-hide_banner", "-i", str(original)],
+                               capture_output=True, text=True, timeout=20)
+        video_line = next((line for line in probe.stderr.splitlines() if "Video:" in line), "")
+        audio_line = next((line for line in probe.stderr.splitlines() if "Audio:" in line), "")
+        # A .mp4 extension alone says nothing about the actual container/codecs.
+        portable = ("Input #0, mov,mp4," in probe.stderr and
+                    re.search(r"Video: h264\b", video_line) and
+                    re.search(r"\byuv420p(?:\(|,|\s)", video_line) and
+                    (not audio_line or "Audio: aac (LC)" in audio_line))
+        if portable:
+            return original
+        width, height, _ = media_info(original)
+        pending = output.with_name(output.stem + ".pending.mp4")
+        try:
+            result = subprocess.run([
+                FFMPEG, "-v", "error", "-y", "-i", str(original),
+                "-map", "0:v:0", "-map", "0:a:0?", "-sn", "-dn",
+                "-vf", f"scale={width}:{height},setsar=1", "-c:v", "libx264",
+                "-preset", "veryfast", "-crf", "18", "-pix_fmt", "yuv420p",
+                "-threads", str(max(1, min(8, int(os.getenv("JISR_FFMPEG_THREADS", "2"))))),
+                "-c:a", "aac", "-profile:a", "aac_low", "-b:a", "192k",
+                "-movflags", "+faststart", str(pending),
+            ], capture_output=True, text=True, timeout=600)
+            if result.returncode or not pending.is_file() or not pending.stat().st_size:
+                raise RuntimeError("تعذر تجهيز معاينة الفيديو؛ أعد المحاولة أو ارفع نسخة MP4 بترميز H.264")
+            pending.replace(output)
+            return output
+        except subprocess.TimeoutExpired as exc:
+            raise RuntimeError("استغرق تجهيز معاينة الفيديو وقتاً طويلاً؛ أعد المحاولة") from exc
+        finally:
+            pending.unlink(missing_ok=True)
+
+
 def checked_style(style):
     result = {"font": "plex", "size": 18, "color": "#ffffff", "backdrop": True, "bilingual": True, **style, "position": "bottom"}
     if not isinstance(result["font"], str) or result["font"] not in SUBTITLE_FONTS or type(result["size"]) is not int or not 10 <= result["size"] <= 42:
@@ -2700,7 +2749,7 @@ class Handler(BaseHTTPRequestHandler):
             if action == "video":
                 # A public media URL is unguessable only when linked from a share page;
                 # here the project ID is a random 128-bit capability.
-                return self.serve_file(DATA / row["id"] / row["filename"])
+                return self.serve_file(playback_video(row))
             if export_type in ("srt", "mp4"):
                 if not exportable(row):
                     return self.fail(409, "انتظر انتهاء المعالجة أو أضف مقاطع قبل التصدير")

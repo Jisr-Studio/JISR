@@ -489,3 +489,6 @@ dialog.export-dialog{width:min(760px,calc(100% - 28px))}
 
 .language-menu{box-sizing:border-box;scrollbar-width:thin}
 .language-menu-option{line-height:1.5}
+
+.playback-status{position:absolute;inset:0;z-index:3;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:24px;text-align:center;background:#0e1321e8;color:#e3e9f2;font-size:16px;line-height:1.7}
+.playback-status[hidden]{display:none}

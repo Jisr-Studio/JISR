@@ -13,3 +13,6 @@ tmp*/
 .venv/
 *.log
 submission/deployment/*.zip
+
+*.sqlite
+*.db

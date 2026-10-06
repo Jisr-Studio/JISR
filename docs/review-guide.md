@@ -14,3 +14,7 @@
 Source-caption changes persist after reloading and appear in the preview, MP4, and SRT exports. They preserve the canonical reference, its URL, and existing review decisions; the JSON sources list retains the original source metadata. Replacing or removing a reference clears its custom caption. The shared viewer is read-only.
 
 Automatic video source captions and warnings use the project language. English retains the bundled chapter names and reference labels; other languages use localized Quran/verse labels with numeric locations and the selected translator. Translated Hadith grading uses the requested-language record when available, otherwise a localized “see source for grading” notice. Arabic reference metadata remains available to the editor. Custom viewer captions can be edited, hidden or reset; changing project language clears them to prevent a stale English line.
+
+## Non-speech audio warnings
+
+Open an audio-gap segment with **تعديل المقطع**. Listen and supply the missing Arabic/translation if it contains speech. If it is non-speech, choose **تجاهل التنبيه: الصوت ليس كلاماً** and confirm explicitly. This removes only that gap cue; it does not erase the original recording. A draft export never marks human review complete in the workflow.

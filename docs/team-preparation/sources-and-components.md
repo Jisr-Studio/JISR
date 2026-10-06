@@ -1,3 +1,5 @@
+> Historical working register. Use [the current external-component notices](../third-party-components.md) and [final audit](../final-delivery-audit-2026-10-06.md) for this delivery.
+
 # Sources, tools, and components working register
 
 > October 6 release update: the actual translation provider is OpenAI GPT-6 Luna, transcription is ElevenLabs Scribe v2, and Quranpedia/HadeethEnc use the seven verified language mappings in [language/source coverage](../languages.md). The ten bundled subtitle fonts have adjacent SIL OFL notices and exact source links in [the font manifest](../../dist/fonts/README.md). The current release checks are in [final delivery](../final-delivery-check-2026-10-06.md). License/permission decisions left blank below have not been invented by this technical audit.
@@ -35,7 +37,6 @@ Do not copy values from .env into this register. Configuration examples contain 
 
 ## Team code and media
 
-- Project source: Turki/Anas confirm authorship, any reused components, and the license they choose for team-owned code. No tracked project LICENSE was found on October 3; do not assign a license without team agreement.
 - Existing silent demo and illustrative segments: record origin and permitted use. Label them as interface examples; they are not evaluated live-provider output.
 - Evaluation and presentation clips: record creator/source, permission or applicable license, dates, allowed display/release scope, and whether they meet the organizer's data requirements. Public availability alone does not establish reusable rights.
 - Screenshots/recordings: use the team's app and permitted clips. Record any third-party material visible in them.
