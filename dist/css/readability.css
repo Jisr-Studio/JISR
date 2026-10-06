@@ -468,3 +468,21 @@ dialog.export-dialog{width:min(760px,calc(100% - 28px))}
 @keyframes export-spin{to{transform:rotate(360deg)}}
 @media(max-width:600px){.export-secondary{grid-template-columns:1fr}.export-dialog #modalBody{padding:18px}.export-dialog .export-option{padding:16px}.export-dialog .export-status{padding:18px}.export-dialog .export-download{font-size:18px}}
 @media(prefers-reduced-motion:reduce){.export-status[data-state=working] .export-state-icon,.export-activity:after{animation:none}.export-activity:after{left:32%}}
+
+/* Fully clickable, themed language menus. */
+.language-control{max-width:100%;min-width:0}
+.language-control select[hidden]{display:none!important}
+.language-trigger{display:flex;align-items:center;gap:12px;min-height:46px;width:100%;padding:10px 14px;background:#ffffff03;border:1px solid #3d4c64;border-radius:8px;color:#edf0f7;font:inherit;font-size:16px;cursor:pointer;text-align:right}
+.language-trigger-label{color:#b9c5d8;font-size:14px;white-space:nowrap}
+.language-trigger-value{flex:1;white-space:nowrap}
+.language-trigger-arrow{color:#b9c5d8;font:20px/1 Arial,sans-serif}
+.language-trigger:hover{background:#ffffff08;border-color:#73829b}
+.language-trigger:focus-visible,.language-trigger[aria-expanded=true]{outline:2px solid #efb86f;outline-offset:2px}
+.language-trigger:disabled{opacity:.5;cursor:default}
+.language-menu{position:fixed;z-index:1000;overflow:auto;overscroll-behavior:contain;padding:6px;background:#1a2436;border:1px solid #526078;border-radius:10px;box-shadow:0 16px 40px #0008;direction:rtl}
+.language-menu[hidden]{display:none}
+.language-menu-option{display:block;width:100%;min-height:44px;padding:10px 14px;border:0;border-radius:6px;background:transparent;color:#edf0f7;font:inherit;font-size:16px;text-align:right;cursor:pointer}
+.language-menu-option:hover,.language-menu-option:focus-visible{background:#2b3850;outline:none}
+.language-menu-option[aria-selected=true]{background:#efb86f14;color:#efb86f}
+.language-menu-option[aria-selected=true]:after{content:'✓';float:left}
+@media(max-width:700px){.project-heading .actions .language-control{flex-basis:100%}.language-trigger{gap:8px}.language-trigger-label{font-size:13px}}

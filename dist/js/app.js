@@ -493,6 +493,7 @@ function syncLanguageControls(){
   $('#projectLanguageChoice').value=targetLanguage();
   $('#retranslateLanguage').disabled=project?.status==='processing';
   document.documentElement.style.setProperty('--translation-font',targetInfo().font_family);
+  document.dispatchEvent(new Event('jisr-language-sync'));
 }
 $('#retranslateLanguage').onclick=()=>{
   if(!project||readOnly||pendingReviews.size||project.status==='processing')return;
