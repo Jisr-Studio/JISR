@@ -30,7 +30,72 @@ The [October 4 verification](docs/verification-2026-10-04.md) records 111 passin
 Python tests and desktop/mobile browser checks for onboarding, appearance,
 upload, review and native MP4 download.
 
-![Jisr translation studio — desktop preview](docs/previews/studio-desktop.png)
+## 🖥️ Interface walkthrough
+
+**Discover the idea → Upload → Transcribe and translate → Review sources → Export.**
+
+The first five screens introduce the workflow through animated, illustrative scenes. The final two show the interactive example editor, where creators can explore the tools before uploading their own video. These screenshots illustrate the interface; the silent example video and its sample text are separate demonstration assets.
+
+### 1. Introduction — a bridge from Arabic to English
+
+The landing page introduces Jisr's purpose: helping Arabic Islamic video content reach English-speaking audiences with visible quotation sources. Its arch motif connects the Arabic input to the translated output. Visitors choose a tour step or select **ابدأ بفيديوك** to upload; the introduction stays visible until they navigate.
+
+<p align="center">
+  <img src="docs/previews/walkthrough/01-introduction.jpeg" alt="Jisr introduction with the Arabic-to-English bridge illustration" width="1000">
+</p>
+<p align="center"><sub>Arabic-first landing page · Animated brand illustration · Direct upload action</sub></p>
+
+### 2. Upload — start with an Arabic video
+
+The upload scene explains the starting point: choose a video and create a workspace without registering an account. It introduces the advertised MP4, MOV, and WebM formats and the 250 MB upload limit. The file card and progress line in this tour are explanatory animation; uploading begins when the visitor chooses a real file.
+
+<p align="center">
+  <img src="docs/previews/walkthrough/02-upload.jpeg" alt="Upload introduction showing a video file card, upload area, and supported formats" width="1000">
+</p>
+<p align="center"><sub>Choose a video · No account required · One connected workspace</sub></p>
+
+### 3. Transcription and translation — from sound to a timed draft
+
+The translation scene shows how speech becomes Arabic text and an English draft associated with video timing. In a real project, word timestamps guide the subtitle boundaries, while quotation candidates and terminology are prepared for review. The output remains editable so the creator can check the connected meaning before approving it.
+
+<p align="center">
+  <img src="docs/previews/walkthrough/03-translation.png" alt="Translation introduction showing an audio waveform, timed Arabic text, and an English draft" width="1000">
+</p>
+<p align="center"><sub>Audio waveform → Timed Arabic transcript → Editable English draft</sub></p>
+
+### 4. Sources and review — keep the reference beside the quotation
+
+The review scene connects a spoken Quran excerpt to its reference and corresponding English translation. Creators compare the wording, inspect the source, and confirm the result themselves. Its sample confirmation is interactive within the tour and does not approve a real project. The current editor places **راجعت هذا المقطع** directly on each segment card.
+
+<p align="center">
+  <img src="docs/previews/walkthrough/04-source-review.jpeg" alt="Source-review introduction linking a Quran excerpt to its reference and translation" width="1000">
+</p>
+<p align="center"><sub>Quotation → Reference → Corresponding translation → Human confirmation</sub></p>
+
+### 5. Export and sharing — deliver the translated result
+
+The export scene introduces the finished video and subtitle-file outputs. Real projects support MP4 with embedded subtitles, timed SRT, and JSON reference lists. Private drafts retain review warnings; the public viewing link requires the review confirmations. Published source translations and machine drafts remain distinguishable throughout the workflow.
+
+<p align="center">
+  <img src="docs/previews/walkthrough/05-export.jpeg" alt="Export introduction with a subtitled video preview and MP4 and SRT output cards" width="1000">
+</p>
+<p align="center"><sub>Subtitled MP4 · Timed SRT · Reference JSON · Viewing link after review</sub></p>
+
+### 6. The studio — preview, edit, and review together
+
+The studio brings the project title, workflow stages, video preview, and segment list into one view. Arabic text and English translations appear together; filters help creators find Quran, Hadith, and segments needing review. Selecting a segment seeks to its position in the video, making it easier to compare the subtitle with what was spoken.
+
+<p align="center">
+  <img src="docs/previews/walkthrough/06-studio-overview.png" alt="Jisr studio overview with project controls, workflow stages, transcript filters, and video preview" width="1000">
+</p>
+<p align="center"><sub>Project controls · Workflow status · Arabic and English segment editor · Video preview</sub></p>
+
+The detailed view shows the numbered cue timeline and the **المراجعة**, **المصادر**, and **المظهر** tool tabs. Creators can open reference details, adjust subtitle appearance, and review individual segments. The highlighted cue ties the editor to playback; source labels keep references visible beside the relevant text.
+
+<p align="center">
+  <img src="docs/previews/walkthrough/07-studio-detail.png" alt="Studio detail showing Arabic and English cues, source labels, playback controls, timeline, and review tools" width="1000">
+</p>
+<p align="center"><sub>Linked cues and playback · Source labels · Review, source, and appearance tools</sub></p>
 
 ## 🎨 Design system
 
