@@ -1,5 +1,13 @@
 /* Display source text without overwriting the speech-recognition transcript. */
 (function (root) {
+  let captionLabels = {surahs:{}, labels:{}};
+  function configureCaptionLabels(labels) { captionLabels = labels; }
+  function englishCaptionText(value) {
+    value=String(value||'').trim().replace(/[٠-٩]/g,c=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(c)));
+    if(!/[\u0600-\u06ff]/.test(value))return value;
+    for(const [arabic,english] of Object.entries(captionLabels.labels))value=value.split(arabic).join(english);
+    return /[\u0600-\u06ff]/.test(value)?'':value;
+  }
   function presentation(segment) {
     const originalArabic = segment?.ar || '';
     const source = segment?.source;
@@ -19,9 +27,22 @@
     const source=segment?.source;
     if(!source || !['quran','hadith'].includes(segment.type))return '';
     if(!useDefault && typeof segment.source_caption==='string')return segment.source_caption;
-    if(source.quotation_mode==='paraphrase')return 'نقل بالمعنى · مرجع مرتبط · '+(source.attribution||source.title||'حديث')+(segment.translation_origin!=='human'&&segment.reviewed!==true?' · English: machine draft':'');
-    if(segment.type==='quran')return (source.title||'آية قرآنية')+' · ترجمة معاني القرآن الكريم'+(source.translator?' · '+source.translator:'');
-    return (source.attribution||source.title||'حديث')+' · '+(source.grade||'الحكم غير مذكور')+(source.translation_status!=='sourced'?' · English: machine draft':'');
+    if(segment.type==='quran'){
+      let query=new URLSearchParams();try{query=new URL(source.url).searchParams}catch{}
+      const location=String(source.url||'').match(/\/surah\/(\d+)\/(\d+)/);
+      const surah=String(source.surah||query.get('surah')||location?.[1]||''),ayah=String(source.ayah||query.get('ayah')||location?.[2]||'');
+      const name=captionLabels.surahs[surah];
+      const reference=name&&/^\d+$/.test(ayah)?`Surah ${name} (${surah}:${ayah})`:name?`Surah ${name} (${surah})`:'Quran';
+      const translator=englishCaptionText(source.translator_en||source.translator);
+      return reference+' · Translation of Quranic meanings'+(translator?' · '+translator:'');
+    }
+    let attribution=englishCaptionText(source.attribution_en||source.attribution);
+    if(!attribution){
+      const dorar=String(source.url||'').match(/dorar\.net\/h\/([A-Za-z0-9]+)/),record=String(source.url||'').match(/hadeethenc\.com\/(?:ar|en)\/browse\/hadith\/(\d+)/);
+      attribution=dorar?`Dorar · Hadith ${dorar[1]}`:record?`HadeethEnc · Hadith ${record[1]}`:'Hadith · See source for details';
+    }
+    if(source.quotation_mode==='paraphrase')return 'Paraphrased quotation · Related source · '+attribution+(segment.translation_origin!=='human'&&segment.reviewed!==true?' · English: machine draft':'');
+    return attribution+' · '+(englishCaptionText(source.grade_en||source.grade)||'See source for grading')+(source.translation_status!=='sourced'?' · English: machine draft':'');
   }
   function reviewPending(segment) {
     if(!segment)return false;
@@ -54,6 +75,6 @@
     const first = matches[0];
     return {start:words[first].start, end:words[first+excerpt.length-1].end};
   }
-  root.JisrCitationText = { presentation, transcriptForSave, sourceCaption, reviewPending, sourceExcerptRange };
+  root.JisrCitationText = { presentation, transcriptForSave, sourceCaption, reviewPending, sourceExcerptRange, configureCaptionLabels };
   if (typeof module !== 'undefined') module.exports = root.JisrCitationText;
 })(typeof window === 'undefined' ? globalThis : window);

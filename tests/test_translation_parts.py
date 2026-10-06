@@ -92,7 +92,8 @@ class TranslationPartsTests(unittest.TestCase):
         subtitles = server.make_srt(segments)
         for line in ("Always remember", "and the Prophet's saying", "in our lives", "Reference verse translation", "Reference hadith translation"):
             self.assertIn(line, subtitles)
-        self.assertIn("00:00:00,600 --> 00:00:02,350", subtitles)
+        self.assertIn("00:00:00,600 --> 00:00:02,400", subtitles)
+        self.assertEqual(segments[1]["end"], 2.35)  # Spoken timing stays unchanged.
         self.assertEqual(len(server.make_sources(segments)), 2)
 
     @patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"})

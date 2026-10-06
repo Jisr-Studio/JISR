@@ -1,10 +1,19 @@
 /* Shared-image preview: bounded cache, next-cue warming, and stale-load guards. */
 (function(root) {
+  // The backend derives display_end from adjacent cues; original end stays editable.
+  function activeIndex(segments,time) {
+    return segments.findIndex(cue=>time>=cue.start&&time<(cue.display_end??cue.end));
+  }
   function create(options) {
     const {image, container, onError=()=>{}} = options;
     const request = options.fetch || root.fetch.bind(root);
     const makeURL = options.makeURL || (blob => URL.createObjectURL(blob));
     const revokeURL = options.revokeURL || (url => URL.revokeObjectURL(url));
+    const decode = options.decode || (async url => {
+      if(typeof root.Image !== 'function')return;
+      const next=new root.Image();next.src=url;
+      await next.decode();
+    });
     const schedule = options.schedule || setTimeout, cancel = options.cancel || clearTimeout;
     const cache = new Map(), pending = new Map(), limit = options.limit || 16;
     let current='', sequence=0, epoch=0, timer=null, destroyed=false;
@@ -33,7 +42,14 @@
         }
         const blob=await response.blob();
         if(destroyed||started!==epoch)throw Object.assign(Error('Preview cancelled'),{name:'AbortError'});
-        const url=makeURL(blob);cache.set(entry.key,url);trim();return url;
+        const url=makeURL(blob);
+        try {
+          // Warming includes decoding, so a cached transition never clears the
+          // visible image while the browser prepares the next PNG.
+          await decode(url);
+          if(destroyed||started!==epoch)throw Object.assign(Error('Preview cancelled'),{name:'AbortError'});
+        } catch(error) {revokeURL(url);throw error}
+        cache.set(entry.key,url);trim();return url;
       })().finally(()=>{if(pending.get(entry.key)===job)pending.delete(entry.key)});
       pending.set(entry.key,job);return job.promise;
     }
@@ -49,7 +65,8 @@
       const key=entry?.key||'';
       if(key===current&&(!key||!image.hidden||pending.has(key)||timer!==null))return;
       current=key;const expected=++sequence;cancel(timer);timer=null;
-      image.hidden=true;container.classList.toggle('image-subtitle',!!key);
+      if(!key||!cache.has(key))image.hidden=true;
+      container.classList.toggle('image-subtitle',!!key);
       if(!key||destroyed)return;
       if(cache.has(key)){paint(key,cache.get(key),expected);return}
       async function run(attempt=0) {
@@ -75,6 +92,6 @@
     }
     return {show,warm,reset,destroy(){reset();destroyed=true}};
   }
-  root.JisrSubtitlePreview={create};
+  root.JisrSubtitlePreview={create,activeIndex};
   if(typeof module!=='undefined')module.exports=root.JisrSubtitlePreview;
 })(typeof window==='undefined'?globalThis:window);

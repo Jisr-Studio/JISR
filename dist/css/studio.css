@@ -30,6 +30,8 @@ main{max-width:1760px;padding:32px 3% 0}.studio-intro{display:flex;justify-conte
 .audio-controls #volume{width:65px;flex:0 0 65px;margin:0}
 .audio-controls output{width:31px;color:#a1aec8;font:10px/1.5 Arial,sans-serif;font-variant-numeric:tabular-nums;text-align:right}
 .subtitle #subtitleArabic{font-family:inherit}
+.subtitle.no-cue{display:none!important}
+.subtitle>div:empty,.subtitle>small:empty{display:none!important}
 .subtitle.image-subtitle{inset:0!important;width:100%;height:100%;font-size:0!important;pointer-events:none}
 .subtitle.image-subtitle>div,.subtitle.image-subtitle>small{position:absolute!important;width:1px!important;height:1px!important;overflow:hidden;clip-path:inset(50%);padding:0!important;margin:0!important}
 .subtitle-image{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none}

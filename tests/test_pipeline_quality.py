@@ -153,7 +153,7 @@ class PipelineQualityTests(unittest.TestCase):
     def test_quran_meanings_and_machine_hadith_are_labeled_in_exports(self):
         quran = cue(type="quran", source={"title": "سورة", "translator": "Saheeh International"})
         hadith = cue(type="hadith", source={"attribution": "مرجع", "translation_status": "machine_draft"})
-        self.assertIn("ترجمة معاني القرآن الكريم", server.make_srt([quran]))
+        self.assertIn("Translation of Quranic meanings", server.make_srt([quran]))
         self.assertIn("Saheeh International", server.make_ass([quran], {}))
         self.assertIn("English: machine draft", server.make_srt([hadith]))
         quran["source_caption"] = ""

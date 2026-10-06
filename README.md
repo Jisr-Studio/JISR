@@ -6,7 +6,15 @@
 > Built for the [AI Challenge for Serving Islamic Content](https://islamicaich.org/), October 2026.  
 > Jisr is an AI-assisted tool. Private SRT/MP4 drafts can be exported with a review warning. Every matched Quranic or Hadith citation requires human confirmation before sharing through a public viewing link.
 
-**Current status:** The local application integrates **ElevenLabs Scribe v2** for transcription and **OpenAI GPT-6 Luna** for translation, quotation detection, terminology review, independent meaning checks, and source-excerpt alignment. Six real Arabic videos were processed and exported locally with the actual providers. Expert content review and public deployment verification remain necessary before launch. See the [October 5 verification](docs/verification-2026-10-05.md).
+**Current status:** The local application integrates **ElevenLabs Scribe v2** for transcription and **OpenAI GPT-6 Luna** for translation, quotation detection, terminology review, independent meaning checks, and source-excerpt alignment. Six real Arabic videos were processed and exported locally with the actual providers. Expert content review and deployment verification of the current release remain necessary before launch. See the [October 5 verification](docs/verification-2026-10-05.md).
+
+The [October 6 product check](docs/verification-2026-10-06.md) verified fresh
+local processing, eight current-renderer MP4 exports, browser downloads and a
+fresh MP4/SRT workflow on the existing Render host. Automatic Hadith matching
+now rejects punctuation-only attribution values. The hosted version is older
+than the local release; publish the current fixes before demonstrating its
+latest subtitle appearance. Fast cues and unsourced Hadith English remain
+explicit human-review tasks.
 
 The [October 4 verification](docs/verification-2026-10-04.md) records 111 passing
 Python tests and desktop/mobile browser checks for onboarding, appearance,
@@ -25,6 +33,8 @@ Islamic organizations produce valuable Arabic videos, but reaching English-speak
 3. **Translate** ordinary speech with GPT-6 Luna. Word-range validation preserves the transcript and timing; a separate bounded check looks for meaning borrowed from neighboring cues, repetition, ambiguous transcription, and religious terminology errors. Al-Jamhara definitions guide translation of detected Islamic terms. Both automatic translation and its check remain drafts until human review.
 4. **Verify Quran quotations** against Quranpedia's Hafs text and attach sourced Saheeh International English. The model does not generate canonical verse translations.
 5. **Verify Hadith quotations** against Dorar and search HadeethEnc for a matching translation. Connected quotation parts are retrieved together and keep one source identity. Short search anchors recover records missed by full queries. A unique complete match can be attached automatically; competing narrations appear for comparison. Explanation availability is separate from translation availability. Unverified English remains a labelled machine draft.
+
+Hadith retrieval prioritizes matching the spoken wording over filling metadata: a record with an unspecified narrator stays explicitly incomplete rather than being replaced by a different narration. Conditional wording and pronouns are checked separately from general fuzzy similarity. Long quotations also follow subtitle length limits; existing Arabic/English sentence clauses can be split locally when their counts agree, preserving every timed word and remaining unconfirmed. Otherwise, word-range translation repartitions them before group retrieval. Human edits and approvals are preserved.
 6. **Review** source Arabic and English text, timing, narrator, grading, attribution, and subtitle appearance. The editor displays matched Quran/Hadith wording from the reference and keeps the original transcript available for comparison. Saving that wording unchanged preserves the reference; changing quotation text invalidates the link and requires verification again.
 7. **Export** a subtitled MP4 or SRT draft with warnings, a JSON list of confirmed citations, or a separate private draft-source inventory with review states and suggestions. The confirmed list is empty before citations are accepted. Public read-only video links require every segment to be reviewed. Exporting a draft does not confirm its text or sources.
 
@@ -42,16 +52,21 @@ Source, translation, explanation, and search links are displayed separately. A D
 - **Audience labels:** the automatic Quran caption includes **ترجمة معاني القرآن الكريم** and its translator. Unsourced Hadith English is labelled **English: machine draft** in the preview and exports. Custom or hidden captions remain the editor's responsibility.
 - **Hadith paraphrases:** editors can explicitly link a related Hadith as **نقل بالمعنى**. This preserves the speaker's wording and its translation, labels the relationship as a paraphrase, and still requires review before publication.
 - **Suggested Hadith sources:** if Dorar cannot match a quotation literally, a bounded HadeethEnc search uses short Arabic anchors. Complete records are checked again; abbreviated wording and recognition differences appear under **مصدر محتمل · قارن واربط**, showing source Arabic, English, narrator, grading, and attribution. These suggestions are not verified literal quotations. Selecting **ربط كنقل بالمعنى** preserves spoken text and leaves human review pending.
-- **Readable speech cues:** the translator aims for short connected clauses and roughly one or two English lines. The server rejects ordinary-speech parts over 180 English characters, or over 8 seconds when they contain more than 12 Arabic words, and allows one repair attempt. Original word timestamps remain authoritative. Retrying an older project can repair oversized unreviewed speech without retranscribing or changing reviewed quotations; failed repair preserves existing translations. Long scripture quotations retain their separate source-matching rules.
+- **Readable cues:** the translator aims for short connected clauses and roughly one or two English lines. The server rejects translation parts over 180 English characters, or over 8 seconds when they contain more than 12 Arabic words, including Quran/Hadith parts, and allows one repair attempt. Original word timestamps remain authoritative. Retrying an older project can repair oversized unreviewed speech or Hadith without retranscribing or changing reviewed quotations; failed repair preserves existing translations. Religious quotations also retain their separate source-matching rules.
 - **Editable source caption:** select a Quran/Hadith segment, then click **تعديل سطر المصدر** above the video preview, or edit **سطر المصدر أسفل الترجمة** in the segment dialog. Save a custom single-line caption of up to 200 characters, leave it empty to hide the line, or choose **استعادة السطر الأصلي** to restore the automatic label.
 
 Source-caption changes persist after reloading and appear in the preview, MP4, and SRT exports. They preserve the canonical reference, its URL, and existing review decisions; the JSON sources list retains the original source metadata. Replacing or removing a reference clears its custom caption. The shared viewer is read-only.
+
+Automatic video source captions target English-speaking viewers. Quran captions use the chapter name and number, verse number, `Translation of Quranic meanings`, and translator. Chapter names are bundled from [Quran.com](https://api.quran.com/api/v4/chapters?language=en) in `dist/source-caption-labels.json`; no runtime name translation or AI call is required. Hadith captions use English reference labels; complex grading remains available in the original source panel rather than being guessed. Custom captions retain their chosen language. The October 6 check exported a real I5 MP4/SRT and verified the preview image matches the exported cue.
+
 
 ### Preview and MP4 appearance
 
 Real projects use the same server-rendered transparent subtitle image in the browser and MP4, including font, colour, background, line wrapping, Arabic shaping, and source caption. Size 10–42 is measured on a 480-pixel logical video width and scales with the video. Long cues shrink to occupy approximately the lower half of the frame in both views. New uploads default to size 24 for portrait, 22 for square, and 18 for landscape; saved editor settings stay unchanged. Uploaded video keeps its original colours in the preview. The illustrative demo still uses browser text.
 
 MP4 exports use H.264 CRF 18 and preserve normal square-pixel video dimensions. Anamorphic or rotated footage is normalized to its displayed aspect ratio; odd dimensions are rounded up to an even encoding canvas. Compatible audio is copied; other codecs are converted to AAC. Export quality cannot restore detail already absent from the original video. SRT contains text and timestamps; its appearance is controlled by the receiving player. See [export verification](docs/export-rendering.md).
+
+Subtitle transitions hold the current cue until the next starts when the gap is at most 0.5 seconds, consistently in preview, SRT and MP4. Longer silences and the final cue clear normally. Original transcript and source timings remain unchanged. Empty preview text no longer leaves background bars, and the next preview PNG is decoded while warming its cache.
 
 Subtitle images are cached in the browser and the next cue is preloaded. Temporary load failures are retried once; old responses cannot replace the current cue or appear in a timing gap. Saving edits preserves playback position, and appearance saves are serialized before export. The review filter uses the same criteria as public sharing, including unconfirmed references and unresolved partial quotations. JSON citations contain only confirmed, aligned references.
 
@@ -72,7 +87,7 @@ docs/                   API contract, source policy, implementation notes, and p
 .vscode/                Run, debug, and test configuration
 .env.example            Configuration template; contains no credentials
 Dockerfile              Linux image with FFmpeg
-render.yaml             Always-on Render configuration and persistent disk
+render.yaml             Free Render demo configuration; temporary storage and idle sleep
 compose.yaml            App, Caddy HTTPS proxy, and persistent data volume
 Caddyfile               Reverse-proxy configuration
 data/                   Generated media and SQLite database; Git-ignored
@@ -147,7 +162,7 @@ node tests/test_citation_text.js
 node tests/test_subtitle_preview.js
 ```
 
-The latest subtitle-readability/source-lookup run on Windows passed **163 Python tests**, with **one Unix-only deployment module skipped** and FFmpeg available. External AI and source-service responses are mocked in the suite; no paid API requests are made by these tests. The integration test uploads a video with audio, processes word timestamps and mixed quotations, permits private draft exports, enforces review for public sharing, renders an actual MP4, and checks subtitle/source exports, sharing permissions, retries, and deletion. It also verifies that preview PNG bytes equal the subtitle image used by MP4. Additional cases cover a 10-ms cue in 60-fps video, odd dimensions, rotation/aspect ratio, incomplete cache files, whitespace translations, confirmed-source eligibility, static MIME types, and video byte ranges. Quran boundary regression tests cover split recitations, speaker introductions, repeated recitations, incomplete quotations, source outages, preservation of words/timestamps and reviewed text, transactional translation failures, and the processing pipeline. JavaScript checks cover preview retry, out-of-order responses, timing gaps, cache cleanup, and review decisions. These checks establish local integration rather than live model accuracy.
+The latest subtitle-readability/source-lookup run on Windows passed **177 Python tests**, with **one Unix-only deployment module skipped** and FFmpeg available. External AI and source-service responses are mocked in the suite; no paid API requests are made by these tests. The integration test uploads a video with audio, processes word timestamps and mixed quotations, permits private draft exports, enforces review for public sharing, renders an actual MP4, and checks subtitle/source exports, sharing permissions, retries, and deletion. It also verifies that preview PNG bytes equal the subtitle image used by MP4. Additional cases cover a 10-ms cue in 60-fps video, odd dimensions, rotation/aspect ratio, incomplete cache files, whitespace translations, confirmed-source eligibility, static MIME types, and video byte ranges. Quran boundary regression tests cover split recitations, speaker introductions, repeated recitations, incomplete quotations, source outages, preservation of words/timestamps and reviewed text, transactional translation failures, and the processing pipeline. JavaScript checks cover preview retry, out-of-order responses, timing gaps, cache cleanup, and review decisions. These checks establish local integration rather than live model accuracy.
 
 Citation checks also cover displaying source wording while preserving the original transcript, retaining the reference when saving unchanged displayed Arabic, and keeping partial quotations and paraphrases distinct. Caption tests cover saving, hiding, resetting, input validation, editor access, source replacement, and subtitle output without changing source metadata. The caption workflow was also checked in the browser for saving, persistence after reload, hiding, and restoration.
 
@@ -200,3 +215,6 @@ Before public launch, complete human review of representative Arabic videos, ver
 
 - **Turki:** frontend, UI/UX, integration, and export.
 - **Anas:** AI engineering, translation, and API integration.
+
+
+Arabic diacritic backdrop fix (October 6): the shared libass renderer uses one padded translucent event box instead of per-run boxes. Combining marks and fallback glyphs no longer create small stepped backdrop edges. The same PNG feeds preview and MP4; disabling the backdrop remains supported. Six font/size cases passed, and an I5 export decoded fully with preview/export cue bytes equal. Renderer `shared-png-v6` invalidates old raster and MP4 caches.

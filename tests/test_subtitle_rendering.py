@@ -19,6 +19,77 @@ def chunk(name, payload):
 
 
 class SubtitleRenderingTests(unittest.TestCase):
+    def test_brief_gaps_are_shared_display_timing_not_transcript_edits(self):
+        segments = [{'id': str(i), 'start': start, 'end': end, 'type': 'speech',
+                     'ar': 'اختبار', 'en': str(i), 'display_end': 999}
+                    for i, (start, end) in enumerate(((1, 2), (2.5, 3), (3.500001, 4), (3.9, 5)))]
+        original = json.dumps(segments)
+        display = server.subtitle_display_segments(segments)
+        self.assertEqual([s['display_end'] for s in display], [2.5, 3, 4, 5])
+        self.assertEqual(json.dumps(segments), original)
+        self.assertEqual(server.subtitle_display_segments(display), display)
+        self.assertEqual(server.subtitle_display_segments([]), [])
+        srt = server.make_srt(segments)
+        ass = server.make_ass(segments, {})
+        self.assertIn('00:00:01,000 --> 00:00:02,500', srt)
+        self.assertIn('Dialogue: 0,0:00:01.00,0:00:02.50', ass)
+        # Source documentation always uses the actual spoken end.
+        quote = {**segments[0], 'type': 'quran', 'source': {'arabic': 'اختبار', 'english': '0'},
+                 'reviewed': True, 'needs_review': False}
+        self.assertEqual(server.make_sources([quote, *segments[1:]])[0]['end'], 2)
+
+    @unittest.skipUnless(server.FFMPEG, 'FFmpeg required for transition timing')
+    def test_export_holds_brief_gap_but_clears_long_silence_and_final_cue(self):
+        with tempfile.TemporaryDirectory() as temp, patch.object(server, 'DATA', Path(temp)):
+            folder = server.DATA / ('a' * 32); folder.mkdir()
+            src = folder / 'original.mp4'
+            subprocess.run([server.FFMPEG, '-v', 'error', '-y', '-f', 'lavfi', '-i',
+                            'color=black:s=320x180:r=30:d=3', '-c:v', 'libx264', str(src)], check=True, capture_output=True)
+            segments = [{'type': 'speech', 'ar': 'اختبار', 'en': text, 'start': start, 'end': end}
+                        for text, start, end in [('FIRST', .2, .7), ('SECOND', 1, 1.3), ('LAST', 2, 2.5)]]
+            row = {'id': folder.name, 'filename': src.name, 'duration': 3, 'style': '{"size":42}', 'segments': json.dumps(segments)}
+            output = server.render_video(row)
+            raw = subprocess.run([server.FFMPEG, '-v', 'error', '-i', str(output), '-f', 'rawvideo', '-pix_fmt', 'gray', '-'], capture_output=True, check=True).stdout
+            frame_size = 320 * 180
+            for frame, visible in [(3, False), (24, True), (31, True), (48, False), (66, True), (81, False)]:
+                with self.subTest(frame=frame):
+                    self.assertEqual(any(v > 100 for v in raw[frame_size * frame:frame_size * (frame + 1)]), visible)
+            manifest = json.loads(output.with_name('render-manifest.json').read_text())
+            self.assertEqual([(c['start'], c['end']) for c in manifest['cues']],
+                             [(0, .2), (.2, 1), (1, 1.3), (1.3, 2), (2, 2.5), (2.5, 3)])
+
+    @unittest.skipUnless(server.FFMPEG, 'FFmpeg required for diacritic backdrops')
+    def test_vowelled_arabic_has_one_solid_backdrop_and_background_can_be_disabled(self):
+        segment = {'type': 'quran', 'start': 0, 'end': 1,
+                   'ar': 'إِنَّا لَا نُضِيعُ أَجْرَ مَنْ أَحْسَنَ عَمَلًا',
+                   'en': 'Indeed, We will not allow to be lost the reward of any who did well in deeds.',
+                   'source': {'surah': 18, 'ayah': 30, 'translator': 'Saheeh International'}}
+        with tempfile.TemporaryDirectory() as temp, patch.object(server, 'DATA', Path(temp)):
+            row = {'id': 'a' * 32}; (server.DATA / row['id']).mkdir()
+            for font in ('amiri', 'plex', 'noto-naskh'):
+                for size in (18, 42):
+                    with self.subTest(font=font, size=size):
+                        image, _ = server.subtitle_image(row, segment, {'font': font, 'size': size}, 640, 360)
+                        raw = subprocess.run([server.FFMPEG, '-v', 'error', '-i', str(image), '-f', 'rawvideo', '-pix_fmt', 'rgba', '-'], capture_output=True, check=True).stdout
+                        alpha = raw[3::4]
+                        points = [i for i, value in enumerate(alpha) if value >= 128]
+                        left, right = min(i % 640 for i in points), max(i % 640 for i in points)
+                        top, bottom = min(points) // 640, max(points) // 640
+                        self.assertGreater(right - left, 100)
+                        # A combining mark must not create a detached box or a
+                        # step in the translucent background's silhouette.
+                        for y in range(top + 2, bottom - 1):
+                            self.assertGreaterEqual(min(alpha[y * 640 + left + 2:y * 640 + right - 1]), 128)
+            plain, _ = server.subtitle_image(row, segment, {'font': 'amiri', 'size': 42, 'backdrop': False}, 640, 360)
+            raw = subprocess.run([server.FFMPEG, '-v', 'error', '-i', str(plain), '-f', 'rawvideo', '-pix_fmt', 'rgba', '-'], capture_output=True, check=True).stdout
+            alpha = raw[3::4]
+            points = [i for i, value in enumerate(alpha) if value >= 128]
+            left, right = min(i % 640 for i in points), max(i % 640 for i in points)
+            top, bottom = min(points) // 640, max(points) // 640
+            # Disabling the backdrop leaves actual transparent gaps between text.
+            interior = [value for y in range(top + 2, bottom - 1) for value in alpha[y * 640 + left + 2:y * 640 + right - 1]]
+            self.assertGreater(interior.count(0), len(interior) / 3)
+
     def test_sources_exclude_unconfirmed_and_unaligned_records(self):
         source = {'kind': 'quran', 'arabic': 'نص', 'english': 'Source', 'start': 99, 'end': 100}
         quote = {'type': 'quran', 'start': 1, 'end': 3, 'ar': 'نص', 'en': 'Source', 'source': source,

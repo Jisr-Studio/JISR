@@ -1,11 +1,12 @@
 const assert = require('node:assert/strict');
 const {presentation, transcriptForSave} = require('../dist/js/citation-text.js');
-const {sourceCaption} = require('../dist/js/citation-text.js');
-const sourceSegment={type:'quran',source:{title:'الكهف، الآية 30'}};
-assert.equal(sourceCaption(sourceSegment),'الكهف، الآية 30 · ترجمة معاني القرآن الكريم');
+const {sourceCaption,configureCaptionLabels} = require('../dist/js/citation-text.js');
+configureCaptionLabels(require('../dist/source-caption-labels.json'));
+const sourceSegment={type:'quran',source:{surah:18,ayah:30,title:'الكهف، الآية 30'}};
+assert.equal(sourceCaption(sourceSegment),'Surah Al-Kahf (18:30) · Translation of Quranic meanings');
 assert.equal(sourceCaption({...sourceSegment,source_caption:'Al-Kahf 18:30'}),'Al-Kahf 18:30');
 assert.equal(sourceCaption({...sourceSegment,source_caption:''}),'');
-assert.equal(sourceCaption({...sourceSegment,source_caption:'Custom'},true),'الكهف، الآية 30 · ترجمة معاني القرآن الكريم');
+assert.equal(sourceCaption({...sourceSegment,source_caption:'Custom'},true),'Surah Al-Kahf (18:30) · Translation of Quranic meanings');
 assert.equal(sourceCaption({type:'speech',source:null,source_caption:'Old source'}),'');
 
 const original = 'ومن أتاني يمشي أتيتوه هرولة';
@@ -56,3 +57,6 @@ assert.equal(sourceExcerptRange({...partialSegment,source:{...partialSegment.sou
 assert.equal(sourceExcerptRange({...partialSegment,source:{...partialSegment.source,quotation_mode:'paraphrase'}}),null);
 assert.equal(sourceExcerptRange({...partialSegment,source:{arabic:'الله يحب الله يحب',partial:true,subtitle_arabic:'الله يحب'}}),null);
 assert.equal(sourceExcerptRange({...partialSegment,source:{...partialSegment.source,subtitle_arabic:'كلام آخر'}}),null);
+
+assert.equal(sourceCaption({type:'hadith',source:{attribution:'صحيح مسلم ٢٢٣',grade:'صحيح',translation_status:'sourced'}}),'Sahih Muslim 223 · Sahih (authentic)');
+assert.equal(sourceCaption({type:'hadith',source:{url:'https://dorar.net/h/test123',grade:'لم يذكر حكمًا'}}),'Dorar · Hadith test123 · See source for grading · English: machine draft');

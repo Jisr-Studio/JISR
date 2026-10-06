@@ -20,6 +20,62 @@ def dorar_response(text):
 @patch.dict("os.environ", {"OPENAI_API_KEY": ""})
 @patch.object(server, "search_hadeethenc", new=lambda query: [])
 class CitationRetrievalTests(unittest.TestCase):
+    def test_related_narration_is_not_a_literal_subtitle_replacement(self):
+        variant = 'وإن تقرب مني شبرا تقربت منه ذراعا وإن تقرب إلي ذراعا تقربت إليه باعا وإن أتاني يمشي أتيته هرولة'
+        self.assertFalse(server.hadith_literal_matches(SPOKEN, variant))
+        self.assertTrue(server.hadith_literal_matches(SPOKEN, CANONICAL))
+        self.assertTrue(server.hadith_literal_matches('ومن أتاني يمشي أتيت له هرولة', CANONICAL))
+        self.assertFalse(server.hadith_literal_matches('من تقرب إلي شبرا تقربت إليه ذراعا',
+                                                      'من تقرب إلي شبرا تقربت منه ذراعا'))
+
+    @patch.object(server, 'resolve_dorar_reference', side_effect=lambda source, query: source)
+    @patch.object(server, 'enrich_hadith_translation', side_effect=lambda spoken, query, source: source)
+    @patch.object(server, 'get_json')
+    def test_exact_wording_with_missing_narrator_beats_complete_different_variant(self, get_json, enrich, resolve):
+        variant = CANONICAL.replace('من تقرب إلي', 'وإن تقرب مني').replace('إليه ذراعا', 'منه ذراعا')
+        for narrator in ('-', ''):
+            with self.subTest(narrator=narrator):
+                correct = dorar_response(CANONICAL)['ahadith']['result'].replace('أبو هريرة', narrator)
+                get_json.return_value = {'ahadith': {'result': dorar_response(variant)['ahadith']['result'] + correct}}
+                segment = {'ar': SPOKEN, 'en': 'Draft', 'candidate': {'kind': 'hadith'}}
+                self.assertTrue(server.verify_hadith(segment))
+                self.assertEqual(segment['source']['arabic'], CANONICAL)
+                self.assertEqual(segment['source']['narrator'], narrator)
+                self.assertEqual(segment['source']['metadata_missing'], ['narrator'])
+                self.assertFalse(segment['reviewed'])
+
+    @patch.object(server, 'resolve_dorar_reference', side_effect=lambda source, query: source)
+    @patch.object(server, 'enrich_hadith_translation', side_effect=lambda spoken, query, source: source)
+    @patch.object(server, 'get_json')
+    def test_different_variant_in_first_search_does_not_stop_other_anchors(self, get_json, enrich, resolve):
+        variant = CANONICAL.replace('من تقرب إلي', 'وإن تقرب مني').replace('إليه ذراعا', 'منه ذراعا')
+        get_json.side_effect = [dorar_response(variant), dorar_response(CANONICAL)]
+        segment = {'ar': SPOKEN, 'en': 'Draft', 'candidate': {'kind': 'hadith'}}
+        self.assertTrue(server.verify_hadith(segment))
+        self.assertEqual(segment['source']['arabic'], CANONICAL)
+        self.assertEqual(get_json.call_count, 2)
+
+    def test_punctuation_placeholders_do_not_count_as_hadith_attribution(self):
+        fields = {"narrator": "أبو هريرة", "attribution": "صحيح مسلم", "grade": "صحيح"}
+        for missing in fields:
+            for placeholder in ("-", "—", "…", " "):
+                with self.subTest(field=missing, placeholder=placeholder):
+                    values = {**fields, missing: placeholder}
+                    self.assertFalse(server.complete_hadith_metadata(values))
+        self.assertTrue(server.complete_hadith_metadata(fields))
+
+    @patch.object(server, "resolve_dorar_reference", side_effect=lambda source, query: source)
+    @patch.object(server, "enrich_hadith_translation", side_effect=lambda spoken, query, source: source)
+    @patch.object(server, "get_json")
+    def test_missing_narrator_does_not_hide_a_complete_matching_record(self, get_json, enrich, resolve):
+        incomplete = dorar_response(CANONICAL)["ahadith"]["result"].replace("أبو هريرة", "-")
+        complete = dorar_response(CANONICAL)["ahadith"]["result"]
+        get_json.return_value = {"ahadith": {"result": incomplete + complete}}
+        segment = {"ar": SPOKEN, "en": "Draft", "candidate": {"kind": "hadith"}}
+        self.assertTrue(server.verify_hadith(segment))
+        self.assertEqual(segment["source"]["narrator"], "أبو هريرة")
+        self.assertFalse(segment["reviewed"])
+
     def test_one_asr_word_boundary_error_matches_saved_case(self):
         self.assertGreater(server.similarity(SPOKEN, CANONICAL), .98)
         self.assertTrue(server.quotation_matches(SPOKEN, CANONICAL))

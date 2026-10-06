@@ -34,6 +34,8 @@ Upload returns an `edit_token` once. Send it in the `X-Edit-Token` header for ed
 
 ## Segment
 
+`start` and `end` are the original spoken timings used by the editor and source records. The server adds a read-only `display_end` for subtitle playback: when the next cue starts within 0.5 seconds after `end`, the current cue remains visible until that start. Longer silences and the final cue retain their original end. Preview, SRT and MP4 share this derived timing; do not send `display_end` as an edit.
+
 ```json
 {
   "id": "12-character-hex-id",
@@ -141,7 +143,9 @@ Unresolved Quran/Hadith candidates retain `candidate`, set `needs_review: true` 
 
 Hadith literal no-match results trigger up to three HadeethEnc anchor searches and at most three complete-record lookups. Only a unique, complete, literal match without lookup failures attaches automatically. Looser lexical matches produce `citation_lookup.status: suggested` and `citation_suggestions`: an array with `id`, `title`, `arabic`, `english`, `url`, `narrator`, `grade`, `attribution`, and `quotation_mode`. These are comparison choices, not confirmed citations. `citation_suggestion_status` distinguishes `suggested`, `not_found`, and `unavailable`. The editor selects a suggestion through the existing Hadith endpoint, explicitly using `paraphrase: true` for abbreviated wording. Attaching/rejecting a source or changing Arabic clears stale suggestions; no automatic review approval occurs.
 
-Hadith matching ranks the spoken passage inside a full source report. Passage matching uses the existing 0.86 similarity threshold; a one-word difference in token counts additionally requires compatible beginning/end boundaries and at least 0.98 similarity without spaces. This tolerates a near-identical ASR boundary error without absorbing an introduction. The original transcript stays unchanged and human review remains required. A transcription error in a complete quotation does not make it a partial quotation. Longer source reports remain partial and require the correct sourced subtitle excerpt. Failed long queries may use up to two shorter normalized anchors; every result must still pass passage matching and metadata checks. This is source retrieval and validation, not an embedding/vector RAG pipeline.
+General passage discovery uses 0.86 similarity. Automatic literal Hadith attachment additionally requires 0.96 similarity and rejects changed conditional wording or pronouns. A short clause can tolerate one ASR split/merge only with matching outer words and at least 0.96 similarity without spaces. Retrieval ranks textual match first, metadata completeness second; `source.metadata_missing` lists absent fields such as `narrator`, without inventing them or substituting another narration. Missing grade or attribution still prevents attachment. Up to two shorter anchors use the actual transcript rather than relying only on a model-generated query. A sourced translation or fallback record may not replace a closer Arabic match with a worse one. Original transcript words stay unchanged and review remains required. This is source retrieval and validation, not an embedding/vector RAG pipeline.
+
+Hadith drafts exceeding subtitle limits can be repartitioned into timed clauses before connected-source retrieval. `reflow_method: "existing_sentence_clauses"` identifies a local split of existing Arabic/English sentences, with no AI request or proportional English word slicing. Ambiguous clause counts defer to word-range translation. Reviewed, human-edited, custom-captioned and paraphrased segments remain intact.
 
 ## Citation destinations
 
@@ -210,3 +214,9 @@ machine-draft label. Explicit custom/hidden source captions remain supported.
 `shared-png-v4` invalidates earlier images/MP4 caches, fitting long subtitles
 approximately into the lower half of the frame. New uploads default to size
 24 for portrait, 22 for square and 18 for landscape; saved styles are preserved.
+
+
+Automatic source captions are English in preview, MP4 and SRT. The shared `dist/source-caption-labels.json` supplies published English chapter names and presentation labels. Original citation metadata stays unchanged. Optional `attribution_en`, `grade_en`, and `translator_en` are used when supplied; unknown Arabic attributions fall back to the provider/record identifier, and unfamiliar grades say `See source for grading`. Custom `source_caption` strings, including empty strings, retain precedence. Renderer `shared-png-v5` invalidates cached Arabic automatic captions.
+
+
+Renderer `shared-png-v6` replaces the per-run backdrop with a padded libass event box (`BorderStyle=4`), covering shaped Arabic and combining marks consistently. `backdrop: false` still renders without a rectangle. [libass reference](https://github.com/libass/libass/wiki/Libass%27-ASS-Extensions#borderstyle4). ASS is an internal rasterization intermediate; no ASS export is provided. MP4, SRT, source metadata, and review state retain their existing contracts.

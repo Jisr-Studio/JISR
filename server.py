@@ -34,6 +34,7 @@ from pipeline_quality import check_meaning, annotate_readability, coherent_hadit
 
 ROOT = Path(__file__).resolve().parent
 DIST = ROOT / "dist"
+SOURCE_CAPTION_LABELS = json.loads((DIST / "source-caption-labels.json").read_text(encoding="utf-8"))
 SUBTITLE_FONTS = {
     "plex": "IBM Plex Sans Arabic", "amiri": "Amiri", "cairo": "Cairo",
     "tajawal": "Tajawal", "noto-sans": "Noto Sans Arabic",
@@ -73,7 +74,8 @@ PROCESS_SLOTS = threading.Semaphore(2)
 RECENT_UPLOADS = {}
 DOWNLOAD_TICKETS = {}
 DOWNLOAD_TTL = 600
-SUBTITLE_RENDER_VERSION = "shared-png-v4"
+SUBTITLE_RENDER_VERSION = "shared-png-v7"
+SUBTITLE_GAP_HOLD_SECONDS = 0.5
 PREVIEW_LOCK = threading.Lock()
 MEDIA_INFO_CACHE = {}
 TAFSIR_INDEX = {}
@@ -141,7 +143,7 @@ def project_row(project_id):
 
 def project_json(row, editable=False):
     result = {k: row[k] for k in ("id", "title", "filename", "status", "error", "stage", "duration", "created", "updated")}
-    result["segments"] = json.loads(row["segments"])
+    result["segments"] = subtitle_display_segments(json.loads(row["segments"]))
     result["publishable"] = publishable(row)
     result["exportable"] = exportable(row)
     result["export_warnings"] = export_warnings(row)
@@ -216,7 +218,7 @@ def save_project(project_id, **changes):
 def ready_for_retry(row):
     return row["status"] == "ready" and any(
         s.get("reviewed") is not True and s.get("translation_origin") != "human" and "source_caption" not in s and (
-            (s.get("candidate") and s.get("needs_review")) or needs_speech_reflow(s)
+            (s.get("candidate") and s.get("needs_review")) or needs_speech_reflow(s) or needs_hadith_reflow(s)
             or (s.get("type") == "speech" and not s.get("source") and s.get("quality_input_hash") != quality_input_hash(s))
             or (s.get("type") == "hadith" and (s.get("source") or {}).get("translation_status") != "sourced")
         ) for s in json.loads(row["segments"]))
@@ -292,6 +294,31 @@ def quotation_similarity(spoken, canonical):
 def quotation_matches(spoken, canonical, threshold=.86):
     """Match a contiguous passage; unrelated surrounding speech stays separate."""
     return quotation_similarity(spoken, canonical) >= threshold
+
+
+def hadith_literal_matches(spoken, canonical):
+    # Related narrations can share a high fuzzy score while changing pronouns
+    # or conditional wording. Keep them as suggestions, not subtitle text.
+    from difflib import SequenceMatcher
+    try:
+        excerpt = canonical_arabic_excerpt(spoken, canonical)
+    except ValueError:
+        return False
+    left, right = normalize_ar(spoken).split(), normalize_ar(excerpt).split()
+    changes = [(tag, left[a:b], right[c:d]) for tag, a, b, c, d in
+               SequenceMatcher(None, left, right, autojunk=False).get_opcodes() if tag != "equal"]
+    wording = {"من", "ومن", "ان", "وان", "اذا", "واذا", "الي", "مني", "منه", "اليه"}
+    if any(tag == "replace" and set(a) & wording and set(b) & wording
+           and set(a) & wording != set(b) & wording for tag, a, b in changes):
+        return False
+    if quotation_matches(spoken, canonical, threshold=.96):
+        return True
+    # A short clause amplifies a single ASR split (أتيت له / أتيته). Accept
+    # only one near-identical split/merge with matching outer boundaries.
+    return bool(len(left) >= 4 and left[0] == right[0] and left[-1] == right[-1]
+                and len(changes) == 1 and changes[0][0] == "replace"
+                and sorted((len(changes[0][1]), len(changes[0][2]))) == [1, 2]
+                and similarity("".join(left), "".join(right)) >= .96)
 
 
 def quotation_is_partial(spoken, canonical):
@@ -636,9 +663,9 @@ def translation_parts(segment, item):
             child["unclear_words"] = [w for w in segment.get("unclear_words", []) if start <= w["start"] <= end]
             child["needs_review"] = bool(child["unclear_words"]) or bool(segment.get("needs_review") and not segment.get("unclear_words"))
             cursor = last + 1
-            if part["kind"] == "speech" and speech_cue_too_long(child, part["english"]):
+            if speech_cue_too_long(child, part["english"]):
                 raise RuntimeError(f"Segment {segment['id']}: speech range {first}..{last} is too long for subtitles; "
-                                   "split it into natural connected clauses, with at most 180 English characters and "
+                                   "split speech or scripture into natural connected clauses, with at most 180 English characters and "
                                    "8 seconds when there are more than 12 Arabic words. Keep every word and its meaning.")
         child.update(id=segment["id"] if not result else uuid.uuid4().hex[:12], en=part["english"].strip(), type="speech", source=None, reviewed=False)
         child["candidate"] = {k: part.get(k) for k in ("kind", "surah", "ayah", "hadith_query")}
@@ -663,6 +690,86 @@ def needs_speech_reflow(segment):
     return (segment.get("type") == "speech" and not segment.get("reviewed") and not segment.get("source")
             and (segment.get("candidate") or {}).get("kind") not in ("quran", "hadith")
             and bool(segment.get("en")) and speech_cue_too_long(segment))
+
+
+def needs_hadith_reflow(segment):
+    return ((segment.get("type") == "hadith" or (segment.get("candidate") or {}).get("kind") == "hadith")
+            and segment.get("reviewed") is not True and segment.get("translation_origin") != "human"
+            and "source_caption" not in segment
+            and (segment.get("source") or {}).get("quotation_mode") != "paraphrase"
+            and bool(segment.get("en")) and speech_cue_too_long(segment))
+
+
+def reflow_hadith_cues(segments):
+    """Repartition automatic long quotes by word ranges, then rematch the group.
+
+    Work transactionally; no proportional English slicing or invented timings.
+    Keep human-approved/edited citations intact.
+    """
+    ids = {s["id"] for s in segments if needs_hadith_reflow(s)}
+    if not ids:
+        return segments
+    working = copy.deepcopy(segments)
+    pending, output = [], []
+    for segment in working:
+        if segment["id"] in ids:
+            clauses = split_saved_hadith_clauses(segment)
+            if clauses:
+                output.extend(clauses)
+                continue
+            segment["en"] = ""
+            segment["source"] = None
+            segment["type"] = "speech"
+            segment.pop("citation_group", None)
+            pending.append(segment)
+        output.append(segment)
+    if pending:
+        translate_segments(output)
+    segments[:] = output
+    return segments
+
+
+def split_saved_hadith_clauses(segment):
+    """Reuse aligned sentence clauses, never divide English by Arabic word ratios.
+
+    Only split when timed Arabic clauses and existing English clauses have the
+    same count and every result fits. All results remain unconfirmed drafts.
+    Ambiguous punctuation defers to the word-range translation path.
+    """
+    if not needs_hadith_reflow(segment):
+        return None
+    words = segment.get("words") or []
+    if normalize_ar(" ".join(w["text"] for w in words)) != normalize_ar(segment["ar"]):
+        return None
+    ranges, first = [], 0
+    for index, word in enumerate(words):
+        if re.search(r"[،,؛;.!?؟][\"»”']*$", word["text"]):
+            ranges.append((first, index + 1)); first = index + 1
+    if first < len(words):
+        ranges.append((first, len(words)))
+    english = [m[0].strip() for m in re.finditer(r".+?(?:[;.!?](?=\s|$)|$)", segment["en"], re.S) if m[0].strip()]
+    if len(ranges) < 2 or len(ranges) != len(english):
+        return None
+    output = []
+    for index, ((first, end), text) in enumerate(zip(ranges, english)):
+        timed = words[first:end]
+        if not timed:
+            return None
+        child = copy.deepcopy(segment)
+        child.update(id=segment["id"] if index == 0 else uuid.uuid4().hex[:12],
+                     ar=" ".join(w["text"] for w in timed), en=text, words=timed,
+                     start=timed[0]["start"], end=timed[-1]["end"], type="speech", source=None,
+                     reviewed=False, needs_review=True, translation_origin="machine",
+                     candidate={"kind": "hadith", "hadith_query": segment["ar"]},
+                     reflow_method="existing_sentence_clauses")
+        for field in ("citation_group", "citation_lookup", "citation_suggestions", "quality_review", "quality_input_hash"):
+            child.pop(field, None)
+        if "unclear_words" in child:
+            child["unclear_words"] = [w for w in child["unclear_words"] if child["start"] <= w["start"] <= child["end"]]
+        if speech_cue_too_long(child):
+            return None
+        output.append(child)
+    return output
 
 
 def reflow_speech_cues(segments):
@@ -707,7 +814,8 @@ def translate_segments(segments, checkpoint=None):
                    "Split different verses and hadith into separate parts. Do not rewrite, add, remove, or reorder Arabic words; never generate timestamps. "
                    "Read the entire sentence before translating its parts. Split ordinary speech into readable subtitle clauses, typically 6-14 Arabic words, "
                    "aiming for 1-2 English lines (about 70-110 characters) and 3-6 seconds per cue. "
-                   "Each ordinary-speech part MUST have at most 180 English characters; a part with more than 12 Arabic words MUST last at most 8 seconds. "
+                   "EVERY part, including Quran and hadith quotations, MUST have at most 180 English characters; a part with more than 12 Arabic words MUST last at most 8 seconds. "
+                   "A long religious quotation must span multiple connected subtitle clauses; preserve every quoted word and classify every part consistently. "
                    "word_end_seconds gives elapsed original word timing; use it to choose boundaries, never generate or modify timestamps. "
                    "Keep short connected sentences intact, including greetings such as السلام عليكم ورحمة الله وبركاته. "
                    "Each part's English must translate ONLY the Arabic words in that exact inclusive range. "
@@ -823,14 +931,22 @@ def lookup_quran(surah, ayah, spoken):
     return segment["source"]
 
 
+def complete_hadith_metadata(source):
+    # Preserve missing values in parsed records, but never treat punctuation
+    # placeholders as complete attribution when automatically choosing one.
+    return all(isinstance(source.get(field), str)
+               and any(char.isalnum() for char in source[field])
+               for field in ("narrator", "grade", "attribution"))
+
+
 def verify_hadith(seg):
     """Match Dorar text, then try to attach a unique sourced translation."""
     query = ((seg.get("candidate") or {}).get("hadith_query") or seg["ar"]).strip()[:100]
     if len(normalize_ar(query)) < 15:
         return False
-    words = normalize_ar(query).split()
+    words = normalize_ar(seg["ar"][:100]).split()
     queries = list(dict.fromkeys([query, " ".join(words[:6]), " ".join(words[-6:])]))
-    source = None
+    source, best_score = None, 0.0
     for search_query in queries:
         if len(search_query) < 15:
             continue
@@ -846,18 +962,24 @@ def verify_hadith(seg):
             raise ValueError("Unsupported Dorar response")
         entries = [entry for fragment in fragments if isinstance(fragment, str) for entry in parse_dorar(fragment)]
         # Rank the spoken passage within a report, not against its full length.
-        scored = sorted(((quotation_similarity(seg["ar"], x["arabic"]), x) for x in entries), key=lambda pair: pair[0], reverse=True)
-        source = next((entry for score, entry in scored if score >= .86 and all(entry.get(field) for field in ("narrator", "grade", "attribution"))), None)
-        if source:
-            query = search_query
+        scored = sorted(((quotation_similarity(seg["ar"], x["arabic"]), x) for x in entries),
+                        key=lambda pair: (pair[0], complete_hadith_metadata(pair[1])), reverse=True)
+        found = next(((score, entry) for score, entry in scored if hadith_literal_matches(seg["ar"], entry["arabic"])
+                      and all(any(c.isalnum() for c in str(entry.get(field) or "")) for field in ("grade", "attribution"))), None)
+        if found and (found[0], complete_hadith_metadata(found[1])) > (best_score, complete_hadith_metadata(source or {})):
+            best_score, source = found
+            chosen_query = search_query
+        # Try other bounded anchors when the first result is only approximate.
+        if source and best_score >= .98:
             break
     if source is None:
         return False
-    if not quotation_matches(seg["ar"], source["arabic"]):
+    if not hadith_literal_matches(seg["ar"], source["arabic"]):
         return False
-    if not source.get("narrator") or not source.get("grade") or not source.get("attribution"):
-        return False
+    query = chosen_query
     source = resolve_dorar_reference(source, query)
+    source["metadata_missing"] = [field for field in ("narrator", "grade", "attribution")
+                                  if not any(c.isalnum() for c in str(source.get(field) or ""))]
     reference = {**source, "kind": "hadith", "title": source["arabic"][:90], "english": seg["en"], "partial": quotation_is_partial(seg["ar"], source["arabic"]), "translator": "ترجمة آلية بانتظار مراجعة المحرر", "translation_status": "machine_draft", "explanation_status": "unavailable"}
     try:
         reference = enrich_hadith_translation(seg["ar"], query, reference)
@@ -1199,7 +1321,7 @@ def dorar_metadata(text):
     fields = (*DORAR_FIELDS, "التخريج", "التصنيف الموضوعي")
     bits = re.split(r"(" + "|".join(map(re.escape, fields)) + r")\s*:\s*", re.sub(r"\s+", " ", text))
     metadata = {bits[j]: bits[j + 1].strip(" |؛") for j in range(1, len(bits) - 1, 2)}
-    if not all(metadata.get(k) for k in ("الراوي", "المصدر", "خلاصة حكم المحدث")):
+    if not all(metadata.get(k) for k in ("المصدر", "خلاصة حكم المحدث")):
         return None
     narrator, scholar, book, number, grade = (metadata.get(k, "") for k in DORAR_FIELDS)
     return {"narrator": narrator, "scholar": scholar, "attribution": book + (" · " + number if number else ""), "grade": grade}
@@ -1330,7 +1452,7 @@ def lookup_hadith(hadith_id, spoken, *, paraphrase=False):
     spoken_norm, full_norm = normalize_ar(spoken), normalize_ar(arabic)
     if type(paraphrase) is not bool:
         raise ValueError("paraphrase must be a JSON boolean")
-    if not quotation_matches(spoken, arabic) and not paraphrase:
+    if not hadith_literal_matches(spoken, arabic) and not paraphrase:
         raise ValueError("النص المسموع لا يطابق الحديث المحدد؛ صحّح النص أو اختر مرجعاً آخر")
     en = get_json(base + "?" + urllib.parse.urlencode({"id": hadith_id, "language": "en"}))
     if en.get("id") is not None and str(en["id"]) != str(hadith_id):
@@ -1430,7 +1552,7 @@ def suggest_hadith_references(seg):
     for anchor in hadith_anchor_queries(query):
         try:
             for entry in search_hadeethenc(anchor):
-                exact = quotation_matches(seg["ar"], entry["arabic"])
+                exact = hadith_literal_matches(seg["ar"], entry["arabic"])
                 score = hadith_related_score(seg["ar"], entry["arabic"])
                 if exact or score >= .65:
                     candidates.setdefault(entry["id"], (score, entry))
@@ -1440,18 +1562,20 @@ def suggest_hadith_references(seg):
     suggestions, exact_sources = [], []
     for _, entry in ranked[:3]:
         try:
-            exact = quotation_matches(seg["ar"], entry["arabic"])
+            exact = hadith_literal_matches(seg["ar"], entry["arabic"])
             source = lookup_hadith(entry["id"], seg["ar"], paraphrase=not exact)
             if not all(source.get(k) for k in ("arabic", "english", "narrator", "grade", "attribution")):
                 continue
-            if exact and quotation_matches(seg["ar"], source["arabic"]):
+            if exact and hadith_literal_matches(seg["ar"], source["arabic"]):
                 exact_sources.append(source)
             elif hadith_related_score(seg["ar"], source["arabic"]) < .65:
                 continue
             suggestions.append({k: source[k] for k in ("id", "title", "arabic", "english", "url", "narrator", "grade", "attribution", "quotation_mode")})
         except (OSError, ValueError, TypeError, KeyError):
             failures = True
-    if len(exact_sources) == 1 and len(ranked) <= 3 and not failures:
+    previous_score = quotation_similarity(seg["ar"], (seg.get("source") or {}).get("arabic", ""))
+    if (len(exact_sources) == 1 and len(ranked) <= 3 and not failures
+            and quotation_similarity(seg["ar"], exact_sources[0]["arabic"]) + .000001 >= previous_score):
         attach_source(seg, "hadith", exact_sources[0])
         return True
     if suggestions:
@@ -1464,12 +1588,12 @@ def suggest_hadith_references(seg):
 
 def enrich_hadith_translation(spoken, query, reference):
     """Attach only a unique complete record matching both speech and Dorar."""
-    candidates = [item for item in search_hadeethenc(query) if quotation_matches(spoken, item["arabic"])]
+    candidates = [item for item in search_hadeethenc(query) if hadith_literal_matches(spoken, item["arabic"])]
     if not candidates:
         found = {}
         for anchor in hadith_anchor_queries(spoken):
             for item in search_hadeethenc(anchor):
-                if quotation_matches(spoken, item["arabic"]):
+                if hadith_literal_matches(spoken, item["arabic"]):
                     found.setdefault(item["id"], item)
         candidates = list(found.values())
     result = dict(reference)
@@ -1481,6 +1605,8 @@ def enrich_hadith_translation(spoken, query, reference):
     for candidate in candidates:
         try:
             source = lookup_hadith(candidate["id"], spoken)
+            if quotation_similarity(spoken, source["arabic"]) + .000001 < quotation_similarity(spoken, reference["arabic"]):
+                continue
             # A matching short phrase alone cannot identify a different report.
             if not quotation_matches(reference["arabic"], source["arabic"]):
                 continue
@@ -1738,6 +1864,10 @@ def process_project(project_id):
             save_project(project_id, stage="تحسين تقسيم الترجمة")
             reflow_speech_cues(segments)
             save_project(project_id, segments=json.dumps(segments, ensure_ascii=False))
+        if any(needs_hadith_reflow(s) for s in segments):
+            save_project(project_id, stage="تقسيم الاقتباسات الطويلة دون حذف كلمات")
+            reflow_hadith_cues(segments)
+            save_project(project_id, segments=json.dumps(segments, ensure_ascii=False))
         if not all(s.get("en") for s in segments):
             save_project(project_id, stage="ترجمة الكلام وتصنيف الاقتباسات")
             segments = translate_segments(segments, checkpoint=lambda items: save_project(project_id, segments=json.dumps(items, ensure_ascii=False)))
@@ -1747,7 +1877,7 @@ def process_project(project_id):
         save_project(project_id, stage="فحص حدود المعنى والترجمة")
         check_meaning(segments, translation_request, translation_key(), normalize_ar)
         save_project(project_id, segments=json.dumps(segments, ensure_ascii=False), stage="مطابقة الاقتباس المتصل والمراجع")
-        coherent_hadith_groups(segments, verify_hadith, suggest_hadith_references, attach_source, quotation_matches, quotation_is_partial)
+        coherent_hadith_groups(segments, verify_hadith, suggest_hadith_references, attach_source, hadith_literal_matches, quotation_is_partial)
         for seg in segments:
             if (seg.get("type") == "hadith" and seg.get("source") and not seg.get("citation_group")
                 and seg.get("reviewed") is not True and seg.get("translation_origin") != "human"
@@ -1768,7 +1898,7 @@ def process_project(project_id):
             for seg in segments:
                 if seg.get("candidate"):
                     resolve_segment_citation(seg)
-        classify_hadith_choices(segments, quotation_matches)
+        classify_hadith_choices(segments, hadith_literal_matches)
         annotate_readability(segments)
         duration = max(row["duration"], max(float(s["end"]) for s in segments))
         save_project(project_id, segments=json.dumps(segments, ensure_ascii=False), duration=duration, status="ready", stage="جاهز للمراجعة")
@@ -1805,14 +1935,38 @@ def source_caption(segment):
         return ""
     if isinstance(segment.get("source_caption"), str):
         return segment["source_caption"]
-    if source.get("quotation_mode") == "paraphrase":
-        return "نقل بالمعنى · مرجع مرتبط · " + (source.get("attribution") or source.get("title") or "حديث") + (" · English: machine draft" if segment.get("translation_origin") != "human" and segment.get("reviewed") is not True else "")
     if segment["type"] == "quran":
-        return (source.get("title") or "آية قرآنية") + " · ترجمة معاني القرآن الكريم" + (" · " + source["translator"] if source.get("translator") else "")
-    caption = (source.get("attribution") or source.get("title") or "حديث") + " · " + (source.get("grade") or "الحكم غير مذكور")
+        query = urllib.parse.parse_qs(urllib.parse.urlparse(source.get("url", "")).query)
+        location = re.search(r"/surah/(\d+)/(\d+)", source.get("url", ""))
+        surah = str(source.get("surah") or query.get("surah", [""])[0] or (location[1] if location else ""))
+        ayah = str(source.get("ayah") or query.get("ayah", [""])[0] or (location[2] if location else ""))
+        name = SOURCE_CAPTION_LABELS["surahs"].get(surah)
+        reference = f"Surah {name} ({surah}:{ayah})" if name and ayah.isdecimal() else f"Surah {name} ({surah})" if name else "Quran"
+        translator = english_caption_text(source.get("translator_en") or source.get("translator"))
+        return reference + " · Translation of Quranic meanings" + (" · " + translator if translator else "")
+    attribution = english_caption_text(source.get("attribution_en") or source.get("attribution"))
+    if not attribution:
+        url = source.get("url", "")
+        match = re.search(r"dorar\.net/h/([A-Za-z0-9]+)", url)
+        record = re.search(r"hadeethenc\.com/(?:ar|en)/browse/hadith/(\d+)", url)
+        attribution = f"Dorar · Hadith {match[1]}" if match else f"HadeethEnc · Hadith {record[1]}" if record else "Hadith · See source for details"
+    if source.get("quotation_mode") == "paraphrase":
+        return "Paraphrased quotation · Related source · " + attribution + (" · English: machine draft" if segment.get("translation_origin") != "human" and segment.get("reviewed") is not True else "")
+    grade = english_caption_text(source.get("grade_en") or source.get("grade")) or "See source for grading"
+    caption = attribution + " · " + grade
     if source.get("translation_status") != "sourced":
         caption += " · English: machine draft"
     return caption
+
+
+def english_caption_text(value):
+    """Translate presentation labels only; unfamiliar metadata stays in the source panel."""
+    value = str(value or "").strip().translate(str.maketrans("٠١٢٣٤٥٦٧٨٩", "0123456789"))
+    if not re.search(r"[\u0600-\u06ff]", value):
+        return value
+    for arabic, english in SOURCE_CAPTION_LABELS["labels"].items():
+        value = value.replace(arabic, english)
+    return value if not re.search(r"[\u0600-\u06ff]", value) else ""
 
 
 def subtitle_arabic(segment):
@@ -1822,9 +1976,28 @@ def subtitle_arabic(segment):
     return source.get("subtitle_arabic") or (source.get("arabic") if not source.get("partial") else "") or segment.get("ar", "")
 
 
+def subtitle_display_segments(segments):
+    """Hold a cue through a brief pause without changing transcription timings.
+
+    Recompute derived ends on every read/export, including after manual edits.
+    Never extend the final cue, a long silence, or an overlapping cue.
+    """
+    ordered = sorted(segments, key=lambda s: s["start"])
+    ends = {}
+    for index, segment in enumerate(ordered):
+        end = float(segment["end"])
+        if index + 1 < len(ordered):
+            next_start = float(ordered[index + 1]["start"])
+            gap = round(next_start - end, 6)
+            if 0 < gap <= SUBTITLE_GAP_HOLD_SECONDS:
+                end = next_start
+        ends[id(segment)] = end
+    return [{**segment, "display_end": ends[id(segment)]} for segment in segments]
+
+
 def make_srt(segments, bilingual=True):
     blocks = []
-    for seg in sorted(segments, key=lambda s: s["start"]):
+    for seg in sorted(subtitle_display_segments(segments), key=lambda s: s["start"]):
         quoted = seg["type"] in ("quran", "hadith")
         original = subtitle_arabic(seg)
         text = (original.strip() + "\n" if bilingual and quoted else "") + (seg.get("en", "").strip() or "[Translation unavailable]")
@@ -1833,7 +2006,7 @@ def make_srt(segments, bilingual=True):
         caption = source_caption(seg) if quoted else ""
         if caption:
             text += "\n" + caption
-        blocks.append(f"{len(blocks)+1}\n{srt_time(seg['start'])} --> {srt_time(seg['end'])}\n{text}\n")
+        blocks.append(f"{len(blocks)+1}\n{srt_time(seg['start'])} --> {srt_time(seg['display_end'])}\n{text}\n")
     return "\n".join(blocks)
 
 
@@ -1873,9 +2046,12 @@ def make_ass(segments, style, width=1280, height=720, fitted_size=None):
     ass_color = "&H00" + color[5:7] + color[3:5] + color[1:3]
     align = 2
     back = "&H441D1405" if style.get("backdrop", True) else "&HFF000000"
-    border_style = 3 if style.get("backdrop", True) else 1
-    lines = ["[Script Info]", "ScriptType: v4.00+", f"PlayResX: {canvas_width}", f"PlayResY: {canvas_height}", "WrapStyle: 0", "", "[V4+ Styles]", "Format: Name,Fontname,Fontsize,PrimaryColour,SecondaryColour,OutlineColour,BackColour,Bold,Italic,Underline,StrikeOut,ScaleX,ScaleY,Spacing,Angle,BorderStyle,Outline,Shadow,Alignment,MarginL,MarginR,MarginV,Encoding", f"Style: Default,{font},{size},{ass_color},{ass_color},{back},{back},0,0,0,0,100,100,0,0,{border_style},2,0,{align},{margin_x},{margin_x},{margin_y},1", "", "[Events]", "Format: Layer,Start,End,Style,Name,MarginL,MarginR,MarginV,Effect,Text"]
-    for s in segments:
+    # libass's event box includes combining marks and font fallbacks in one
+    # continuous backdrop. Per-run boxes produce jagged Arabic diacritic edges.
+    border_style = 4 if style.get("backdrop", True) else 1
+    outline, padding = (0, 4) if style.get("backdrop", True) else (2, 0)
+    lines = ["[Script Info]", "ScriptType: v4.00+", "ScaledBorderAndShadow: yes", f"PlayResX: {canvas_width}", f"PlayResY: {canvas_height}", "WrapStyle: 0", "", "[V4+ Styles]", "Format: Name,Fontname,Fontsize,PrimaryColour,SecondaryColour,OutlineColour,BackColour,Bold,Italic,Underline,StrikeOut,ScaleX,ScaleY,Spacing,Angle,BorderStyle,Outline,Shadow,Alignment,MarginL,MarginR,MarginV,Encoding", f"Style: Default,{font},{size},{ass_color},{ass_color},{back},{back},0,0,0,0,100,100,0,0,{border_style},{outline},{padding},{align},{margin_x},{margin_x},{margin_y},1", "", "[Events]", "Format: Layer,Start,End,Style,Name,MarginL,MarginR,MarginV,Effect,Text"]
+    for s in subtitle_display_segments(segments):
         def safe_ass(value):
             return str(value).strip().replace("{", "(").replace("}", ")").replace("\\", "/").replace("\n", " ")
         original = subtitle_arabic(s)
@@ -1886,7 +2062,7 @@ def make_ass(segments, style, width=1280, height=720, fitted_size=None):
         caption = source_caption(s)
         if caption:
             combined += r"\N{\fnIBM Plex Sans Arabic\fs" + str(min(16, max(10, round(size * .45, 2)))) + r"\c&H81C7E1&}" + safe_ass(caption)
-        lines.append(f"Dialogue: 0,{ass_time(s['start'])},{ass_time(s['end'])},Default,,0,0,0,,{combined}")
+        lines.append(f"Dialogue: 0,{ass_time(s['start'])},{ass_time(s['display_end'])},Default,,0,0,0,,{combined}")
     return "\n".join(lines) + "\n"
 
 
@@ -1984,7 +2160,7 @@ def render_video(row):
         dst = folder / "translated.mp4"
         tmp = folder / "translated.tmp.mp4"
         style = checked_style(json.loads(row["style"]))
-        segments = json.loads(row["segments"])
+        segments = subtitle_display_segments(json.loads(row["segments"]))
         width, height, audio_codec = media_info(src)
         signature = hashlib.sha256(json.dumps([SUBTITLE_RENDER_VERSION, style, segments, src.stat().st_mtime_ns, src.stat().st_size], sort_keys=True).encode()).hexdigest()
         manifest = folder / "render-manifest.json"
@@ -1995,13 +2171,13 @@ def render_video(row):
             except (ValueError, AttributeError):
                 pass
         duration = max(float(row["duration"]), max((s["end"] for s in segments), default=0))
-        points = sorted({0.0, duration, *(max(0, min(duration, float(s[key]))) for s in segments for key in ("start", "end"))})
+        points = sorted({0.0, duration, *(max(0, min(duration, float(s[key]))) for s in segments for key in ("start", "display_end"))})
         sequence = ["ffconcat version 1.0"]
         used = []
         for start, end in zip(points, points[1:]):
             if end <= start:
                 continue
-            segment = next((s for s in segments if s["start"] <= start < s["end"]), None)
+            segment = next((s for s in segments if s["start"] <= start < s["display_end"]), None)
             image, fitted = subtitle_image(row, segment, style, width, height)
             relative = image.relative_to(folder).as_posix()
             sequence.extend([f"file '{relative}'", "option framerate 1000", f"duration {end - start:.6f}"])

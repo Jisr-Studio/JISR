@@ -242,7 +242,7 @@ class EndToEndTests(unittest.TestCase):
             self.assertIn(expected, subtitle_text)
         for unspoken in ("Synthetic verse prefix.", "under his nails", "machine draft"):
             self.assertNotIn(unspoken, subtitle_text)
-        self.assertIn("00:00:00,500 --> 00:00:01,950", subtitle_text)
+        self.assertIn("00:00:00,500 --> 00:00:02,000", subtitle_text)
         _, raw = self.request(prefix + "/export/sources")
         references = json.loads(raw)
         self.assertEqual(len(references), 2)

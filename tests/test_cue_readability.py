@@ -14,6 +14,23 @@ def response(parts):
 
 
 class CueReadabilityTests(unittest.TestCase):
+    @patch.object(server, 'translate_segments', side_effect=AssertionError('Existing clauses need no AI request'))
+    def test_existing_hadith_clauses_split_locally_without_losing_english_or_words(self, translate):
+        text = 'من تقرب إلي شبرا تقربت إليه ذراعا، ومن تقرب إلي ذراعا تقربت إليه باعا، ومن أتاني يمشي أتيت له هرولة.'
+        words = [{'text': w, 'start': i * .7, 'end': i * .7 + .6} for i, w in enumerate(text.split())]
+        segment = {'id': 'quote', 'type': 'hadith', 'ar': text,
+                   'en': 'Whoever draws near a span, I draw near a cubit; whoever draws near a cubit, I draw near a fathom; whoever comes walking, I come running.',
+                   'words': words, 'start': 0, 'end': words[-1]['end'], 'source': {'arabic': 'Previous variant'}}
+        original = copy.deepcopy(segment)
+        clauses = [segment]; server.reflow_hadith_cues(clauses)
+        self.assertEqual(len(clauses), 3)
+        self.assertEqual([w for s in clauses for w in s['words']], original['words'])
+        self.assertEqual(' '.join(s['en'] for s in clauses), original['en'])
+        self.assertEqual([(round(s['start'], 3), round(s['end'], 3)) for s in clauses], [(0, 4.8), (4.9, 9.7), (9.8, 13.9)])
+        self.assertTrue(all(s['reviewed'] is False and s['source'] is None for s in clauses))
+        self.assertIsNone(server.split_saved_hadith_clauses({**original, 'en': 'One complete English sentence.'}))
+        translate.assert_not_called()
+
     def segment(self):
         words = [{'text': str(i), 'start': i * .5, 'end': i * .5 + .4} for i in range(24)]
         return {'id': 'cue', 'ar': ' '.join(w['text'] for w in words), 'words': words,
@@ -64,8 +81,40 @@ class CueReadabilityTests(unittest.TestCase):
         result = server.translation_parts(segment, {'parts': [{'first_word': 0, 'last_word': 4, 'kind': 'speech', 'english': 'Peace be upon you, and Allah’s mercy and blessings.'}]})
         self.assertEqual(len(result), 1)
         self.assertEqual(result[0]['ar'], text)
-        result = server.translation_parts(self.segment(), {'parts': [{'first_word': 0, 'last_word': 23, 'kind': 'hadith', 'english': 'Reference draft ' * 20}]})
-        self.assertEqual(result[0]['candidate']['kind'], 'hadith')
+        with self.assertRaisesRegex(RuntimeError, 'too long for subtitles'):
+            server.translation_parts(self.segment(), {'parts': [{'first_word': 0, 'last_word': 23, 'kind': 'hadith', 'english': 'Reference draft ' * 20}]})
+        result = server.translation_parts(self.segment(), {'parts': [
+            {'first_word': 0, 'last_word': 11, 'kind': 'hadith', 'english': 'First quotation clause.'},
+            {'first_word': 12, 'last_word': 23, 'kind': 'hadith', 'english': 'Second quotation clause.'}]})
+        self.assertTrue(all(s['candidate']['kind'] == 'hadith' for s in result))
+
+    @patch.object(server, 'translation_request', return_value=response([
+        {'first_word': 0, 'last_word': 11, 'kind': 'hadith', 'english': 'First quotation clause.'},
+        {'first_word': 12, 'last_word': 23, 'kind': 'hadith', 'english': 'Second quotation clause.'}]))
+    @patch.object(server, 'translation_key', return_value='test-key')
+    def test_legacy_hadith_paragraph_reflows_with_all_words_and_real_timestamps(self, key, request):
+        quote = self.segment()
+        quote.update(type='hadith', en='Long saved quote.', source={'arabic': 'Previous variant'}, candidate={'kind': 'hadith'})
+        original = copy.deepcopy(quote)
+        segments = [quote]
+        self.assertTrue(server.needs_hadith_reflow(quote))
+        server.reflow_hadith_cues(segments)
+        self.assertEqual([w for s in segments for w in s['words']], original['words'])
+        self.assertEqual([(s['start'], s['end']) for s in segments], [(0, 5.9), (6, 11.9)])
+        self.assertTrue(all(s['source'] is None and s['candidate']['kind'] == 'hadith' for s in segments))
+        for change in ({'reviewed': True}, {'translation_origin': 'human'}, {'source_caption': 'Custom'},
+                       {'source': {'quotation_mode': 'paraphrase'}}):
+            with self.subTest(change=change):
+                self.assertFalse(server.needs_hadith_reflow({**original, **change}))
+
+    @patch.object(server, 'translate_segments', side_effect=RuntimeError('provider failure'))
+    def test_hadith_reflow_failure_keeps_original_reference_and_translation(self, translate):
+        quote = self.segment()
+        quote.update(type='hadith', en='Saved quote.', source={'arabic': 'Original source'})
+        segments = [quote]; original = copy.deepcopy(segments)
+        with self.assertRaises(RuntimeError):
+            server.reflow_hadith_cues(segments)
+        self.assertEqual(segments, original)
 
     @patch.object(server, 'translate_segments', side_effect=RuntimeError('provider failure'))
     def test_reflow_outage_preserves_existing_translation(self, translate):
