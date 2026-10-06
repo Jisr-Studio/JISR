@@ -401,22 +401,31 @@ body:not(.start-view) .demo-pill{font-size:15px;color:#d0daea}
 }
 
 /* Review confirmation lives directly on each segment, beside the content. */
-.segment-review-footer{grid-column:1/-1;border-top:1px solid #43516b;padding-top:14px;margin-top:4px;display:flex;justify-content:flex-start}
-.segment-review-button{display:inline-flex;align-items:center;gap:12px;min-height:46px;padding:9px 16px;border:1px solid #8e7152;border-radius:8px;background:#eab16a0c;color:#f5c78b;font:inherit;font-size:18px;line-height:1.6;cursor:pointer}
-.segment-review-button>span{display:grid;place-items:center;width:24px;height:24px;border:1px solid currentColor;border-radius:5px;font-size:20px}
-.segment-review-button[aria-pressed=true]{color:#c2ebd7;background:#25473d;border-color:#648f7d}
+ .segment-review-footer{grid-column:1/-1;display:flex;justify-content:flex-start;padding-top:8px;margin-top:2px}
+.segment-review-button{display:inline-flex;align-items:center;gap:9px;min-height:44px;padding:7px 12px;border:1px solid #526078;border-radius:7px;background:transparent;color:#d5deec;font:inherit;font-size:16px;line-height:1.5;cursor:pointer;transition:background .15s,border-color .15s}
+.segment-review-button>span{display:grid;place-items:center;flex:none;width:18px;height:18px;border:1.5px solid #8d9cb3;border-radius:4px;font:700 13px/1 Arial,sans-serif}
+.segment-review-button:hover:not(:disabled){background:#ffffff08;border-color:#b89462}
+.segment-review-button[aria-pressed=true]{color:#b9d9cb;background:#80b59e0a;border-color:#668c7d}
+.segment-review-button[aria-pressed=true]>span{background:#91bba7;border-color:#91bba7;color:#142b23}
+.segment-review-button:focus-visible{outline:2px solid #efb86f;outline-offset:3px}
 .segment-review-button:disabled{opacity:.55;cursor:default}
-@media(max-width:760px){.segment-review-button{font-size:17px;min-height:46px}}
-
-.language-picker{display:flex;flex-direction:column;gap:5px;font-size:13px;min-width:160px}
-.language-picker select,#projectLanguageChoice{background:#223149;color:#fff;border:1px solid #52627a;border-radius:8px;padding:9px;font:inherit}
+.language-picker{display:flex;flex-direction:row;align-items:center;gap:10px;min-width:0;max-width:100%;padding:0 12px;background:#ffffff03;border:1px solid #3d4c64;border-radius:8px;color:#b9c5d8;font-size:14px;line-height:1.5;white-space:nowrap;min-height:46px}
+.language-picker select,#projectLanguageChoice{appearance:none;background-color:transparent;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='m1 1 5 5 5-5' fill='none' stroke='%23c3cfdf' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:left 2px center;color:#edf0f7;border:0;border-radius:4px;padding:10px 0 10px 22px;font:inherit;font-size:16px;line-height:1.5;cursor:pointer;min-width:115px;max-width:100%}
+.language-picker select option,#projectLanguageChoice option{background:#1a2436;color:#edf0f7}
+.language-picker:focus-within{border-color:#efb86f;box-shadow:0 0 0 2px #efb86f20}
+.language-picker select:focus-visible{outline:none}
+.journey-primary-actions{align-items:center}
+.project-heading .actions{align-items:center;flex-wrap:wrap}
+#projectLanguageChoice{background-color:#ffffff05;border:1px solid #3d4c64;padding-right:12px;background-position:left 10px center;padding-left:30px;min-height:44px}
+#projectLanguageChoice:focus-visible{outline:2px solid #efb86f;outline-offset:2px}
+@media(max-width:700px){.language-picker{gap:8px;padding-inline:10px;font-size:13px}.language-picker select{font-size:15px}.journey-primary-actions{flex-wrap:wrap;justify-content:center}.project-heading .actions .language-picker{flex-basis:100%;justify-content:space-between}.segment-review-button{font-size:16px}}
 #projectLanguageControls{display:flex;flex-wrap:wrap;align-items:center;gap:9px;margin:10px 0}
 #projectLanguageControls[hidden]{display:none}
 .translation{unicode-bidi:plaintext;overflow-wrap:anywhere;font-family:var(--translation-font,'Noto Sans'),sans-serif}
 .translation[lang="ur"]{line-height:2.3}
 .translation[lang="hi"]{line-height:1.8}
 .translation[lang="zh-Hans"]{line-height:1.7;word-break:normal;line-break:strict}
-@media(max-width:700px){.journey-primary-actions{flex-wrap:wrap}.language-picker{min-width:130px}}
+
 
 /* Export: one prominent video action, clear preparation, and a real download link. */
 dialog.export-dialog{width:min(760px,calc(100% - 28px))}
