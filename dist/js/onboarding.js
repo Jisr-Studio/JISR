@@ -72,7 +72,7 @@
   }
 
   next.onclick = () => {
-    document.querySelector('#fileInput').click();
+    chooseUploadVideo();
   };
   back.onclick = () => showStep(current - 1);
   tabs.forEach((tab, index) => {

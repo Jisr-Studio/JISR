@@ -18,7 +18,7 @@
     c.menu.style.maxHeight=height+'px';
     c.menu.style.top=top+'px';
   }
-  function open(c,index){if(c.select.disabled)return;close();opened=c;c.menu.hidden=false;c.button.setAttribute('aria-expanded','true');position(c);const options=[...c.menu.children];(options[index??Math.max(0,c.select.selectedIndex)]).focus()}
+  function open(c,index){if(c.select.disabled)return;close();opened=c;c.menu.hidden=false;c.button.setAttribute('aria-expanded','true');position(c);const options=[...c.menu.children];(options[index??Math.max(0,[...c.select.options].filter(option=>!option.disabled).findIndex(option=>option.value===c.select.value))]).focus()}
   document.querySelectorAll('[data-upload-language],#projectLanguageChoice').forEach((select,n)=>{
     const label=select.closest('.language-picker');
     const wrapper=document.createElement('div');wrapper.className='language-control';
@@ -30,10 +30,10 @@
     wrapper.append(button,select);select.hidden=true;
     document.body.append(menu);
     const c={select,button,menu};controls.push(c);
-    [...select.options].forEach((option,index)=>{const item=document.createElement('button');item.type='button';item.className='language-menu-option';item.setAttribute('role','option');item.textContent=option.textContent;item.onclick=()=>{select.value=option.value;select.dispatchEvent(new Event('change',{bubbles:true}));sync();close(true)};item.onkeydown=e=>{const items=[...menu.children];let next;if(e.key==='ArrowDown')next=(index+1)%items.length;if(e.key==='ArrowUp')next=(index+items.length-1)%items.length;if(e.key==='Home')next=0;if(e.key==='End')next=items.length-1;if(next!==undefined){e.preventDefault();items[next].focus()}if(e.key==='Escape'){e.preventDefault();close(true)}if(e.key==='Tab')close()};menu.append(item)});
+    [...select.options].filter(option=>!option.disabled).forEach((option,index)=>{const item=document.createElement('button');item.type='button';item.className='language-menu-option';item.setAttribute('role','option');item.textContent=option.textContent;item.onclick=()=>{select.value=option.value;select.dispatchEvent(new Event('change',{bubbles:true}));sync();close(true)};item.onkeydown=e=>{const items=[...menu.children];let next;if(e.key==='ArrowDown')next=(index+1)%items.length;if(e.key==='ArrowUp')next=(index+items.length-1)%items.length;if(e.key==='Home')next=0;if(e.key==='End')next=items.length-1;if(next!==undefined){e.preventDefault();items[next].focus()}if(e.key==='Escape'){e.preventDefault();close(true)}if(e.key==='Tab')close()};menu.append(item)});
     button.onclick=()=>opened===c?close():open(c);
-    button.onkeydown=e=>{if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();open(c,e.key==='ArrowUp'?select.options.length-1:undefined)}if(e.key==='Escape')close(true)};
-    c.sync=()=>{button.replaceChildren();const caption=document.createElement('span');caption.className='language-trigger-label';caption.textContent=labelText;const value=document.createElement('span');value.className='language-trigger-value';value.textContent=select.selectedOptions[0]?.textContent||'';const arrow=document.createElement('span');arrow.className='language-trigger-arrow';arrow.setAttribute('aria-hidden','true');arrow.textContent='⌄';button.append(caption,value,arrow);button.disabled=select.disabled;[...menu.children].forEach((item,i)=>item.setAttribute('aria-selected',String(i===select.selectedIndex)));if(opened===c&&select.disabled)close()};
+    button.onkeydown=e=>{if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();open(c,e.key==='ArrowUp'?menu.children.length-1:undefined)}if(e.key==='Escape')close(true)};
+    c.sync=()=>{button.replaceChildren();const caption=document.createElement('span');caption.className='language-trigger-label';caption.textContent=labelText;const value=document.createElement('span');value.className='language-trigger-value';value.textContent=select.selectedOptions[0]?.textContent||'';const arrow=document.createElement('span');arrow.className='language-trigger-arrow';arrow.setAttribute('aria-hidden','true');arrow.textContent='⌄';button.append(caption,value,arrow);button.disabled=select.disabled;[...menu.children].forEach((item,i)=>item.setAttribute('aria-selected',String([...select.options].filter(option=>!option.disabled)[i].value===select.value)));if(opened===c&&select.disabled)close()};
     select.addEventListener('change',sync);new MutationObserver(sync).observe(select,{attributes:true,attributeFilter:['disabled']});
   });
   function sync(){controls.forEach(c=>c.sync())}

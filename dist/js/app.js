@@ -178,7 +178,16 @@ function editCaption(i){
   $('#saveCaption').onclick=()=>saveCaption($('#editCaption').value.trim());
   $('#resetCaption').onclick=()=>saveCaption(null);
 }
-$('#upload').onclick=()=>$('#fileInput').click();$('#fileInput').onchange=async e=>{let f=e.target.files[0];if(!f)return;if(!/\.(mp4|mov|webm|mkv|m4v)$/i.test(f.name))return toast('اختر ملف فيديو مدعوماً');if(f.size>250*1024*1024)return toast('الحد الأقصى 250 ميغابايت');let body=new FormData();body.append('target_language',uploadLanguage);body.append('video',f);toast('جارٍ رفع الفيديو...');workflowUploading=true;syncWorkflow();try{let p=await api('/api/projects',{method:'POST',body});token=p.edit_token;localStorage.setItem('jisr-edit',JSON.stringify({id:p.id,token}));history.replaceState(null,'','/?project='+p.id);setProject(p);toast('تم رفع الفيديو');processDialog()}catch(err){toast(err.message)}finally{workflowUploading=false;status()}e.target.value=''};
+function requireUploadLanguage(){
+  if(uploadLanguage)return true;
+  toast('اختر لغة الترجمة أولاً');
+  const visible=$$('[data-upload-language]').find(el=>el.parentElement.getBoundingClientRect().width>0);
+  const trigger=visible?.parentElement.querySelector('.language-trigger');
+  if(trigger){trigger.focus();trigger.click()}else visible?.focus();
+  return false;
+}
+function chooseUploadVideo(){if(requireUploadLanguage())$('#fileInput').click()}
+$('#upload').onclick=chooseUploadVideo;$('#fileInput').onchange=async e=>{let f=e.target.files[0];if(!f)return;if(!requireUploadLanguage()){e.target.value='';return;}if(!/\.(mp4|mov|webm|mkv|m4v)$/i.test(f.name))return toast('اختر ملف فيديو مدعوماً');if(f.size>250*1024*1024)return toast('الحد الأقصى 250 ميغابايت');let body=new FormData();body.append('target_language',uploadLanguage);body.append('video',f);toast('جارٍ رفع الفيديو...');workflowUploading=true;syncWorkflow();try{let p=await api('/api/projects',{method:'POST',body});token=p.edit_token;localStorage.setItem('jisr-edit',JSON.stringify({id:p.id,token}));history.replaceState(null,'','/?project='+p.id);setProject(p);toast('تم رفع الفيديو');processDialog()}catch(err){toast(err.message)}finally{workflowUploading=false;status()}e.target.value=''};
 function processDialog(){modal('معالجة الفيديو',`<p>المقطع: <b>${esc(project.title)}</b></p><p>التفريغ: ElevenLabs Scribe v2. الترجمة والتصنيف: خدمة الذكاء الاصطناعي المضبوطة على الخادم. مطابقة الآيات: Quranpedia. الحديث المحتمل ينتظر التوثيق بمصدر محدد.</p><div class="modal-actions"><button class="button primary" id="runProcess">بدء المعالجة الآلية</button><button class="button secondary" id="manualProcess">إدخال نص وتوقيت يدوياً</button></div><p class="modal-note">المفاتيح تُضبط على الخادم، ولا تُكتب داخل المتصفح.</p>`);$('#runProcess').onclick=async()=>{try{await api('/api/projects/'+project.id+'/process',{method:'POST',body:'{}'});$('#modal').close();setProject({...project,status:'processing',stage:'بدأت المعالجة'});toast('بدأت المعالجة')}catch(e){toast(e.message)}};$('#manualProcess').onclick=manualDialog}
 function manualDialog(){modal('إدخال مقاطع يدوياً','<p>كل سطر: البداية|النهاية|العربية|الترجمة. الوقت بالثواني. هذا المسار لتجربة التحرير والتصدير قبل إضافة المفاتيح.</p><textarea id="manualText" dir="ltr" style="min-height:160px" placeholder="0|5|بسم الله|In the name of Allah"></textarea><div class="modal-actions"><button class="button primary" id="saveManual">حفظ المقاطع</button></div>');$('#saveManual').onclick=async()=>{try{let entries=$('#manualText').value.trim().split(/\r?\n/).filter(Boolean).map(line=>{let [start,end,ar,translation]=line.split('|');return {start:+start,end:+end,ar:ar||'',translation:translation||''}});let p=await api('/api/projects/'+project.id+'/manual',{method:'POST',body:JSON.stringify({segments:entries})});setProject(p);$('#modal').close();toast('تم حفظ المقاطع')}catch(e){toast(e.message)}}}
 function edit(i){
@@ -483,7 +492,7 @@ status=function(){
   }else processButton.textContent='متابعة المعالجة';
 };
 
-let uploadLanguage='en';
+let uploadLanguage='';
 function targetLanguage(){return project?.target_language||'en'}
 function targetInfo(){return JisrLanguages.info(targetLanguage())}
 function syncLanguageControls(){

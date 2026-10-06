@@ -32,7 +32,7 @@ upload, review and native MP4 download.
 
 ## Translation languages
 
-Choose **لغة الترجمة** beside the upload control before selecting a video: English (`en`, default), Spanish (`es`), Urdu (`ur`, RTL), Hindi (`hi`), Indonesian (`id`), Simplified Chinese (`zh-Hans`) or Turkish (`tr`). The saved project keeps its language when reopened. The editor remains Arabic.
+Choose **لغة الترجمة** beside the upload control before selecting a video. No upload language is selected by default; choosing one is required: English (`en`), Spanish (`es`), Urdu (`ur`, RTL), Hindi (`hi`), Indonesian (`id`), Simplified Chinese (`zh-Hans`) or Turkish (`tr`). The saved project keeps its language when reopened. The editor remains Arabic.
 
 To change a processed project, choose a different project language and click **إعادة الترجمة**, then confirm. This reuses the Arabic transcription and word timestamps, preserves the Arabic reference identity, saves the previous edits in a private language history, and clears translation approval/selections/custom source captions. It does not call ElevenLabs again. The configured translation provider handles speech, terminology, meaning review and exact source-excerpt alignment in the selected language.
 
