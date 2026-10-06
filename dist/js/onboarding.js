@@ -11,14 +11,24 @@
   let current = 0;
   let paused = motion.matches;
   let touchStart = null;
-  let autoTimer = null;
+  const slideDuration = 8000;
+  let autoFrame = null;
+  let elapsed = 0;
   function scheduleAdvance() {
-    clearTimeout(autoTimer);
-    if (paused || motion.matches || document.hidden || document.querySelector('#landing').hidden || !document.querySelector('#questions').hidden) return;
-    autoTimer = setTimeout(() => {
-      if (tour.querySelector('.language-trigger[aria-expanded="true"]')) { scheduleAdvance(); return; }
-      showStep((current + 1) % slides.length, false, true);
-    }, 8000);
+    cancelAnimationFrame(autoFrame);
+    let previous = performance.now();
+    function tick(now) {
+      const blocked = paused || motion.matches || document.hidden || document.querySelector('#landing').hidden || !document.querySelector('#questions').hidden || tour.querySelector('.language-trigger[aria-expanded="true"]');
+      if (!blocked) elapsed += Math.max(0, now - previous);
+      previous = now;
+      tour.style.setProperty('--tour-progress', String(Math.min(1, elapsed / slideDuration)));
+      if (elapsed >= slideDuration) {
+        showStep((current + 1) % slides.length, false, true);
+        return;
+      }
+      autoFrame = requestAnimationFrame(tick);
+    }
+    autoFrame = requestAnimationFrame(tick);
   }
   function updateMotion() {
     tour.classList.toggle('motion-paused', paused || document.hidden || document.querySelector('#landing').hidden);
@@ -49,6 +59,8 @@
   function showStep(index, focus = true, automatic = false) {
     if (index < 0 || index >= slides.length) return;
     const previous = current;
+    elapsed = 0;
+    tour.style.setProperty('--tour-progress', '0');
     current = index;
     tour.dataset.direction = index < previous ? 'back' : 'next';
     slides.forEach((slide, i) => {
@@ -88,7 +100,7 @@
     };
   });
   toggle.onclick = () => { paused = !paused; updateMotion(); };
-  replay.onclick = () => { restartScene(); scheduleAdvance(); };
+  replay.onclick = () => { elapsed = 0; tour.style.setProperty('--tour-progress', '0'); restartScene(); scheduleAdvance(); };
   motion.addEventListener('change', () => { paused = motion.matches; updateMotion(); });
   document.addEventListener('visibilitychange', updateMotion);
   new MutationObserver(updateMotion).observe(document.querySelector('#landing'), {attributes: true, attributeFilter: ['hidden']});

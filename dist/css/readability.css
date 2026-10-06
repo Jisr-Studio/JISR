@@ -172,7 +172,7 @@ h1{font-size:30px}.panel-heading h2,.reference-card h3,.review-summary b{font-si
 .journey-rail button:before{display:block;position:absolute;inset-inline:0;top:0;height:3px;background:#536078;border-radius:3px;transform:none}
 .journey-rail button:after{content:'';position:absolute;inset-inline:0;top:0;height:3px;border-radius:3px;background:#efb86f;transform:scaleX(0);transform-origin:right}
 .journey-rail button[aria-selected=true]{color:#ffe0b5}
-.journey-rail button[aria-selected=true]:after{animation:tour-progress 4s linear both}
+.journey-rail button[aria-selected=true]:after{animation:none!important;transform:scaleX(var(--tour-progress,0))}
 .motion-paused .journey-rail button:after{animation-play-state:paused}
 .journey-rail button:hover{color:#fff}
 .journey-rail button:hover:before{background:#8b9ab4}
