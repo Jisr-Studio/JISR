@@ -362,5 +362,5 @@ See the [deployment guide](docs/deployment.md) for hosting, persistent storage, 
 
 ## Team
 
-- **Turki:** frontend, UI/UX, integration, and export.
+- **Turki:** Frontend, UI/UX and Workflow integration.
 - **Anas:** AI engineering, translation, and API integration.
