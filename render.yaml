@@ -10,7 +10,7 @@ services:
     dockerContext: .
     healthCheckPath: /api/health
     numInstances: 1
-    autoDeployTrigger: "off"
+    autoDeployTrigger: commit
     envVars:
       - key: JISR_HOST
         value: 0.0.0.0
