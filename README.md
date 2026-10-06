@@ -120,6 +120,11 @@ Failed preparation offers a retry, and an expired download link asks the user to
 </p>
 <p align="center"><sub>Preparation status · Elapsed time · Review warnings remain visible</sub></p>
 
+<p align="center">
+  <img src="docs/previews/walkthrough/12-export-ready.png" alt="Completed MP4 preparation showing the filename, file size, download button, and temporary-link notice" width="760">
+</p>
+<p align="center"><sub>File ready · Filename and size · Explicit MP4 download action</sub></p>
+
 </details>
 
 ### 6. The studio — preview, edit, and review together
